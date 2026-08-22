@@ -22,7 +22,10 @@ import {
   Sparkles,
   Activity,
   Layers,
-  ChevronRight
+  ChevronRight,
+  TrendingUp,
+  AlertCircle,
+  Radio
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -111,7 +114,7 @@ export default function ExecutiveControlTower() {
               </span>
               <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
                 <span>Executive Supply Chain Control Tower</span>
-                <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-mono font-medium border border-emerald-200/60 dark:border-emerald-800/60">
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-mono font-medium border border-emerald-200/60 dark:border-emerald-800/60">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Live Operational Telemetry
                 </span>
@@ -142,7 +145,7 @@ export default function ExecutiveControlTower() {
 
             <button
               onClick={() => setIsAiOpen(true)}
-              className="flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-indigo-500" />
               <span>Ask Copilot</span>
@@ -291,7 +294,7 @@ export default function ExecutiveControlTower() {
               const Icon = node.icon;
               return (
                 <React.Fragment key={node.key}>
-                  <div className="flex flex-col items-center p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 min-w-[105px] text-center space-y-1.5 hover:border-indigo-500/40 transition-all shadow-2xs">
+                  <div className="flex flex-col items-center p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 min-w-[105px] text-center space-y-1.5 hover:border-indigo-500/40 transition-all shadow-2xs">
                     <div className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-indigo-600 dark:text-indigo-400">
                       <Icon className="w-3.5 h-3.5" />
                     </div>
@@ -382,7 +385,7 @@ export default function ExecutiveControlTower() {
 
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
             {recentActivity.map((log) => (
-              <div key={log._id} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 text-xs space-y-1">
+              <div key={log._id} className="p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 text-xs space-y-1">
                 <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
                   <span className="font-semibold text-indigo-600 dark:text-indigo-400">{log.user || 'System'}</span>
                   <span>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
