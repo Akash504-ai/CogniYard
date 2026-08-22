@@ -90,4 +90,11 @@ export const analyticsAPI = {
   getControlTower: () => api.get('/analytics/control-tower'),
 };
 
+export const exceptionAPI = {
+  getExceptions: () => api.get('/exceptions'),
+  getExceptionById: (id) => api.get(`/exceptions/${id}`),
+  acknowledgeException: (id) => api.patch(`/exceptions/${id}/acknowledge`),
+  resolveException: (id, resolutionNote) => api.patch(`/exceptions/${id}/resolve`, { resolutionNote }),
+};
+
 export default api;

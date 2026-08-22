@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { analyticsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -43,6 +44,7 @@ import {
 export default function ExecutiveControlTower() {
   const { showNotification, setIsAiOpen } = useAuth();
   const { isDark } = useTheme();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -328,7 +330,16 @@ export default function ExecutiveControlTower() {
                 Critical Exceptions Panel — What Needs Attention Now
               </h3>
             </div>
-            <span className="text-[11px] text-zinc-400 font-mono">{exceptions.length} Active Items</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-zinc-400 font-mono">{exceptions.length} Active Items</span>
+              <button
+                onClick={() => navigate('/exceptions')}
+                className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>View All Exceptions</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
