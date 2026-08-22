@@ -35,15 +35,58 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    app: 'CogniYard MVP',
-    timestamp: new Date()
+    app: 'CogniYard MVP'
   });
 });
 
-// Error handling middleware
+// 404 Route Handler for unknown API endpoints
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint '${req.originalUrl}' not found.`
+  });
+});
+
+// Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error('API Error:', err.message);
+
+  // Invalid Mongoose ObjectId format (CastError)
+  if (err.name === 'CastError') {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid resource ID format: ${err.value}`
+    });
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const message = Object.values(err.errors).map(val => val.message).join(', ');
+    return res.status(400).json({
+      success: false,
+      message
+    });
+  }
+
+  // Duplicate key error
+  if (err.code === 11000) {
+    return res.status(400).json({
+      success: false,
+      message: 'Duplicate field value entered.'
+    });
+  }
+
+  // JWT errors
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired authentication token.'
+    });
+  }
+
+  // Default internal server error (no raw stack trace in response)
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal Server Error'
   });

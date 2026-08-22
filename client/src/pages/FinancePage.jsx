@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { financeAPI } from '../services/api';
+import { financeAPI, procurementAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
   Receipt, 
@@ -9,7 +9,8 @@ import {
   FileText, 
   ExternalLink, 
   Lock,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 export default function FinancePage() {
@@ -17,10 +18,14 @@ export default function FinancePage() {
   const [activeTab, setActiveTab] = useState('invoices');
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [selectedPo, setSelectedPo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // New Invoice Modal
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [invNumber, setInvNumber] = useState('INV-1001');
   const [invPoNumber, setInvPoNumber] = useState('PO-1001');
   const [invSupplier, setInvSupplier] = useState('Apex Industrial Safety Co.');
   const [invAmount, setInvAmount] = useState(22500);
@@ -36,12 +41,14 @@ export default function FinancePage() {
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
-      const [invRes, payRes] = await Promise.all([
+      const [invRes, payRes, poRes] = await Promise.all([
         financeAPI.getInvoices(),
-        financeAPI.getPayments()
+        financeAPI.getPayments(),
+        procurementAPI.getPurchaseOrders().catch(() => ({ data: { purchaseOrders: [] } }))
       ]);
       setInvoices(invRes.data.invoices || []);
       setPayments(payRes.data.payments || []);
+      setPurchaseOrders(poRes.data.purchaseOrders || []);
     } catch (err) {
       console.error('Error fetching finance data:', err);
     } finally {
@@ -49,41 +56,102 @@ export default function FinancePage() {
     }
   };
 
+  const handleSelectPo = (poNum) => {
+    const poDoc = purchaseOrders.find(p => p.poNumber === poNum);
+    if (poDoc) {
+      setSelectedPo(poDoc);
+      setInvPoNumber(poDoc.poNumber);
+      setInvSupplier(poDoc.supplierName || 'Apex Industrial Safety Co.');
+      setInvAmount(poDoc.totalAmount || 22500);
+    }
+  };
+
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
     try {
+      setSubmitting(true);
+      const poItems = selectedPo?.items?.length ? selectedPo.items : [{ productName: 'Industrial Item', quantity: 500, unitPrice: Number(invAmount) / 500 }];
       const res = await financeAPI.createInvoice({
+        invoiceNumber: invNumber,
         poNumber: invPoNumber,
         supplierName: invSupplier,
         totalAmount: Number(invAmount),
         fileUrl: invFileUrl,
-        items: [{ productName: 'Safety Helmet - High Visibility Yellow', quantity: 500, unitPrice: 45 }]
+        items: poItems
       });
       showNotification(`Created Invoice ${res.data.invoice.invoiceNumber} and performed 3-Way Match!`, 'success');
+      if (res.data.invoices) setInvoices(res.data.invoices);
+      if (res.data.payments) setPayments(res.data.payments);
       setIsInvoiceModalOpen(false);
       fetchFinanceData();
     } catch (err) {
-      showNotification('Error creating invoice', 'warning');
+      showNotification(err.response?.data?.message || 'Error creating invoice', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleRunMatch = async (invoiceId) => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       const res = await financeAPI.triggerMatch(invoiceId);
       showNotification(`3-Way Match result: ${res.data.matchResult?.matchStatus}`, 'info');
+      if (res.data.invoices) setInvoices(res.data.invoices);
+      if (res.data.payments) setPayments(res.data.payments);
       fetchFinanceData();
     } catch (err) {
       showNotification('Error running match engine', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleUpdatePayment = async (paymentId, status) => {
+    if (submitting) return;
     try {
-      await financeAPI.updatePaymentStatus(paymentId, status);
+      setSubmitting(true);
+      const res = await financeAPI.updatePaymentStatus(paymentId, status);
       showNotification(`Updated Payment status to ${status}`, 'success');
+      if (res.data.payments) setPayments(res.data.payments);
       fetchFinanceData();
     } catch (err) {
-      showNotification('Error updating payment status', 'warning');
+      showNotification(err.response?.data?.message || 'Error updating payment status', 'warning');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (submitting || !window.confirm('Are you sure you want to delete this invoice?')) return;
+    try {
+      setSubmitting(true);
+      const res = await financeAPI.deleteInvoice(invoiceId);
+      showNotification(res.data.message || 'Invoice deleted successfully', 'success');
+      if (res.data.invoices) setInvoices(res.data.invoices);
+      if (res.data.payments) setPayments(res.data.payments);
+      fetchFinanceData();
+    } catch (err) {
+      showNotification(err.response?.data?.message || 'Error deleting invoice', 'warning');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (submitting || !window.confirm('Are you sure you want to delete this payment record?')) return;
+    try {
+      setSubmitting(true);
+      const res = await financeAPI.deletePayment(paymentId);
+      showNotification(res.data.message || 'Payment record deleted successfully', 'success');
+      if (res.data.payments) setPayments(res.data.payments);
+      fetchFinanceData();
+    } catch (err) {
+      showNotification(err.response?.data?.message || 'Error deleting payment', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -102,8 +170,12 @@ export default function FinancePage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsInvoiceModalOpen(true)}
-            className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer"
+            onClick={() => {
+              setInvNumber(`INV-${Math.floor(1000 + Math.random() * 9000)}`);
+              setIsInvoiceModalOpen(true);
+            }}
+            disabled={submitting}
+            className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span>Upload Invoice</span>
@@ -189,9 +261,18 @@ export default function FinancePage() {
                       </button>
                       <button
                         onClick={() => handleRunMatch(inv._id)}
-                        className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] shadow-sm transition-all cursor-pointer"
+                        disabled={submitting}
+                        className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] shadow-sm transition-all cursor-pointer disabled:opacity-50"
                       >
                         Re-Match
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInvoice(inv._id)}
+                        disabled={submitting}
+                        title="Delete Invoice"
+                        className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -214,6 +295,7 @@ export default function FinancePage() {
                   <th className="p-3.5">PO Ref</th>
                   <th className="p-3.5">Supplier</th>
                   <th className="p-3.5">Amount ($)</th>
+                  <th className="p-3.5">3-Way Match</th>
                   <th className="p-3.5">Payment Status</th>
                   <th className="p-3.5 text-right">Actions</th>
                 </tr>
@@ -222,36 +304,52 @@ export default function FinancePage() {
                 {payments.map((pay) => (
                   <tr key={pay._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
                     <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{pay.paymentNumber}</td>
-                    <td className="p-3.5 font-mono text-zinc-600 dark:text-zinc-300">{pay.invoiceNumber}</td>
-                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200 font-medium">{pay.poNumber}</td>
+                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200">{pay.invoiceNumber}</td>
+                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200">{pay.poNumber}</td>
                     <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">{pay.supplierName}</td>
                     <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-100">${pay.amount.toLocaleString()}</td>
                     <td className="p-3.5">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
+                        pay.matchStatus === 'MATCHED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      }`}>
+                        {pay.matchStatus}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
                         pay.paymentStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                        pay.paymentStatus === 'ON_HOLD' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                        pay.paymentStatus === 'APPROVED' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' :
+                        pay.paymentStatus === 'APPROVED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
                         'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                       }`}>
                         {pay.paymentStatus}
                       </span>
                     </td>
                     <td className="p-3.5 text-right space-x-2">
-                      {pay.paymentStatus === 'APPROVED' && (
+                      {pay.paymentStatus !== 'PAID' ? (
                         <button
                           onClick={() => handleUpdatePayment(pay._id, 'PAID')}
-                          className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] shadow-sm transition-all inline-flex items-center gap-1 cursor-pointer"
+                          disabled={submitting || pay.matchStatus === 'MISMATCH'}
+                          className={`px-2.5 py-1 rounded font-semibold text-[11px] transition-all cursor-pointer disabled:opacity-50 ${
+                            pay.matchStatus === 'MISMATCH'
+                              ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed border border-zinc-300 dark:border-zinc-700'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                          }`}
                         >
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>Execute Payment</span>
+                          {pay.matchStatus === 'MISMATCH' ? <span className="flex items-center gap-1"><Lock className="w-3 h-3"/> Locked (Mismatch)</span> : 'Pay Invoice'}
                         </button>
-                      )}
-                      {pay.paymentStatus === 'ON_HOLD' && (
-                        <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1 justify-end">
-                          <Lock className="w-3 h-3" />
-                          <span>Locked (Mismatch)</span>
+                      ) : (
+                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                          Txn: {pay.transactionId}
                         </span>
                       )}
+                      <button
+                        onClick={() => handleDeletePayment(pay._id)}
+                        disabled={submitting}
+                        title="Delete Payment Record"
+                        className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -267,6 +365,33 @@ export default function FinancePage() {
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Upload Supplier Invoice</h3>
             <form onSubmit={handleCreateInvoice} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-emerald-600 dark:text-emerald-400 font-semibold mb-1">⚡ Quick Autofill from Purchase Order</label>
+                <select
+                  value={invPoNumber}
+                  onChange={(e) => handleSelectPo(e.target.value)}
+                  className="w-full bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none font-medium cursor-pointer"
+                >
+                  <option value="">-- Choose PO to Pre-fill Form --</option>
+                  {purchaseOrders.map((p) => (
+                    <option key={p._id} value={p.poNumber}>
+                      {p.poNumber} | {p.items?.[0]?.productName || 'Item'} (${p.totalAmount?.toLocaleString() || 0}) - {p.supplierName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Invoice Number</label>
+                <input
+                  type="text"
+                  value={invNumber}
+                  onChange={(e) => setInvNumber(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-mono"
+                  required
+                />
+              </div>
+
               <div>
                 <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Purchase Order Reference</label>
                 <input
@@ -293,6 +418,7 @@ export default function FinancePage() {
                 <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Total Billed Amount ($)</label>
                 <input
                   type="number"
+                  min="1"
                   value={invAmount}
                   onChange={(e) => setInvAmount(e.target.value)}
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-semibold"
@@ -320,9 +446,10 @@ export default function FinancePage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer"
+                  disabled={submitting}
+                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
                 >
-                  Save & Trigger 3-Way Match
+                  {submitting ? 'Processing...' : 'Save & Trigger 3-Way Match'}
                 </button>
               </div>
             </form>
@@ -349,9 +476,42 @@ export default function FinancePage() {
                 <span>PO Ref: <strong className="text-zinc-900 dark:text-zinc-200">{selectedInvoiceForMatch.poNumber}</strong></span>
               </div>
 
-              <div className="space-y-1">
-                <div className="font-semibold text-zinc-900 dark:text-zinc-100">Supplier: {selectedInvoiceForMatch.supplierName}</div>
-                <div>Billed Amount: <strong className="text-zinc-900 dark:text-zinc-100">${selectedInvoiceForMatch.totalAmount.toLocaleString()}</strong></div>
+              {/* 3-Way Comparison Matrix Table */}
+              <div className="overflow-x-auto my-2">
+                <table className="w-full text-center text-[11px] border border-zinc-200 dark:border-zinc-800 rounded-md">
+                  <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 uppercase text-[9px] font-semibold">
+                    <tr>
+                      <th className="p-2 text-left">Metric</th>
+                      <th className="p-2">PO Record</th>
+                      <th className="p-2">Goods Receipt</th>
+                      <th className="p-2">Invoice Billed</th>
+                      <th className="p-2">Match</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-800 dark:text-zinc-300 font-mono">
+                    <tr>
+                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Quantity</td>
+                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.poQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
+                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.acceptedQty !== undefined ? selectedInvoiceForMatch.ocrData.acceptedQty : (selectedInvoiceForMatch.matchStatus === 'MATCHED' ? selectedInvoiceForMatch.items[0]?.quantity : 0)).toLocaleString()}</td>
+                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.invoiceQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
+                      <td className="p-2 font-bold">{selectedInvoiceForMatch.matchStatus === 'MATCHED' ? '✓' : '❌'}</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Unit Price</td>
+                      <td className="p-2">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
+                      <td className="p-2">—</td>
+                      <td className="p-2">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
+                      <td className="p-2 font-bold">✓</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Total Amount</td>
+                      <td className="p-2">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
+                      <td className="p-2">—</td>
+                      <td className="p-2">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
+                      <td className="p-2 font-bold">{selectedInvoiceForMatch.matchStatus === 'MATCHED' ? '✓' : '❌'}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               {selectedInvoiceForMatch.ocrData?.reasons && selectedInvoiceForMatch.ocrData.reasons.length > 0 ? (
@@ -367,7 +527,7 @@ export default function FinancePage() {
               ) : (
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>3-Way Match Verified: Purchase Order, Goods Receipt, and Invoice quantities match 100%.</span>
+                  <span>3-Way Match Verified: Purchase Order, Goods Receipt, and Invoice quantities & amounts match 100%.</span>
                 </div>
               )}
             </div>

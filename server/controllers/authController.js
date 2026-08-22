@@ -15,7 +15,7 @@ const generateToken = (user) => {
 };
 
 // --- Register ---
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
@@ -45,7 +45,7 @@ exports.register = async (req, res) => {
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      role: 'procurement_manager', // Safe default role
+      role: 'procurement_manager',
       department: 'Procurement Operations',
       isActive: true
     });
@@ -66,12 +66,12 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Login ---
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -111,18 +111,17 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Google OAuth Handler ---
-exports.googleAuth = async (req, res) => {
+exports.googleAuth = async (req, res, next) => {
   try {
     const { token: googleToken, profile } = req.body;
     let email, name, googleId, avatar;
 
     if (googleToken) {
-      // Verify Google ID token via Google TokenInfo API
       const googleRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${googleToken}`);
       email = googleRes.data.email;
       name = googleRes.data.name;
@@ -140,7 +139,6 @@ exports.googleAuth = async (req, res) => {
     let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
 
     if (!user) {
-      // Safe default role for new Google users
       user = new User({
         name: name || 'Google User',
         email: email.toLowerCase(),
@@ -175,13 +173,12 @@ exports.googleAuth = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Google Auth Error:', error.message);
-    res.status(500).json({ success: false, message: 'Google Authentication failed.' });
+    next(error);
   }
 };
 
 // --- Get Current User ---
-exports.getMe = async (req, res) => {
+exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
@@ -189,22 +186,22 @@ exports.getMe = async (req, res) => {
     }
     res.json({ success: true, user });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Admin: Get All Users ---
-exports.getUsers = async (req, res) => {
+exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
     res.json({ success: true, count: users.length, users });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Admin: Update User Role ---
-exports.updateUserRole = async (req, res) => {
+exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
     const allowedRoles = ['procurement_manager', 'warehouse_manager', 'finance_user', 'admin'];
@@ -232,12 +229,12 @@ exports.updateUserRole = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Admin: Toggle User Active Status ---
-exports.toggleUserStatus = async (req, res) => {
+exports.toggleUserStatus = async (req, res, next) => {
   try {
     const { isActive } = req.body;
     const user = await User.findById(req.params.id);
@@ -250,6 +247,6 @@ exports.toggleUserStatus = async (req, res) => {
 
     res.json({ success: true, user: { id: user._id, name: user.name, email: user.email, isActive: user.isActive } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };

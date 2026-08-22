@@ -9,7 +9,7 @@ const api = axios.create({
   }
 });
 
-// Interceptor to attach Bearer token to all requests
+// Request Interceptor: Attach Bearer token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('cogniyard_token');
   if (token) {
@@ -17,6 +17,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 }, (error) => Promise.reject(error));
+
+// Response Interceptor: Auto-logout on 401 Unauthorized
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('cogniyard_token');
+      if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
@@ -45,9 +59,11 @@ export const logisticsAPI = {
   getTrucks: () => api.get('/trucks'),
   updateTruckStatus: (truckId, data) => api.patch(`/trucks/${truckId}`, data),
   simulateMovement: () => api.post('/trucks/simulate'),
+  simulateDelay: (truckId) => api.post(`/trucks/${truckId}/delay`),
   getDocks: () => api.get('/docks'),
   recommendDock: (truckId) => api.get(`/docks/recommend/${truckId}`),
   assignDock: (data) => api.post('/docks/assign', data),
+  releaseDock: (data) => api.post('/docks/release', data),
   getASNs: () => api.get('/asn'),
   createASN: (data) => api.post('/asn', data),
   getGoodsReceipts: () => api.get('/receiving'),
@@ -59,8 +75,10 @@ export const financeAPI = {
   getInvoices: () => api.get('/invoices'),
   createInvoice: (data) => api.post('/invoices', data),
   triggerMatch: (id) => api.post(`/invoices/${id}/match`),
+  deleteInvoice: (id) => api.delete(`/invoices/${id}`),
   getPayments: () => api.get('/payments'),
   updatePaymentStatus: (id, status) => api.patch(`/payments/${id}/status`, { status }),
+  deletePayment: (id) => api.delete(`/payments/${id}`),
 };
 
 export const aiAPI = {

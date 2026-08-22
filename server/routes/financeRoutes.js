@@ -7,9 +7,11 @@ const { protect, authorize } = require('../middleware/auth');
 router.get('/invoices', protect, finance.getInvoices);
 router.post('/invoices', protect, authorize('finance_user', 'admin'), finance.createInvoice);
 router.post('/invoices/:id/match', protect, authorize('finance_user', 'admin'), finance.triggerMatch);
+router.delete('/invoices/:id', protect, authorize('finance_user', 'admin'), finance.deleteInvoice);
 
 // Payments
 router.get('/payments', protect, finance.getPayments);
 router.patch('/payments/:id/status', protect, authorize('finance_user', 'admin'), finance.updatePaymentStatus);
+router.delete('/payments/:id', protect, authorize('finance_user', 'admin'), finance.deletePayment);
 
 module.exports = router;

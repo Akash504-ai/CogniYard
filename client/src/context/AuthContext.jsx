@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const AuthContext = createContext();
 
@@ -95,7 +96,7 @@ export const AuthProvider = ({ children }) => {
     setNotification({ message, type });
     setTimeout(() => {
       setNotification(null);
-    }, 4000);
+    }, 4500);
   };
 
   return (
@@ -116,6 +117,21 @@ export const AuthProvider = ({ children }) => {
       notification,
       showNotification
     }}>
+      {/* Floating Top-Right Notification Toast */}
+      {notification && (
+        <div className={`fixed top-5 right-5 z-[99999] max-w-sm px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md flex items-center gap-3 text-xs font-semibold tracking-tight transition-all animate-in fade-in slide-in-from-top-3 ${
+          notification.type === 'warning' || notification.type === 'error'
+            ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40'
+            : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-500/40'
+        }`}>
+          {notification.type === 'warning' || notification.type === 'error' ? (
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+          )}
+          <span className="leading-snug">{notification.message}</span>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

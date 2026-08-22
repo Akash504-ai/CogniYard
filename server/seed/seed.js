@@ -5,11 +5,11 @@ require('dotenv').config();
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
+const YardDock = require('../models/Dock');
 const PurchaseRequisition = require('../models/PurchaseRequisition');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Shipment = require('../models/Shipment');
 const Truck = require('../models/Truck');
-const Dock = require('../models/Dock');
 const ASN = require('../models/ASN');
 const GoodsReceipt = require('../models/GoodsReceipt');
 const Inventory = require('../models/Inventory');
@@ -19,70 +19,89 @@ const AuditLog = require('../models/AuditLog');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cogniyard';
 
-const seedDatabase = async () => {
+async function seedDatabase() {
   try {
+    console.log('🌱 Connecting to MongoDB for seeding...');
     await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB for seeding...');
 
-    // Clear existing collections
-    await User.deleteMany({});
-    await Product.deleteMany({});
-    await Supplier.deleteMany({});
-    await PurchaseRequisition.deleteMany({});
-    await PurchaseOrder.deleteMany({});
-    await Shipment.deleteMany({});
-    await Truck.deleteMany({});
-    await Dock.deleteMany({});
-    await ASN.deleteMany({});
-    await GoodsReceipt.deleteMany({});
-    await Inventory.deleteMany({});
-    await Invoice.deleteMany({});
-    await Payment.deleteMany({});
-    await AuditLog.deleteMany({});
-
-    console.log('Cleared existing database records.');
-
-    // 1. Create Users
-    const salt = await bcrypt.genSalt(10);
-    const defaultPassword = await bcrypt.hash('password123', salt);
-
-    const users = await User.insertMany([
-      { name: 'Alex Vance', email: 'procurement@cogniyard.com', password: defaultPassword, role: 'procurement_manager', department: 'Global Procurement' },
-      { name: 'Marcus Brody', email: 'warehouse@cogniyard.com', password: defaultPassword, role: 'warehouse_manager', department: 'Yard & Logistics Operations' },
-      { name: 'Elena Rostova', email: 'finance@cogniyard.com', password: defaultPassword, role: 'finance_user', department: 'Corporate Finance & AP' },
-      { name: 'System Admin', email: 'admin@cogniyard.com', password: defaultPassword, role: 'admin', department: 'IT Operations' }
+    console.log('🧹 Clearing existing database records...');
+    await Promise.all([
+      User.deleteMany({}),
+      Product.deleteMany({}),
+      Supplier.deleteMany({}),
+      YardDock.deleteMany({}),
+      PurchaseRequisition.deleteMany({}),
+      PurchaseOrder.deleteMany({}),
+      Shipment.deleteMany({}),
+      Truck.deleteMany({}),
+      ASN.deleteMany({}),
+      GoodsReceipt.deleteMany({}),
+      Inventory.deleteMany({}),
+      Invoice.deleteMany({}),
+      Payment.deleteMany({}),
+      AuditLog.deleteMany({})
     ]);
-    console.log(`Created ${users.length} Users.`);
 
-    // 2. Create Suppliers
-    const suppliers = await Supplier.insertMany([
-      { name: 'Apex Industrial Safety Co.', code: 'SUP-101', email: 'orders@apexsafety.com', phone: '+1-800-555-0144', category: 'Industrial Safety', rating: 4.8, leadTimeDays: 2, otdScore: 98, status: 'ACTIVE' },
-      { name: 'Global Logistics Supply Ltd.', code: 'SUP-102', email: 'sales@globallogistics.com', phone: '+1-800-555-0188', category: 'Heavy Machinery & Tools', rating: 4.5, leadTimeDays: 4, otdScore: 92, status: 'ACTIVE' },
-      { name: 'Vanguard Raw Materials', code: 'SUP-103', email: 'contact@vanguardraw.com', phone: '+1-800-555-0211', category: 'Raw Materials', rating: 4.2, leadTimeDays: 5, otdScore: 88, status: 'ACTIVE' },
-      { name: 'EcoPack Logistics Solutions', code: 'SUP-104', email: 'info@ecopack.com', phone: '+1-800-555-0399', category: 'Packaging', rating: 4.7, leadTimeDays: 3, otdScore: 96, status: 'ACTIVE' }
+    // -------------------------------------------------------------
+    // USERS (4 DISTINCT ROLES)
+    // -------------------------------------------------------------
+    const hashedPassword = await bcrypt.hash('password123', 10);
+    const users = await User.create([
+      { name: 'Alex Vance', email: 'procurement@cogniyard.com', password: hashedPassword, role: 'procurement_manager', department: 'Procurement' },
+      { name: 'Marcus Brody', email: 'warehouse@cogniyard.com', password: hashedPassword, role: 'warehouse_manager', department: 'Logistics' },
+      { name: 'Elena Rostova', email: 'finance@cogniyard.com', password: hashedPassword, role: 'finance_user', department: 'Finance AP' },
+      { name: 'System Admin', email: 'admin@cogniyard.com', password: hashedPassword, role: 'admin', department: 'Executive' }
     ]);
-    console.log(`Created ${suppliers.length} Suppliers.`);
+    console.log(`Created ${users.length} Users with roles: procurement_manager, warehouse_manager, finance_user, admin.`);
 
-    // 3. Create Products
-    const products = await Product.insertMany([
-      { sku: 'SKU-HLM-500', name: 'Safety Helmet - High Visibility Yellow', description: 'ANSI Z89.1 Certified Hard Hat', category: 'Industrial Safety', unit: 'pcs', defaultPrice: 45.00, currentStock: 250, reorderLevel: 50, preferredSupplier: suppliers[0]._id },
-      { sku: 'SKU-GLV-200', name: 'Heavy Duty Leather Work Gloves', description: 'Cut-resistant level 5 safety gloves', category: 'Industrial Safety', unit: 'pairs', defaultPrice: 18.50, currentStock: 400, reorderLevel: 100, preferredSupplier: suppliers[0]._id },
-      { sku: 'SKU-PAL-100', name: 'Standard Wooden Cargo Pallets', description: 'Euro-pallet 1200x800mm', category: 'Packaging', unit: 'pcs', defaultPrice: 22.00, currentStock: 120, reorderLevel: 40, preferredSupplier: suppliers[3]._id },
-      { sku: 'SKU-WCH-800', name: 'Electric Heavy Lifting Winch 2-Ton', description: 'Industrial grade 220V motor winch', category: 'Heavy Machinery & Tools', unit: 'units', defaultPrice: 850.00, currentStock: 15, reorderLevel: 5, preferredSupplier: suppliers[1]._id }
+    // -------------------------------------------------------------
+    // PRODUCTS
+    // -------------------------------------------------------------
+    const products = await Product.create([
+      { sku: 'SKU-HLMT-01', name: 'Safety Helmet - High Visibility Yellow', category: 'PPE', defaultPrice: 45.00, unit: 'units', description: 'ANSI Z89.1 Certified Type I Class E Hard Hat' },
+      { sku: 'SKU-GLVS-02', name: 'Heavy-Duty Cut Resistant Gloves (Pair)', category: 'PPE', defaultPrice: 18.50, unit: 'pairs', description: 'ANSI Cut Level A4 Nitrile Coated Gloves' },
+      { sku: 'SKU-VEST-03', name: 'Reflective Safety Vest - Class 2', category: 'PPE', defaultPrice: 24.00, unit: 'units', description: 'ANSI/ISEA 107-2020 High Vis Reflective Vest' }
     ]);
     console.log(`Created ${products.length} Products.`);
 
-    // 4. Create Docks
-    const docks = await Dock.insertMany([
-      { dockNumber: 'DOCK-01', name: 'Receiving Dock 1 (Dry Goods)', status: 'AVAILABLE', suitableLoadTypes: ['DRY_VAN', 'FLATBED'], notes: 'Near Aisle A' },
-      { dockNumber: 'DOCK-02', name: 'Receiving Dock 2 (Cold Storage)', status: 'OCCUPIED', suitableLoadTypes: ['REFRIGERATED'], notes: 'Temperature controlled bay' },
-      { dockNumber: 'DOCK-03', name: 'Receiving Dock 3 (Express High Priority)', status: 'AVAILABLE', suitableLoadTypes: ['DRY_VAN', 'HAZMAT'], notes: 'Direct access to high-bay rack' },
+    // -------------------------------------------------------------
+    // SUPPLIERS
+    // -------------------------------------------------------------
+    const suppliers = await Supplier.create([
+      {
+        name: 'Apex Industrial Safety Co.',
+        code: 'SUP-001',
+        email: 'orders@apexindustrial.com',
+        phone: '+1-800-555-0199',
+        rating: 4.9,
+        leadTimeDays: 2,
+        otdScore: 98
+      },
+      {
+        name: 'Vanguard Logistics & Supply Ltd.',
+        code: 'SUP-002',
+        email: 'sales@vanguardlogistics.com',
+        phone: '+1-800-555-0288',
+        rating: 4.4,
+        leadTimeDays: 4,
+        otdScore: 91
+      }
+    ]);
+    console.log(`Created ${suppliers.length} Suppliers with AI Scores.`);
+
+    // -------------------------------------------------------------
+    // YARD DOCKS
+    // -------------------------------------------------------------
+    const docks = await YardDock.create([
+      { dockNumber: 'DOCK-01', name: 'Receiving Dock 1 (High Bay)', status: 'AVAILABLE', suitableLoadTypes: ['DRY_VAN', 'REFRIGERATED'], notes: 'Standard pallet receiving' },
+      { dockNumber: 'DOCK-02', name: 'Receiving Dock 2 (Cold Storage)', status: 'AVAILABLE', suitableLoadTypes: ['REFRIGERATED'], notes: 'Temperature control bay' },
+      { dockNumber: 'DOCK-03', name: 'Receiving Dock 3 (Fast Track)', status: 'AVAILABLE', suitableLoadTypes: ['DRY_VAN', 'FLATBED'], notes: 'Priority unloading zone' },
       { dockNumber: 'DOCK-04', name: 'Receiving Dock 4 (Heavy Cargo)', status: 'MAINTENANCE', suitableLoadTypes: ['FLATBED', 'DRY_VAN'], notes: 'Hydraulic lift under repair' }
     ]);
     console.log(`Created ${docks.length} Yard Docks.`);
 
     // -------------------------------------------------------------
-    // SCENARIO 1: SUCCESSFUL END-TO-END FLOW (PO-1001)
+    // SCENARIO 1: LIVE DEMO INBOUND SHIPMENT (PO-1001 & TRK-9001)
     // -------------------------------------------------------------
     const pr1 = await PurchaseRequisition.create({
       prNumber: 'PR-1001',
@@ -102,7 +121,7 @@ const seedDatabase = async () => {
       supplierName: suppliers[0].name,
       items: [{ product: products[0]._id, productName: products[0].name, quantity: 500, unitPrice: 45.00, totalPrice: 22500.00 }],
       totalAmount: 22500.00,
-      status: 'RECEIVED'
+      status: 'ISSUED'
     });
 
     const shp1 = await Shipment.create({
@@ -112,7 +131,7 @@ const seedDatabase = async () => {
       origin: 'Apex Mfg Plant - Dallas, TX',
       destination: 'CogniYard Logistics Center - Bay 3',
       carrier: 'Apex Freight Corp',
-      status: 'DELIVERED',
+      status: 'IN_TRANSIT',
       estimatedArrival: '10:30 AM'
     });
 
@@ -123,15 +142,15 @@ const seedDatabase = async () => {
       poNumber: 'PO-1001',
       driverName: 'John Miller',
       driverPhone: '+1-555-9012',
-      latitude: 12.9716, // Yard Location
+      latitude: 12.9716,
       longitude: 77.5946,
-      status: 'UNLOADING',
+      status: 'IN_TRANSIT',
       eta: '10:30 AM',
       priority: 'HIGH',
       appointmentTime: '10:30 AM',
       loadType: 'DRY_VAN',
-      yardLocation: 'Zone A - Dock 03',
-      assignedDock: 'DOCK-03'
+      yardLocation: 'In Transit to Yard Gate',
+      assignedDock: null
     });
 
     const asn1 = await ASN.create({
@@ -140,16 +159,7 @@ const seedDatabase = async () => {
       shipmentId: shp1.shipmentNumber,
       supplierName: suppliers[0].name,
       items: [{ productName: products[0].name, quantity: 500, lotNumber: 'LOT-2026-H1' }],
-      status: 'RECEIVED'
-    });
-
-    const gr1 = await GoodsReceipt.create({
-      receiptNumber: 'GR-1001',
-      poNumber: 'PO-1001',
-      asnNumber: asn1.asnNumber,
-      receivedBy: 'Marcus Brody',
-      items: [{ productName: products[0].name, orderedQuantity: 500, receivedQuantity: 500, damagedQuantity: 0, acceptedQuantity: 500 }],
-      remarks: 'All 500 units inspected and verified intact.'
+      status: 'IN_TRANSIT'
     });
 
     await Inventory.create({
@@ -157,37 +167,12 @@ const seedDatabase = async () => {
       sku: products[0].sku,
       productName: products[0].name,
       warehouseLocation: 'Aisle A-01 (High-Bay)',
-      quantityOnHand: 750,
-      availableQuantity: 750
-    });
-
-    const inv1 = await Invoice.create({
-      invoiceNumber: 'INV-8801',
-      supplierName: suppliers[0].name,
-      poNumber: 'PO-1001',
-      items: [{ productName: products[0].name, quantity: 500, unitPrice: 45.00, totalPrice: 22500.00 }],
-      totalAmount: 22500.00,
-      fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
-      matchStatus: 'MATCHED',
-      ocrData: { matched: true, reasons: [] },
-      notes: '3-Way Match Passed cleanly (PO: 500, Receipt: 500, Invoice: 500).'
-    });
-
-    await Payment.create({
-      paymentNumber: 'PAY-3001',
-      invoiceId: inv1._id,
-      invoiceNumber: inv1.invoiceNumber,
-      poNumber: 'PO-1001',
-      supplierName: suppliers[0].name,
-      amount: 22500.00,
-      matchStatus: 'MATCHED',
-      paymentStatus: 'PAID',
-      paymentDate: new Date(),
-      transactionId: 'TXN-99882211'
+      quantityOnHand: 260,
+      availableQuantity: 260
     });
 
     // -------------------------------------------------------------
-    // SCENARIO 2: EXCEPTION SCENARIO - QUANTITY MISMATCH (PO-1002)
+    // SCENARIO 2: PARTIAL RECEIVING & MISMATCH TEST (PO-1002)
     // -------------------------------------------------------------
     const pr2 = await PurchaseRequisition.create({
       prNumber: 'PR-1002',
@@ -246,6 +231,15 @@ const seedDatabase = async () => {
       remarks: '50 units short shipment from supplier, 10 units damaged in transit.'
     });
 
+    await Inventory.create({
+      product: products[1]._id,
+      sku: products[1].sku,
+      productName: products[1].name,
+      warehouseLocation: 'Aisle B-04',
+      quantityOnHand: 440,
+      availableQuantity: 440
+    });
+
     const inv2 = await Invoice.create({
       invoiceNumber: 'INV-8802',
       supplierName: suppliers[0].name,
@@ -254,11 +248,8 @@ const seedDatabase = async () => {
       totalAmount: 9250.00,
       fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
       matchStatus: 'MISMATCH',
-      ocrData: {
-        matched: false,
-        reasons: ['Quantity Mismatch: Received/Accepted 440 units, but Invoice billed for 500 units (PO was 500 units).']
-      },
-      notes: 'Billed full amount $9250 despite receiving only 440 accepted units.'
+      ocrData: { matched: false, reasons: ['❌ Quantity Mismatch: Received/Accepted 440 units, but Invoice billed for 500 units.'] },
+      notes: 'Payment placed ON_HOLD due to quantity mismatch discrepancy.'
     });
 
     await Payment.create({
@@ -272,38 +263,20 @@ const seedDatabase = async () => {
       paymentStatus: 'ON_HOLD'
     });
 
-    // Additional active delayed truck for demo
-    await Truck.create({
-      truckId: 'TRK-9003',
-      trailerId: 'TRL-9920',
-      shipmentId: 'SHP-1003',
-      poNumber: 'PO-1003',
-      driverName: 'Samira Khan',
-      driverPhone: '+1-555-4422',
-      latitude: 12.9500,
-      longitude: 77.5700,
-      status: 'DELAYED',
-      eta: '04:45 PM (Delayed +2h)',
-      priority: 'URGENT',
-      appointmentTime: '02:30 PM',
-      loadType: 'FLATBED',
-      yardLocation: 'Highway Interstate 40'
-    });
+    // -------------------------------------------------------------
+    // INITIAL AUDIT LOGS
+    // -------------------------------------------------------------
+    await AuditLog.create([
+      { user: 'System Admin', role: 'admin', action: 'SEED_DATABASE', entity: 'System', details: 'Initialized CogniYard Hackathon MVP Seed Data.' },
+      { user: 'Alex Vance', role: 'procurement_manager', action: 'CREATE_PO', entity: 'PurchaseOrder', entityId: 'PO-1001', details: 'Issued PO-1001 to Apex Industrial Safety Co.' }
+    ]);
 
-    await AuditLog.create({
-      user: 'System Seed Engine',
-      role: 'admin',
-      action: 'SEED_DATABASE',
-      entity: 'System',
-      details: 'Populated CogniYard database with synthetic P2P and Yard Logistics datasets.'
-    });
-
-    console.log('✅ Database seeded successfully with synthetic SCM data!');
+    console.log('✅ CogniYard Database Seeding Completed Successfully!');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Seeding Error:', error);
     process.exit(1);
   }
-};
+}
 
 seedDatabase();

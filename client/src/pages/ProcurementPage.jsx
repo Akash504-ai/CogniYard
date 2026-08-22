@@ -8,7 +8,8 @@ import {
   Users, 
   Star, 
   ArrowRight,
-  Bot
+  Bot,
+  Award
 } from 'lucide-react';
 
 export default function ProcurementPage() {
@@ -19,11 +20,12 @@ export default function ProcurementPage() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // New PR Modal State
   const [isPrModalOpen, setIsPrModalOpen] = useState(false);
   const [newPrItem, setNewPrItem] = useState('');
-  const [newPrQty, setNewPrQty] = useState(100);
+  const [newPrQty, setNewPrQty] = useState(500);
   const [newPrPrice, setNewPrPrice] = useState(45);
 
   // Convert to PO Modal State
@@ -39,7 +41,7 @@ export default function ProcurementPage() {
       setLoading(true);
       const [prRes, supRes, poRes, prodRes] = await Promise.all([
         procurementAPI.getRequisitions(),
-        procurementAPI.getSuppliers(),
+        procurementAPI.evaluateSuppliers(), // Uses evaluated ranking endpoint
         procurementAPI.getPurchaseOrders(),
         procurementAPI.getProducts()
       ]);
@@ -56,10 +58,22 @@ export default function ProcurementPage() {
 
   const handleCreatePr = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
+    if (!newPrItem.trim()) {
+      showNotification('Please enter a valid item description', 'warning');
+      return;
+    }
+    if (Number(newPrQty) <= 0) {
+      showNotification('Quantity must be greater than 0', 'warning');
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const res = await procurementAPI.createRequisition({
         items: [{
-          productName: newPrItem || 'Safety Helmets',
+          productName: newPrItem.trim(),
           quantity: Number(newPrQty),
           estimatedUnitPrice: Number(newPrPrice)
         }],
@@ -67,27 +81,35 @@ export default function ProcurementPage() {
       });
       showNotification(`Created Requisition ${res.data.requisition.prNumber}`, 'success');
       setIsPrModalOpen(false);
+      setNewPrItem('');
       fetchProcurementData();
     } catch (err) {
-      showNotification('Failed to create requisition', 'warning');
+      showNotification(err.response?.data?.message || 'Failed to create requisition', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleApprovePr = async (prId) => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       await procurementAPI.approveRequisition(prId);
-      showNotification('Requisition approved!', 'success');
+      showNotification('Requisition approved successfully!', 'success');
       fetchProcurementData();
     } catch (err) {
-      showNotification('Error approving requisition', 'warning');
+      showNotification(err.response?.data?.message || 'Error approving requisition', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCreatePo = async (e) => {
     e.preventDefault();
-    if (!selectedPrForPo || !selectedSupplierId) return;
+    if (submitting || !selectedPrForPo || !selectedSupplierId) return;
 
     try {
+      setSubmitting(true);
       const res = await procurementAPI.createPurchaseOrder({
         prId: selectedPrForPo._id,
         supplierId: selectedSupplierId,
@@ -95,9 +117,12 @@ export default function ProcurementPage() {
       });
       showNotification(`Purchase Order ${res.data.purchaseOrder.poNumber} issued successfully!`, 'success');
       setSelectedPrForPo(null);
+      setSelectedSupplierId('');
       fetchProcurementData();
     } catch (err) {
-      showNotification('Error issuing Purchase Order', 'warning');
+      showNotification(err.response?.data?.message || 'Error issuing Purchase Order', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -213,7 +238,8 @@ export default function ProcurementPage() {
                       {pr.status === 'PENDING' && (
                         <button
                           onClick={() => handleApprovePr(pr._id)}
-                          className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] transition-all cursor-pointer"
+                          disabled={submitting}
+                          className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] transition-all cursor-pointer disabled:opacity-50"
                         >
                           Approve
                         </button>
@@ -221,11 +247,15 @@ export default function ProcurementPage() {
                       {pr.status === 'APPROVED' && (
                         <button
                           onClick={() => setSelectedPrForPo(pr)}
-                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all inline-flex items-center gap-1 cursor-pointer"
+                          disabled={submitting}
+                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         >
                           <span>Convert to PO</span>
                           <ArrowRight className="w-3 h-3" />
                         </button>
+                      )}
+                      {pr.status === 'CONVERTED_TO_PO' && (
+                        <span className="text-[10px] text-zinc-400 font-mono">PO Issued</span>
                       )}
                     </td>
                   </tr>
@@ -239,18 +269,32 @@ export default function ProcurementPage() {
       {/* Tab 2: Suppliers Matrix */}
       {activeTab === 'suppliers' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {suppliers.map((sup) => (
+          {suppliers.map((sup, idx) => (
             <div key={sup._id} className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-5 rounded-xl space-y-3 transition-colors">
               <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/80 pb-3">
                 <div>
-                  <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{sup.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{sup.name}</h4>
+                    {idx === 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20 flex items-center gap-1">
+                        <Award className="w-3 h-3" /> Top Pick
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] font-mono text-zinc-500">{sup.code} • {sup.category}</span>
                 </div>
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-medium">
-                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                  <span>{sup.rating} / 5.0</span>
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-medium">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>{sup.rating} / 5.0</span>
+                  </span>
+                  {sup.score && (
+                    <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400">Score: {sup.score}/100</span>
+                  )}
+                </div>
               </div>
+
+              {/* Performance Metrics */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-zinc-50 dark:bg-zinc-950 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
                   <span className="text-zinc-500 block text-[10px]">On-Time Delivery (OTD)</span>
@@ -261,6 +305,14 @@ export default function ProcurementPage() {
                   <strong className="text-zinc-800 dark:text-zinc-200 font-semibold text-sm">{sup.leadTimeDays} Days</strong>
                 </div>
               </div>
+
+              {/* Rationale Explanation */}
+              {sup.recommendationReason && (
+                <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
+                  {sup.recommendationReason}
+                </div>
+              )}
+
               <div className="text-[11px] text-zinc-500 flex items-center justify-between pt-1">
                 <span>Email: {sup.email}</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">{sup.status}</span>
@@ -322,7 +374,7 @@ export default function ProcurementPage() {
                   type="text"
                   value={newPrItem}
                   onChange={(e) => setNewPrItem(e.target.value)}
-                  placeholder="e.g. Safety Helmet - High Visibility Yellow"
+                  placeholder="e.g. 500 Safety Helmets"
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
                   required
                 />
@@ -332,6 +384,7 @@ export default function ProcurementPage() {
                   <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Quantity</label>
                   <input
                     type="number"
+                    min="1"
                     value={newPrQty}
                     onChange={(e) => setNewPrQty(e.target.value)}
                     className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
@@ -342,6 +395,7 @@ export default function ProcurementPage() {
                   <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Est. Unit Price ($)</label>
                   <input
                     type="number"
+                    min="1"
                     value={newPrPrice}
                     onChange={(e) => setNewPrPrice(e.target.value)}
                     className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
@@ -359,9 +413,10 @@ export default function ProcurementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold hover:bg-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer"
+                  disabled={submitting}
+                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold hover:bg-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer disabled:opacity-50"
                 >
-                  Submit PR
+                  {submitting ? 'Submitting...' : 'Submit PR'}
                 </button>
               </div>
             </form>
@@ -376,7 +431,7 @@ export default function ProcurementPage() {
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Issue PO for {selectedPrForPo.prNumber}</h3>
             <form onSubmit={handleCreatePo} className="space-y-4 text-xs">
               <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Select Supplier</label>
+                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Select Recommended Supplier</label>
                 <select
                   value={selectedSupplierId}
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
@@ -386,7 +441,7 @@ export default function ProcurementPage() {
                   <option value="">-- Choose Supplier --</option>
                   {suppliers.map(s => (
                     <option key={s._id} value={s._id}>
-                      {s.name} (Rating: {s.rating} | OTD: {s.otdScore}%)
+                      {s.name} (Score: {s.score}/100 | OTD: {s.otdScore}%)
                     </option>
                   ))}
                 </select>
@@ -394,7 +449,7 @@ export default function ProcurementPage() {
 
               <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1 text-zinc-700 dark:text-zinc-300">
                 <div className="font-semibold text-zinc-900 dark:text-zinc-100">Item: {selectedPrForPo.items[0]?.productName}</div>
-                <div>Quantity: {selectedPrForPo.items[0]?.quantity}</div>
+                <div>Quantity: {selectedPrForPo.items[0]?.quantity} units</div>
                 <div className="text-zinc-900 dark:text-zinc-100 font-bold">Total PO Amount: ${selectedPrForPo.totalAmount.toLocaleString()}</div>
               </div>
 
@@ -408,9 +463,10 @@ export default function ProcurementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold hover:bg-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer"
+                  disabled={submitting || !selectedSupplierId}
+                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
                 >
-                  Issue Purchase Order
+                  {submitting ? 'Issuing PO...' : 'Issue Purchase Order'}
                 </button>
               </div>
             </form>

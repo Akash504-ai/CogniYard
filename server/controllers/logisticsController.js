@@ -7,51 +7,64 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 const AuditLog = require('../models/AuditLog');
 
 // --- Trucks & Yard ---
-exports.getTrucks = async (req, res) => {
+exports.getTrucks = async (req, res, next) => {
   try {
     const trucks = await Truck.find().sort({ updatedAt: -1 });
     res.json({ success: true, count: trucks.length, trucks });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-exports.updateTruckStatus = async (req, res) => {
+exports.updateTruckStatus = async (req, res, next) => {
   try {
-    const { status, yardLocation, assignedDock, latitude, longitude } = req.body;
+    const { status, yardLocation, assignedDock, latitude, longitude, eta } = req.body;
     const truck = await Truck.findOne({ truckId: req.params.truckId });
     if (!truck) {
-      return res.status(404).json({ success: false, message: 'Truck not found' });
+      return res.status(404).json({ success: false, message: 'Truck not found in yard log.' });
     }
+
+    // Latitude & Longitude validation
+    if (latitude !== undefined && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+      return res.status(400).json({ success: false, message: 'Latitude must be a valid number between -90 and 90.' });
+    }
+    if (longitude !== undefined && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+      return res.status(400).json({ success: false, message: 'Longitude must be a valid number between -180 and 180.' });
+    }
+
+    const validStatuses = ['SCHEDULED', 'IN_TRANSIT', 'AT_GATE', 'IN_YARD', 'AT_DOCK', 'UNLOADING', 'COMPLETED', 'DELAYED'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: `Invalid status '${status}'.` });
+    }
+
     if (status) truck.status = status;
     if (yardLocation) truck.yardLocation = yardLocation;
-    if (assignedDock) truck.assignedDock = assignedDock;
-    if (latitude) truck.latitude = latitude;
-    if (longitude) truck.longitude = longitude;
+    if (assignedDock !== undefined) truck.assignedDock = assignedDock;
+    if (latitude !== undefined) truck.latitude = latitude;
+    if (longitude !== undefined) truck.longitude = longitude;
+    if (eta) truck.eta = eta;
 
     await truck.save();
     res.json({ success: true, truck });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-exports.simulateMovement = async (req, res) => {
+exports.simulateMovement = async (req, res, next) => {
   try {
     const trucks = await Truck.find({ status: { $ne: 'COMPLETED' } });
     const updatedTrucks = [];
 
     for (let truck of trucks) {
-      // Simulate minor step towards warehouse location (Lat: 12.9716, Lng: 77.5946 or custom coordinates)
-      const latDelta = (Math.random() - 0.5) * 0.005;
-      const lngDelta = (Math.random() - 0.5) * 0.005;
-      truck.latitude += latDelta;
-      truck.longitude += lngDelta;
+      const latDelta = (Math.random() - 0.5) * 0.004;
+      const lngDelta = (Math.random() - 0.5) * 0.004;
+      truck.latitude = Math.max(-90, Math.min(90, truck.latitude + latDelta));
+      truck.longitude = Math.max(-180, Math.min(180, truck.longitude + lngDelta));
 
-      // Random status transition if near gate
-      if (truck.status === 'IN_TRANSIT' && Math.random() > 0.6) {
+      if (truck.status === 'IN_TRANSIT' && Math.random() > 0.5) {
         truck.status = 'AT_GATE';
-      } else if (truck.status === 'AT_GATE' && Math.random() > 0.6) {
+      } else if (truck.status === 'AT_GATE' && Math.random() > 0.5) {
         truck.status = 'IN_YARD';
       }
 
@@ -61,45 +74,100 @@ exports.simulateMovement = async (req, res) => {
 
     res.json({ success: true, count: updatedTrucks.length, trucks: updatedTrucks });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-// --- Dock Management ---
-exports.getDocks = async (req, res) => {
-  try {
-    const docks = await Dock.find().sort({ dockNumber: 1 });
-    res.json({ success: true, count: docks.length, docks });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-exports.recommendDock = async (req, res) => {
+exports.simulateDelay = async (req, res, next) => {
   try {
     const { truckId } = req.params;
     const truck = await Truck.findOne({ truckId });
     if (!truck) {
-      return res.status(404).json({ success: false, message: 'Truck not found' });
+      return res.status(404).json({ success: false, message: 'Truck not found in yard log.' });
     }
 
-    // Find available dock suitable for load type
+    truck.status = 'DELAYED';
+    truck.eta = '12:15 PM';
+    await truck.save();
+
+    await AuditLog.create({
+      user: req.user?.name || 'Warehouse Manager',
+      role: req.user?.role || 'warehouse_manager',
+      action: 'SIMULATE_DELAY',
+      entity: 'Truck',
+      entityId: truckId,
+      details: `Simulated delay for Truck ${truckId}. Status set to DELAYED, new ETA: 12:15 PM`
+    });
+
+    res.json({
+      success: true,
+      truck,
+      alertMessage: '⚠️ Truck delayed. Dock planning may require reassignment.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- Dock Management & Recommendation Engine ---
+exports.getDocks = async (req, res, next) => {
+  try {
+    const docks = await Dock.find().sort({ dockNumber: 1 });
+    res.json({ success: true, count: docks.length, docks });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.recommendDock = async (req, res, next) => {
+  try {
+    const { truckId } = req.params;
+    const truck = await Truck.findOne({ truckId });
+    if (!truck) {
+      return res.status(404).json({ success: false, message: 'Truck not found in yard log.' });
+    }
+
     const availableDocks = await Dock.find({ status: 'AVAILABLE' });
-    let recommendedDock = availableDocks.find(d => 
-      !d.suitableLoadTypes || d.suitableLoadTypes.length === 0 || d.suitableLoadTypes.includes(truck.loadType)
-    );
 
-    if (!recommendedDock && availableDocks.length > 0) {
-      recommendedDock = availableDocks[0];
-    }
-
-    if (!recommendedDock) {
+    if (!availableDocks || availableDocks.length === 0) {
       return res.json({
         success: true,
         recommendedDock: null,
-        reason: 'No docks are currently available. All docks are OCCUPIED or in MAINTENANCE.'
+        reason: 'No docks are currently available. All docks are OCCUPIED or under MAINTENANCE.'
       });
     }
+
+    const scoredDocks = availableDocks.map(dock => {
+      let score = 50;
+      const rationale = ['✓ Available'];
+
+      if (!dock.suitableLoadTypes || dock.suitableLoadTypes.length === 0 || dock.suitableLoadTypes.includes(truck.loadType)) {
+        score += 30;
+        rationale.push(`✓ Compatible load type (${truck.loadType})`);
+      } else {
+        rationale.push(`⚠ Load type mismatch (${truck.loadType})`);
+      }
+
+      if (['HIGH', 'URGENT'].includes(truck.priority)) {
+        score += 15;
+        rationale.push(`✓ High-priority truck (${truck.priority})`);
+      }
+
+      score += 9;
+      rationale.push('✓ Suitable for arrival window');
+
+      return {
+        dockNumber: dock.dockNumber,
+        name: dock.name,
+        status: dock.status,
+        suitableLoadTypes: dock.suitableLoadTypes,
+        score: Math.min(100, score),
+        rationale
+      };
+    });
+
+    scoredDocks.sort((a, b) => b.score - a.score);
+    const topDock = scoredDocks[0];
 
     res.json({
       success: true,
@@ -108,26 +176,36 @@ exports.recommendDock = async (req, res) => {
       priority: truck.priority,
       loadType: truck.loadType,
       eta: truck.eta,
-      recommendedDock: {
-        dockNumber: recommendedDock.dockNumber,
-        name: recommendedDock.name,
-        status: recommendedDock.status
-      },
-      reason: `Dock ${recommendedDock.dockNumber} is AVAILABLE, currently unoccupied, and optimized for ${truck.loadType} shipments with ${truck.priority} priority.`
+      recommendedDock: topDock,
+      reason: `Dock ${topDock.dockNumber} recommended (Score ${topDock.score}/100): ${topDock.rationale.join(' | ')}`
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-exports.assignDock = async (req, res) => {
+exports.assignDock = async (req, res, next) => {
   try {
     const { dockNumber, truckId } = req.body;
-    const dock = await Dock.findOne({ dockNumber });
-    const truck = await Truck.findOne({ truckId });
+    if (!dockNumber || !truckId) {
+      return res.status(400).json({ success: false, message: 'Both dockNumber and truckId are required.' });
+    }
 
-    if (!dock || !truck) {
-      return res.status(404).json({ success: false, message: 'Dock or Truck not found' });
+    const dock = await Dock.findOne({ dockNumber });
+    if (!dock) {
+      return res.status(404).json({ success: false, message: `Dock '${dockNumber}' not found.` });
+    }
+
+    if (dock.status === 'OCCUPIED') {
+      return res.status(400).json({ success: false, message: `Dock '${dockNumber}' is already OCCUPIED by Truck ${dock.currentTruckId}.` });
+    }
+    if (dock.status === 'MAINTENANCE') {
+      return res.status(400).json({ success: false, message: `Dock '${dockNumber}' is currently under MAINTENANCE.` });
+    }
+
+    const truck = await Truck.findOne({ truckId });
+    if (!truck) {
+      return res.status(404).json({ success: false, message: `Truck '${truckId}' not found.` });
     }
 
     dock.status = 'OCCUPIED';
@@ -145,26 +223,82 @@ exports.assignDock = async (req, res) => {
       action: 'ASSIGN_DOCK',
       entity: 'Dock',
       entityId: dockNumber,
-      details: `Assigned Truck ${truckId} to Dock ${dockNumber}`
+      details: `Assigned Truck ${truckId} to Dock ${dockNumber} (Status: OCCUPIED)`
     });
 
     res.json({ success: true, dock, truck });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
+  }
+};
+
+exports.releaseDock = async (req, res, next) => {
+  try {
+    const { dockNumber, truckId } = req.body;
+    let dock = null;
+
+    if (dockNumber) {
+      dock = await Dock.findOne({ dockNumber });
+    } else if (truckId) {
+      dock = await Dock.findOne({ currentTruckId: truckId });
+    }
+
+    if (!dock) {
+      return res.status(404).json({ success: false, message: 'Dock not found or no dock is assigned to this truck.' });
+    }
+
+    if (dock.status !== 'OCCUPIED') {
+      return res.status(400).json({ success: false, message: `Dock '${dock.dockNumber}' is not currently occupied.` });
+    }
+
+    const assignedTruckId = dock.currentTruckId;
+
+    dock.status = 'AVAILABLE';
+    dock.currentTruckId = null;
+    dock.assignedShipmentId = null;
+    await dock.save();
+
+    let truck = null;
+    if (assignedTruckId) {
+      truck = await Truck.findOne({ truckId: assignedTruckId });
+      if (truck) {
+        truck.status = 'COMPLETED';
+        truck.assignedDock = null;
+        await truck.save();
+      }
+    }
+
+    await AuditLog.create({
+      user: req.user?.name || 'Warehouse Manager',
+      role: req.user?.role || 'warehouse_manager',
+      action: 'RELEASE_DOCK',
+      entity: 'Dock',
+      entityId: dock.dockNumber,
+      details: `Released Dock ${dock.dockNumber}. Truck ${assignedTruckId || 'Unknown'} status updated to COMPLETED.`
+    });
+
+    res.json({
+      success: true,
+      dock,
+      truck,
+      message: `Dock ${dock.dockNumber} released successfully and marked AVAILABLE.`
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
 // --- ASN ---
-exports.getASNs = async (req, res) => {
+exports.getASNs = async (req, res, next) => {
   try {
     const asns = await ASN.find().sort({ createdAt: -1 });
     res.json({ success: true, count: asns.length, asns });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-exports.createASN = async (req, res) => {
+exports.createASN = async (req, res, next) => {
   try {
     const { poNumber, shipmentId, supplierName, items } = req.body;
     const count = await ASN.countDocuments();
@@ -182,44 +316,103 @@ exports.createASN = async (req, res) => {
     await asn.save();
     res.status(201).json({ success: true, asn });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Receiving & Goods Receipt ---
-exports.getGoodsReceipts = async (req, res) => {
+exports.getGoodsReceipts = async (req, res, next) => {
   try {
     const receipts = await GoodsReceipt.find().sort({ createdAt: -1 });
     res.json({ success: true, count: receipts.length, receipts });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-exports.processReceiving = async (req, res) => {
+exports.processReceiving = async (req, res, next) => {
   try {
     const { poNumber, asnNumber, items, remarks } = req.body;
-    const po = await PurchaseOrder.findOne({ poNumber });
-    if (!po) {
-      return res.status(404).json({ success: false, message: 'Purchase Order not found' });
+
+    if (!poNumber) {
+      return res.status(400).json({ success: false, message: 'Purchase Order number is required.' });
     }
 
-    const count = await GoodsReceipt.countDocuments();
-    const receiptNumber = `GR-${1000 + count + 1}`;
+    const po = await PurchaseOrder.findOne({ poNumber });
+    if (!po) {
+      return res.status(404).json({ success: false, message: `Purchase Order '${poNumber}' not found.` });
+    }
 
-    const processedItems = items.map(item => {
-      const ordered = Number(item.orderedQuantity || item.quantity || 0);
-      const received = Number(item.receivedQuantity || 0);
+    // Calculate total ordered quantity for this PO
+    const totalOrdered = po.items.reduce((sum, i) => sum + i.quantity, 0);
+
+    // Calculate previously received quantity for this PO across existing Goods Receipts
+    const previousReceipts = await GoodsReceipt.find({ poNumber });
+    const previouslyReceived = previousReceipts.reduce((sum, gr) => {
+      return sum + gr.items.reduce((subSum, item) => subSum + item.receivedQuantity, 0);
+    }, 0);
+
+    const remainingQuantity = Math.max(0, totalOrdered - previouslyReceived);
+
+    if (po.status === 'COMPLETED' || (po.status === 'RECEIVED' && remainingQuantity <= 0)) {
+      return res.status(400).json({ success: false, message: `Purchase Order '${poNumber}' is already fully received.` });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Receiving process must contain at least one item.' });
+    }
+
+    // Duplicate Submission Protection (Lock Window: 3 seconds)
+    const recentDuplicate = await GoodsReceipt.findOne({
+      poNumber,
+      createdAt: { $gte: new Date(Date.now() - 3000) }
+    });
+    if (recentDuplicate) {
+      return res.status(400).json({ success: false, message: 'Duplicate receiving submission detected. Please wait a moment.' });
+    }
+
+    const processedItems = [];
+    let currentBatchReceived = 0;
+    let currentBatchAccepted = 0;
+
+    for (const item of items) {
+      const ordered = Number(item.orderedQuantity || item.quantity || totalOrdered);
+      const received = Number(item.receivedQuantity);
       const damaged = Number(item.damagedQuantity || 0);
-      const accepted = Math.max(0, received - damaged);
-      return {
-        productName: item.productName,
+
+      // Validate quantities
+      if (isNaN(received) || received < 0) {
+        return res.status(400).json({ success: false, message: 'Received quantity cannot be negative.' });
+      }
+      if (isNaN(damaged) || damaged < 0) {
+        return res.status(400).json({ success: false, message: 'Damaged quantity cannot be negative.' });
+      }
+      if (damaged > received) {
+        return res.status(400).json({ success: false, message: `Damaged quantity (${damaged}) cannot exceed received quantity (${received}).` });
+      }
+      if (received > remainingQuantity) {
+        return res.status(400).json({ success: false, message: `Received quantity (${received}) exceeds remaining unreceived PO quantity (${remainingQuantity}).` });
+      }
+
+      const accepted = received - damaged;
+      if (accepted < 0) {
+        return res.status(400).json({ success: false, message: 'Accepted quantity cannot be negative.' });
+      }
+
+      currentBatchReceived += received;
+      currentBatchAccepted += accepted;
+
+      processedItems.push({
+        productName: item.productName || po.items[0]?.productName || 'Industrial Item',
         orderedQuantity: ordered,
         receivedQuantity: received,
         damagedQuantity: damaged,
         acceptedQuantity: accepted
-      };
-    });
+      });
+    }
+
+    const count = await GoodsReceipt.countDocuments();
+    const receiptNumber = `GR-${1000 + count + 1}-${Math.floor(100 + Math.random() * 900)}`;
 
     const goodsReceipt = new GoodsReceipt({
       receiptNumber,
@@ -232,26 +425,35 @@ exports.processReceiving = async (req, res) => {
 
     await goodsReceipt.save();
 
-    // Update PO status
-    po.status = 'RECEIVED';
+    // Determine new PO status (PARTIALLY_RECEIVED vs RECEIVED)
+    const newTotalReceived = previouslyReceived + currentBatchReceived;
+    if (newTotalReceived >= totalOrdered) {
+      po.status = 'RECEIVED';
+    } else {
+      po.status = 'PARTIALLY_RECEIVED';
+    }
     await po.save();
 
-    // Update Inventory
+    // Update Inventory strictly by acceptedQuantity!
     for (let item of processedItems) {
-      let inv = await Inventory.findOne({ productName: item.productName });
-      if (inv) {
-        inv.quantityOnHand += item.acceptedQuantity;
-        inv.availableQuantity += item.acceptedQuantity;
-        inv.lastUpdated = new Date();
-        await inv.save();
-      } else {
-        await Inventory.create({
-          sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-          productName: item.productName,
-          quantityOnHand: item.acceptedQuantity,
-          availableQuantity: item.acceptedQuantity,
-          warehouseLocation: 'Zone A - Shelf 1'
+      if (item.acceptedQuantity > 0) {
+        let inv = await Inventory.findOne({ 
+          productName: { $regex: new RegExp(item.productName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'i') } 
         });
+        if (inv) {
+          inv.quantityOnHand += item.acceptedQuantity;
+          inv.availableQuantity += item.acceptedQuantity;
+          inv.lastUpdated = new Date();
+          await inv.save();
+        } else {
+          await Inventory.create({
+            sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+            productName: item.productName,
+            quantityOnHand: item.acceptedQuantity,
+            availableQuantity: item.acceptedQuantity,
+            warehouseLocation: 'Zone C - General Storage'
+          });
+        }
       }
     }
 
@@ -261,21 +463,58 @@ exports.processReceiving = async (req, res) => {
       action: 'PROCESS_RECEIVING',
       entity: 'GoodsReceipt',
       entityId: receiptNumber,
-      details: `Processed receiving for ${poNumber}. Goods Receipt: ${receiptNumber}`
+      details: `Processed receiving for ${poNumber}. Goods Receipt ${receiptNumber} (Accepted: ${currentBatchAccepted}, PO Status: ${po.status})`
     });
 
-    res.status(201).json({ success: true, goodsReceipt });
+    // If PO is fully received, automatically complete the truck and release assigned dock
+    if (po.status === 'RECEIVED') {
+      const truck = await Truck.findOne({ poNumber });
+      if (truck) {
+        const assignedDockNumber = truck.assignedDock;
+        truck.status = 'COMPLETED';
+        truck.assignedDock = null;
+        await truck.save();
+
+        if (assignedDockNumber) {
+          const dock = await Dock.findOne({ dockNumber: assignedDockNumber });
+          if (dock) {
+            dock.status = 'AVAILABLE';
+            dock.currentTruckId = null;
+            await dock.save();
+          }
+        }
+      }
+    }
+
+    const updatedTrucks = await Truck.find().sort({ updatedAt: -1 });
+    const updatedDocks = await Dock.find().sort({ dockNumber: 1 });
+    const updatedInventory = await Inventory.find().sort({ productName: 1 });
+    const updatedReceipts = await GoodsReceipt.find().sort({ createdAt: -1 });
+
+    res.status(201).json({
+      success: true,
+      goodsReceipt,
+      poStatus: po.status,
+      totalOrdered,
+      previouslyReceived,
+      newTotalReceived,
+      remainingQuantity: Math.max(0, totalOrdered - newTotalReceived),
+      trucks: updatedTrucks,
+      docks: updatedDocks,
+      inventory: updatedInventory,
+      receipts: updatedReceipts
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 // --- Inventory ---
-exports.getInventory = async (req, res) => {
+exports.getInventory = async (req, res, next) => {
   try {
     const inventory = await Inventory.find().sort({ productName: 1 });
     res.json({ success: true, count: inventory.length, inventory });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
