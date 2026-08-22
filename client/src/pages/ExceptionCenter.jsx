@@ -20,7 +20,10 @@ import {
   Check,
   UserCheck,
   Building2,
-  Lock
+  Lock,
+  Layers,
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 
 export default function ExceptionCenter() {
@@ -168,15 +171,15 @@ export default function ExceptionCenter() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsAiOpen(true)}
-              className="flex items-center gap-2 text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-indigo-500" />
+              <Sparkles className="w-4 h-4 text-indigo-500 group-hover:rotate-12 transition-transform" />
               <span>Ask Copilot</span>
             </button>
             <button
               onClick={fetchExceptions}
               disabled={isRefreshing}
-              className="text-xs px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+              className="text-xs px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRefreshing ? 'Syncing...' : 'Refresh Feed'}</span>
@@ -274,7 +277,7 @@ export default function ExceptionCenter() {
 
       </div>
 
-      {/* EXCEPTION CARDS TABLE / LIST */}
+      {/* EXCEPTION CARDS TABLE */}
       <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -304,7 +307,7 @@ export default function ExceptionCenter() {
                   
                   {/* Severity Badge */}
                   <td className="py-3.5 px-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider uppercase border ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider uppercase border ${
                       ex.severity === 'CRITICAL'
                         ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900'
                         : ex.severity === 'WARNING'
