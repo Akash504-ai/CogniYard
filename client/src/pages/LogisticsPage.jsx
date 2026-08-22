@@ -8,7 +8,17 @@ import {
   PackageCheck, 
   Zap,
   AlertTriangle,
-  LogOut
+  LogOut,
+  Clock,
+  Radio,
+  Warehouse,
+  FileText,
+  X,
+  Sparkles,
+  CheckCircle2,
+  Layers,
+  ArrowRight,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function LogisticsPage() {
@@ -177,97 +187,146 @@ export default function LogisticsPage() {
   };
 
   const calculatedAccepted = Math.max(0, Number(receivedQty || 0) - Number(damagedQty || 0));
+  const availableDocksCount = docks.filter(d => d.status === 'AVAILABLE').length;
+  const delayedTrucksCount = trucks.filter(t => t.status === 'DELAYED').length;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-5 rounded-xl transition-colors">
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 tracking-tight">
-            <Truck className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-            <span>Where's My Truck? — Yard & Dock Operations (E2)</span>
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Real-time Leaflet tracking, explainable dock allocation, and warehouse receiving.
-          </p>
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
+      
+      {/* Top Banner & Control Deck Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs">
+                <Truck className="w-5 h-5" />
+              </span>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                Yard Logistics & Inbound Fleet (E2)
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
+              GPS telemetry routing, real-time yard turnarounds, explainable dock allocation algorithms, and dockside quality inspection workflows.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => handleSimulateDelay(trucks[0]?.truckId)}
+              disabled={submitting}
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Simulate Delay</span>
+            </button>
+            <button
+              onClick={handleSimulateMovement}
+              disabled={submitting}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <span>Simulate Movement</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => handleSimulateDelay(trucks[0]?.truckId)}
-            disabled={submitting}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold transition-all cursor-pointer disabled:opacity-50"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span>Simulate Delay</span>
-          </button>
-          <button
-            onClick={handleSimulateMovement}
-            disabled={submitting}
-            className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Zap className="w-4 h-4 fill-current" />
-            <span>Simulate Movement</span>
-          </button>
+
+        {/* Quick Operations Telemetry Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Inbound In-Transit</span>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">{trucks.length} Trucks</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Available Docks</span>
+            <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{availableDocksCount} / {docks.length} Open</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Transit Anomalies</span>
+            <div className="text-sm font-bold text-rose-600 dark:text-rose-400 font-mono mt-0.5">{delayedTrucksCount} Delayed</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Receipts Generated</span>
+            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">{goodsReceipts.length} GRNs</div>
+          </div>
         </div>
       </div>
 
-      {/* Delay Alert Banner */}
+      {/* Delay Alert Notification Banner */}
       {delayAlert && (
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div className="p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
             <span>{delayAlert}</span>
           </div>
-          <button onClick={() => setDelayAlert(null)} className="text-xs underline opacity-80 hover:opacity-100 cursor-pointer">
-            Dismiss
+          <button
+            onClick={() => setDelayAlert(null)}
+            className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900 text-[11px] font-medium hover:opacity-80 transition-opacity cursor-pointer shadow-2xs"
+          >
+            Dismiss Alert
           </button>
         </div>
       )}
 
-      {/* Live Leaflet Map */}
+      {/* Real-time Fleet Telemetry Map */}
       <TruckMap trucks={trucks} onSimulateStep={handleSimulateMovement} />
 
-      {/* Dock Management Grid */}
+      {/* Dock Allocation Bay Matrix */}
       <div className="space-y-3">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-          <Boxes className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-          <span>Yard Dock Management & Live Status</span>
-        </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Boxes className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Active Yard Dock Bays
+            </h3>
+          </div>
+          <span className="text-[11px] text-zinc-400 font-mono">Automated Gate Assignment Active</span>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {docks.map((dock) => (
             <div
               key={dock._id}
-              className={`p-4 rounded-xl border transition-all bg-white dark:bg-zinc-900/50 flex flex-col justify-between space-y-3 ${
-                dock.status === 'AVAILABLE' ? 'border-emerald-500/30' :
-                dock.status === 'OCCUPIED' ? 'border-purple-500/30' :
-                'border-zinc-200 dark:border-zinc-800 opacity-60'
+              className={`relative p-5 rounded-2xl border transition-all bg-white dark:bg-zinc-900/60 backdrop-blur-xl flex flex-col justify-between space-y-4 shadow-sm ${
+                dock.status === 'AVAILABLE'
+                  ? 'border-emerald-500/30 hover:border-emerald-500/60'
+                  : dock.status === 'OCCUPIED'
+                  ? 'border-indigo-500/30 hover:border-indigo-500/60'
+                  : 'border-zinc-200 dark:border-zinc-800 opacity-60'
               }`}
             >
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 text-xs font-mono">{dock.dockNumber}</span>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
-                    dock.status === 'AVAILABLE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                    dock.status === 'OCCUPIED' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    {dock.dockNumber}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    dock.status === 'AVAILABLE' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                    dock.status === 'OCCUPIED' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-800/60' :
                     'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${dock.status === 'AVAILABLE' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
                     {dock.status}
                   </span>
                 </div>
-                <p className="text-xs text-zinc-800 dark:text-zinc-300 font-medium">{dock.name}</p>
-                <p className="text-[11px] text-zinc-500 mt-1 font-mono">
-                  Truck: <strong className="text-zinc-900 dark:text-zinc-200">{dock.currentTruckId || 'None'}</strong>
-                </p>
+
+                <div>
+                  <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{dock.name}</p>
+                  <p className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                    Target Truck: <strong className="text-zinc-900 dark:text-zinc-200">{dock.currentTruckId || 'None'}</strong>
+                  </p>
+                </div>
               </div>
 
               {dock.status === 'OCCUPIED' && (
                 <button
                   onClick={() => handleReleaseDock(dock.dockNumber)}
                   disabled={submitting}
-                  className="w-full py-1.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs border border-zinc-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  <LogOut className="w-3 h-3 text-zinc-500" />
-                  <span>Release Dock</span>
+                  <LogOut className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Release Dock Bay</span>
                 </button>
               )}
             </div>
@@ -275,57 +334,66 @@ export default function LogisticsPage() {
         </div>
       </div>
 
-      {/* Active Trucks Queue Table */}
-      <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Active Truck Queue & Receiving Controls</h3>
+      {/* Active Inbound Truck Queue Table */}
+      <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Truck className="w-4 h-4 text-zinc-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Active Truck Manifest & Dockside Receiving
+            </h3>
+          </div>
+          <span className="text-[11px] text-zinc-400 font-mono">Real-time GPS sync</span>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+            <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
               <tr>
-                <th className="p-3.5">Truck ID</th>
-                <th className="p-3.5">PO Ref</th>
-                <th className="p-3.5">Trailer / Driver</th>
-                <th className="p-3.5">ETA</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5">Assigned Dock</th>
-                <th className="p-3.5 text-right">Actions</th>
+                <th className="py-3.5 px-4 font-semibold">Truck ID</th>
+                <th className="py-3.5 px-4 font-semibold">PO Reference</th>
+                <th className="py-3.5 px-4 font-semibold">Trailer & Driver</th>
+                <th className="py-3.5 px-4 font-semibold">Estimated Arrival</th>
+                <th className="py-3.5 px-4 font-semibold">Status</th>
+                <th className="py-3.5 px-4 font-semibold">Allocated Dock</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Yard Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
               {trucks.filter(truck => truck.status !== 'COMPLETED').map((truck) => (
-                <tr key={truck._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                  <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{truck.truckId}</td>
-                  <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200 font-medium">{truck.poNumber}</td>
-                  <td className="p-3.5">
-                    <div>{truck.trailerId}</div>
-                    <div className="text-[10px] text-zinc-500">{truck.driverName}</div>
+                <tr key={truck._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{truck.truckId}</td>
+                  <td className="py-3.5 px-4 font-mono font-semibold text-zinc-800 dark:text-zinc-200">{truck.poNumber}</td>
+                  <td className="py-3.5 px-4">
+                    <div className="font-semibold text-zinc-900 dark:text-zinc-100">{truck.trailerId}</div>
+                    <div className="text-[10px] text-zinc-400">{truck.driverName}</div>
                   </td>
-                  <td className="p-3.5 font-medium text-amber-600 dark:text-amber-400">{truck.eta}</td>
-                  <td className="p-3.5">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                      truck.status === 'DELAYED' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
-                      truck.status === 'UNLOADING' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                      truck.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                      'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  <td className="py-3.5 px-4 font-mono font-semibold text-amber-600 dark:text-amber-400">{truck.eta}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      truck.status === 'DELAYED' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60' :
+                      truck.status === 'UNLOADING' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/60' :
+                      truck.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                      'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60'
                     }`}>
                       {truck.status}
                     </span>
                   </td>
-                  <td className="p-3.5 font-mono text-zinc-700 dark:text-zinc-300">{truck.assignedDock || 'Unassigned'}</td>
-                  <td className="p-3.5 text-right space-x-2">
+                  <td className="py-3.5 px-4 font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                    {truck.assignedDock || <span className="text-zinc-400 font-normal">Unassigned</span>}
+                  </td>
+                  <td className="py-3.5 px-4 text-right space-x-1.5">
                     <button
                       onClick={() => handleSimulateDelay(truck.truckId)}
                       disabled={submitting}
-                      className="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-medium text-[11px] border border-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-600 dark:text-amber-400 font-semibold text-xs border border-amber-200/60 dark:border-amber-900/40 transition-all cursor-pointer disabled:opacity-50"
                     >
                       Delay
                     </button>
                     <button
                       onClick={() => handleGetDockRecommendation(truck)}
                       disabled={submitting}
-                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer disabled:opacity-50"
                     >
                       Recommend Dock
                     </button>
@@ -339,7 +407,7 @@ export default function LogisticsPage() {
                         setDamagedQty(0);
                       }}
                       disabled={submitting}
-                      className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] shadow-sm transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm transition-all inline-flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
                     >
                       <PackageCheck className="w-3.5 h-3.5" />
                       <span>Receive Goods</span>
@@ -352,35 +420,45 @@ export default function LogisticsPage() {
         </div>
       </div>
 
-      {/* Live Warehouse Inventory Table */}
-      <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl space-y-2">
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-            <Boxes className="w-4 h-4" />
-            <span>Synchronized Warehouse Inventory Stock</span>
-          </h3>
+      {/* Synchronized Warehouse Inventory Stock Table */}
+      <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Warehouse className="w-4 h-4 text-zinc-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Synchronized Warehouse Inventory Stock
+            </h3>
+          </div>
+          <span className="text-[11px] text-zinc-400 font-mono">ERP Live Connect</span>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+            <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
               <tr>
-                <th className="p-3.5">SKU / Code</th>
-                <th className="p-3.5">Product Description</th>
-                <th className="p-3.5">Location</th>
-                <th className="p-3.5">Stock On Hand</th>
-                <th className="p-3.5">Available Stock</th>
-                <th className="p-3.5">Last Updated</th>
+                <th className="py-3.5 px-4 font-semibold">SKU Identifier</th>
+                <th className="py-3.5 px-4 font-semibold">Product Description</th>
+                <th className="py-3.5 px-4 font-semibold">Warehouse Bay</th>
+                <th className="py-3.5 px-4 font-semibold">Stock On Hand</th>
+                <th className="py-3.5 px-4 font-semibold">Available Stock</th>
+                <th className="py-3.5 px-4 font-semibold">Telemetry Updated</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
               {inventory.map((item) => (
-                <tr key={item._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                  <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{item.sku}</td>
-                  <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">{item.productName}</td>
-                  <td className="p-3.5 text-zinc-500 font-mono">{item.warehouseLocation || 'Aisle A-01'}</td>
-                  <td className="p-3.5 font-bold text-emerald-600 dark:text-emerald-400 text-sm">{item.quantityOnHand.toLocaleString()}</td>
-                  <td className="p-3.5 font-semibold text-zinc-900 dark:text-zinc-100">{item.availableQuantity.toLocaleString()}</td>
-                  <td className="p-3.5 text-zinc-500 text-[11px]">{new Date(item.updatedAt || item.lastUpdated).toLocaleString()}</td>
+                <tr key={item._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{item.sku}</td>
+                  <td className="py-3.5 px-4 font-medium text-zinc-900 dark:text-zinc-200">{item.productName}</td>
+                  <td className="py-3.5 px-4 text-zinc-500 font-mono">{item.warehouseLocation || 'Aisle A-01'}</td>
+                  <td className="py-3.5 px-4 font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+                    {item.quantityOnHand.toLocaleString()}
+                  </td>
+                  <td className="py-3.5 px-4 font-semibold font-mono text-zinc-900 dark:text-zinc-100">
+                    {item.availableQuantity.toLocaleString()}
+                  </td>
+                  <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">
+                    {new Date(item.updatedAt || item.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -390,22 +468,50 @@ export default function LogisticsPage() {
 
       {/* Dock Recommendation Modal */}
       {recommendedDock && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-              <span>Smart Dock Recommendation</span>
-            </h3>
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Explainable Dock Allocation</h3>
+              </div>
+              <button
+                onClick={() => setRecommendedDock(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            <div className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs text-zinc-700 dark:text-zinc-300">
-              <div className="text-zinc-900 dark:text-zinc-200 font-semibold">Truck: {recommendedDock.truckId} ({recommendedDock.poNumber})</div>
-              <div>ETA: <strong>{recommendedDock.eta}</strong> | Priority: <strong>{recommendedDock.priority}</strong> | Load Type: <strong>{recommendedDock.loadType}</strong></div>
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 space-y-3 text-xs text-zinc-700 dark:text-zinc-300">
+              <div className="flex items-center justify-between font-mono">
+                <span className="text-zinc-400">Target Vehicle:</span>
+                <strong className="text-zinc-900 dark:text-zinc-100">{recommendedDock.truckId} ({recommendedDock.poNumber})</strong>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1">
+                <div className="bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200/60 dark:border-zinc-800">
+                  <span className="text-[9px] uppercase text-zinc-400 block font-semibold">ETA</span>
+                  <strong>{recommendedDock.eta}</strong>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200/60 dark:border-zinc-800">
+                  <span className="text-[9px] uppercase text-zinc-400 block font-semibold">Priority</span>
+                  <strong className="text-indigo-600 dark:text-indigo-400">{recommendedDock.priority}</strong>
+                </div>
+                <div className="bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200/60 dark:border-zinc-800">
+                  <span className="text-[9px] uppercase text-zinc-400 block font-semibold">Load</span>
+                  <strong>{recommendedDock.loadType}</strong>
+                </div>
+              </div>
 
               {recommendedDock.recommendedDock ? (
-                <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="mt-3 pt-3 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Recommended Bay</span>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Score: {recommendedDock.recommendedDock.score}/100</span>
+                    <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Recommended Bay</span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      Allocation Score: {recommendedDock.recommendedDock.score}/100
+                    </span>
                   </div>
 
                   <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
@@ -413,11 +519,11 @@ export default function LogisticsPage() {
                   </div>
 
                   {recommendedDock.recommendedDock.rationale && (
-                    <div className="space-y-1 pt-1">
-                      <span className="text-[10px] text-zinc-500 block">Scoring Rationale:</span>
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] text-zinc-400 block font-semibold">Allocation Logic:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {recommendedDock.recommendedDock.rationale.map((reason, idx) => (
-                          <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20">
+                          <span key={idx} className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-200/60 dark:border-emerald-800/60">
                             {reason}
                           </span>
                         ))}
@@ -433,17 +539,17 @@ export default function LogisticsPage() {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setRecommendedDock(null)}
-                className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer text-xs"
               >
-                Close
+                Dismiss
               </button>
               {recommendedDock.recommendedDock && (
                 <button
                   onClick={() => handleAssignDock(recommendedDock.recommendedDock.dockNumber, recommendedDock.truckId)}
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold text-xs shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Assign to {recommendedDock.recommendedDock.dockNumber}
+                  Confirm Bay {recommendedDock.recommendedDock.dockNumber}
                 </button>
               )}
             </div>
@@ -451,79 +557,97 @@ export default function LogisticsPage() {
         </div>
       )}
 
-      {/* Goods Receipt Modal */}
+      {/* Goods Receiving Modal */}
       {receivingPo && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Process Warehouse Receiving</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Enter received & damaged quantities for {receivingPo.poNumber}</p>
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <PackageCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Dockside Goods Inward (GRN)</h3>
+                  <p className="text-[11px] text-zinc-400 font-mono">Reference: {receivingPo.poNumber}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReceivingPo(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            <form onSubmit={handleProcessReceiving} className="space-y-3 text-xs">
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1 text-zinc-700 dark:text-zinc-300">
+            <form onSubmit={handleProcessReceiving} className="space-y-4 text-xs">
+              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl space-y-1 text-zinc-700 dark:text-zinc-300">
                 <div className="font-semibold text-zinc-900 dark:text-zinc-100">Item: {receivingPo.item}</div>
-                <div>Ordered Quantity: <strong className="text-zinc-900 dark:text-zinc-200">{receivingPo.ordered}</strong></div>
+                <div className="text-[11px] text-zinc-400 font-mono">
+                  Ordered Quantity: <strong className="text-zinc-800 dark:text-zinc-200">{receivingPo.ordered} units</strong>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Received Quantity</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Received Quantity</label>
                   <input
                     type="number"
                     min="0"
                     value={receivedQty}
                     onChange={(e) => setReceivedQty(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-semibold"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 font-mono text-zinc-900 dark:text-zinc-100 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Damaged Quantity</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Damaged / Rejected</label>
                   <input
                     type="number"
                     min="0"
                     value={damagedQty}
                     onChange={(e) => setDamagedQty(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-semibold"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 font-mono text-zinc-900 dark:text-zinc-100 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   />
                 </div>
               </div>
 
-              {/* Calculated Accepted Summary Banner */}
-              <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-between">
-                <span>Calculated Accepted Stock:</span>
-                <span className="font-mono text-sm">{calculatedAccepted} units</span>
+              {/* Calculated Accepted Summary Pill */}
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between">
+                <span>Net Accepted Inventory:</span>
+                <span className="font-mono text-sm font-bold">{calculatedAccepted} units</span>
               </div>
 
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Inspection Remarks</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Inspector Remarks</label>
                 <textarea
                   value={receivingRemarks}
                   onChange={(e) => setReceivingRemarks(e.target.value)}
-                  placeholder="e.g. Inspected at dock. 10 units damaged in transit."
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 h-16"
-                ></textarea>
+                  placeholder="e.g. Inspected at dock bay 2. Certified intact."
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all h-16 resize-none"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setReceivingPo(null)}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold text-xs shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? 'Processing...' : 'Create Goods Receipt & Sync Inventory'}
+                  {submitting ? 'Processing...' : 'Generate GRN & Sync Stock'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }
