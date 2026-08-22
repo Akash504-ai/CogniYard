@@ -82,7 +82,7 @@ export const financeAPI = {
 };
 
 export const aiAPI = {
-  chat: (message) => api.post('/ai/chat', { message }),
+  chat: (message, confirmed = false, params = null, chatHistory = []) => api.post('/ai/chat', { message, confirmed, params, chatHistory }),
 };
 
 export const analyticsAPI = {

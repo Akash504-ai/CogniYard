@@ -264,6 +264,89 @@ async function seedDatabase() {
     });
 
     // -------------------------------------------------------------
+    // SCENARIO 3: COMPLETED LIFECYCLE DEMO (PO-1003 & TRK-1003)
+    // -------------------------------------------------------------
+    const pr3 = await PurchaseRequisition.create({
+      prNumber: 'PR-1003',
+      requestedBy: 'Alex Vance',
+      items: [{ product: products[0]._id, productName: 'Industrial Cooling Fan', quantity: 50000, estimatedUnitPrice: 5000.00, totalPrice: 250000000.00 }],
+      totalAmount: 250000000.00,
+      status: 'CONVERTED_TO_PO',
+      priority: 'HIGH',
+      aiGenerated: false
+    });
+
+    const po3 = await PurchaseOrder.create({
+      poNumber: 'PO-1003',
+      prId: pr3._id,
+      supplier: suppliers[0]._id,
+      supplierName: suppliers[0].name,
+      items: [{ product: products[0]._id, productName: 'Industrial Cooling Fan', quantity: 50000, unitPrice: 5000.00, totalPrice: 250000000.00 }],
+      totalAmount: 250000000.00,
+      status: 'RECEIVED'
+    });
+
+    const shp3 = await Shipment.create({
+      shipmentNumber: 'SHP-1003',
+      poNumber: 'PO-1003',
+      supplierName: suppliers[0].name,
+      origin: 'Apex Industrial Plant',
+      destination: 'CogniYard Main Dock',
+      carrier: 'Apex Express Heavy',
+      status: 'DELIVERED',
+      estimatedArrival: '10:30 AM'
+    });
+
+    const truck3 = await Truck.create({
+      truckId: 'TRK-1003',
+      trailerId: 'TRL-3303',
+      shipmentId: shp3.shipmentNumber,
+      poNumber: 'PO-1003',
+      driverName: 'Marcus Miller',
+      driverPhone: '+1-555-3399',
+      latitude: 12.9716,
+      longitude: 77.5946,
+      status: 'COMPLETED',
+      eta: '10:30 AM',
+      priority: 'HIGH',
+      appointmentTime: '10:30 AM',
+      loadType: 'DRY_VAN',
+      yardLocation: 'Dock Bay 1'
+    });
+
+    const gr3 = await GoodsReceipt.create({
+      receiptNumber: 'GR-1003',
+      poNumber: 'PO-1003',
+      asnNumber: 'ASN-1003',
+      receivedBy: 'Warehouse Manager',
+      items: [{ productName: 'Industrial Cooling Fan', orderedQuantity: 50000, receivedQuantity: 50000, damagedQuantity: 1, acceptedQuantity: 49999 }],
+      remarks: '49,999 units accepted into stock, 1 unit damaged in transit.'
+    });
+
+    const inv3 = await Invoice.create({
+      invoiceNumber: 'INV-3333',
+      supplierName: suppliers[0].name,
+      poNumber: 'PO-1003',
+      items: [{ productName: 'Industrial Cooling Fan', quantity: 49999, unitPrice: 5000.00, totalPrice: 249995000.00 }],
+      totalAmount: 249995000.00,
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      matchStatus: 'MATCHED',
+      ocrData: { matched: true, reasons: [] },
+      notes: '3-Way Match verified cleanly. Billed for accepted quantity (49,999 units).'
+    });
+
+    await Payment.create({
+      paymentNumber: 'PAY-3003',
+      invoiceId: inv3._id,
+      invoiceNumber: inv3.invoiceNumber,
+      poNumber: 'PO-1003',
+      supplierName: suppliers[0].name,
+      amount: 249995000.00,
+      matchStatus: 'MATCHED',
+      paymentStatus: 'PAID'
+    });
+
+    // -------------------------------------------------------------
     // INITIAL AUDIT LOGS
     // -------------------------------------------------------------
     await AuditLog.create([
