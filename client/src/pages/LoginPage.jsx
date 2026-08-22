@@ -1,9 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, ROLE_LABELS, ROLES } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { GoogleLogin } from '@react-oauth/google';
-import { Boxes, Lock, Mail, ArrowRight, Key, Sun, Moon } from 'lucide-react';
+import { 
+  Boxes, 
+  Lock, 
+  Mail, 
+  ArrowRight, 
+  Key, 
+  Sun, 
+  Moon, 
+  Shield, 
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Truck,
+  Receipt,
+  ShoppingCart,
+  ShieldCheck
+} from 'lucide-react';
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
@@ -14,6 +30,41 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const demoAccounts = [
+    {
+      role: 'Procurement',
+      title: 'Procurement Mgr',
+      email: 'procurement@cogniyard.com',
+      icon: ShoppingCart,
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bg: 'bg-indigo-500/10'
+    },
+    {
+      role: 'Warehouse',
+      title: 'Yard & Logistics',
+      email: 'warehouse@cogniyard.com',
+      icon: Truck,
+      color: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-500/10'
+    },
+    {
+      role: 'Finance',
+      title: 'Finance & AP',
+      email: 'finance@cogniyard.com',
+      icon: Receipt,
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-500/10'
+    },
+    {
+      role: 'Admin',
+      title: 'System Admin',
+      email: 'admin@cogniyard.com',
+      icon: ShieldCheck,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-500/10'
+    }
+  ];
 
   const handleQuickLogin = (demoEmail, demoPassword = 'password123') => {
     setEmail(demoEmail);
@@ -49,60 +100,81 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 flex flex-col justify-center items-center p-4 relative transition-colors">
-      {/* Sun/Moon Toggle Top Right */}
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col justify-center items-center p-4 relative overflow-hidden transition-colors selection:bg-indigo-500 selection:text-white">
+      
+      {/* Ambient Radial Background Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 right-10 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Theme Toggle */}
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-all cursor-pointer"
-        title="Toggle Theme"
+        className="absolute top-5 right-5 p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-all shadow-2xs cursor-pointer z-10"
+        title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
       >
-        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-600" />}
       </button>
 
-      <div className="w-full max-w-md bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 p-8 rounded-xl shadow-2xl space-y-6">
+      {/* Main Authentication Card */}
+      <div className="w-full max-w-md bg-white/80 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-7 sm:p-8 rounded-3xl shadow-xl space-y-6 relative z-10">
+        
         {/* Brand Header */}
-        <div className="text-center space-y-1.5">
-          <div className="inline-flex w-10 h-10 rounded-lg bg-zinc-900 dark:bg-zinc-100 items-center justify-center text-zinc-100 dark:text-zinc-950 font-bold mb-1">
-            <Boxes className="w-5 h-5" />
+        <div className="text-center space-y-2">
+          <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 items-center justify-center text-white shadow-md shadow-indigo-500/20 mb-1">
+            <Boxes className="w-6 h-6 stroke-[2.2]" />
           </div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">CogniYard</h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">AI-Enabled Procurement & Yard Platform</p>
+          <div className="space-y-0.5">
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              CogniYard Platform
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Autonomous Yard Logistics & Procurement AI
+            </p>
+          </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Error Notification Alert */}
         {error && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-md text-xs">
-            {error}
+          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
-        {/* Form */}
+        {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Email Address</label>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              Enterprise Email
+            </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+              <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="procurement@cogniyard.com"
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-500 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 rounded-md pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors font-mono"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs focus:outline-none transition-all font-mono"
                 required
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Password</label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Password
+              </label>
+              <span className="text-[10px] text-zinc-400 font-mono">Demo: password123</span>
+            </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+              <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-500 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 rounded-md pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors font-mono"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs focus:outline-none transition-all font-mono"
                 required
               />
             </div>
@@ -111,13 +183,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
           >
             {loading ? (
-              <span>Authenticating...</span>
+              <span className="font-mono">Authenticating Session...</span>
             ) : (
               <>
-                <span>Sign In to CogniYard</span>
+                <span>Enter Workspace</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
@@ -125,93 +197,64 @@ export default function LoginPage() {
         </form>
 
         {/* Divider */}
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-zinc-200 dark:border-zinc-800"></div>
-          <span className="flex-shrink mx-3 text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-medium">Or</span>
-          <div className="flex-grow border-t border-zinc-200 dark:border-zinc-800"></div>
+        <div className="relative flex items-center py-0.5">
+          <div className="flex-grow border-t border-zinc-200/80 dark:border-zinc-800/80" />
+          <span className="flex-shrink mx-3 text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+            Single Sign-On
+          </span>
+          <div className="flex-grow border-t border-zinc-200/80 dark:border-zinc-800/80" />
         </div>
 
-        {/* Google OAuth */}
+        {/* Google OAuth Login */}
         <div className="flex justify-center">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => setError('Google Sign-In failed')}
-            theme={isDark ? "filled_dark" : "outline"}
-            shape="rectangular"
+            theme={isDark ? "filled_black" : "outline"}
+            shape="pill"
+            size="medium"
           />
         </div>
 
-        {/* Quick Demo Accounts Grid */}
-        <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">
-            <span>Quick Demo Accounts</span>
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">Click to auto-fill</span>
+        {/* Quick Demo Profiles Grid */}
+        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2.5">
+          <div className="flex items-center justify-between text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+            <span>Quick Role Emulation</span>
+            <span className="font-mono text-indigo-600 dark:text-indigo-400">1-Click Autofill</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {/* Procurement Manager */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('procurement@cogniyard.com', 'password123')}
-              className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left transition-all group cursor-pointer"
-            >
-              <div className="font-medium text-zinc-900 dark:text-zinc-200 text-xs">Procurement Manager</div>
-              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 truncate">procurement@cogniyard.com</div>
-              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-1 mt-0.5">
-                <Key className="w-3 h-3 text-zinc-500" />
-                <span>password123</span>
-              </div>
-            </button>
-
-            {/* Warehouse Manager */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('warehouse@cogniyard.com', 'password123')}
-              className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left transition-all group cursor-pointer"
-            >
-              <div className="font-medium text-zinc-900 dark:text-zinc-200 text-xs">Warehouse Manager</div>
-              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 truncate">warehouse@cogniyard.com</div>
-              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-1 mt-0.5">
-                <Key className="w-3 h-3 text-zinc-500" />
-                <span>password123</span>
-              </div>
-            </button>
-
-            {/* Finance User */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('finance@cogniyard.com', 'password123')}
-              className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left transition-all group cursor-pointer"
-            >
-              <div className="font-medium text-zinc-900 dark:text-zinc-200 text-xs">Finance User</div>
-              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 truncate">finance@cogniyard.com</div>
-              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-1 mt-0.5">
-                <Key className="w-3 h-3 text-zinc-500" />
-                <span>password123</span>
-              </div>
-            </button>
-
-            {/* System Admin */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@cogniyard.com', 'password123')}
-              className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-left transition-all group cursor-pointer"
-            >
-              <div className="font-medium text-zinc-900 dark:text-zinc-200 text-xs">System Admin</div>
-              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 truncate">admin@cogniyard.com</div>
-              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-1 mt-0.5">
-                <Key className="w-3 h-3 text-zinc-500" />
-                <span>password123</span>
-              </div>
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            {demoAccounts.map((acc, idx) => {
+              const Icon = acc.icon;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleQuickLogin(acc.email, 'password123')}
+                  className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200/70 dark:border-zinc-800/70 hover:border-indigo-300 dark:hover:border-indigo-800/60 hover:bg-white dark:hover:bg-zinc-900 text-left transition-all group cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`p-1 rounded-md ${acc.bg} ${acc.color}`}>
+                      <Icon className="w-3 h-3" />
+                    </div>
+                    <span className="font-semibold text-zinc-900 dark:text-zinc-200 text-[11px] truncate">
+                      {acc.title}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-400 truncate">
+                    {acc.email}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-xs text-zinc-500 dark:text-zinc-400 pt-1">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-zinc-900 dark:text-zinc-200 font-semibold hover:underline">
-            Register here
+        {/* Footer Registration Link */}
+        <div className="text-center text-xs text-zinc-400 dark:text-zinc-500 pt-1">
+          Don't have an enterprise account?{' '}
+          <Link to="/register" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+            Register workspace
           </Link>
         </div>
       </div>
