@@ -9,7 +9,17 @@ import {
   Star, 
   ArrowRight,
   Bot,
-  Award
+  Award,
+  Clock,
+  DollarSign,
+  Layers,
+  FileCheck,
+  TrendingUp,
+  X,
+  Building2,
+  Sparkles,
+  Search,
+  ChevronRight
 } from 'lucide-react';
 
 export default function ProcurementPage() {
@@ -41,7 +51,7 @@ export default function ProcurementPage() {
       setLoading(true);
       const [prRes, supRes, poRes, prodRes] = await Promise.all([
         procurementAPI.getRequisitions(),
-        procurementAPI.evaluateSuppliers(), // Uses evaluated ranking endpoint
+        procurementAPI.evaluateSuppliers(),
         procurementAPI.getPurchaseOrders(),
         procurementAPI.getProducts()
       ]);
@@ -126,136 +136,188 @@ export default function ProcurementPage() {
     }
   };
 
+  const totalCommittedSpend = purchaseOrders.reduce((acc, po) => acc + (po.totalAmount || 0), 0);
+  const pendingApprovalsCount = requisitions.filter(r => r.status === 'PENDING').length;
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-5 rounded-xl transition-colors">
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 tracking-tight">
-            <ShoppingCart className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-            <span>Procurement Lifecycle Management (P2P)</span>
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Manage Purchase Requisitions, Supplier Evaluations, and Purchase Orders.
-          </p>
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
+      
+      {/* Top Banner & Action Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs">
+                <ShoppingCart className="w-5 h-5" />
+              </span>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                Procurement & Sourcing Hub
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
+              Full lifecycle Procure-to-Pay (P2P): Auto-generate purchase requisitions, analyze supplier performance metrics, and issue POs with audit trails.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAiOpen(true)}
+              className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-indigo-500 group-hover:rotate-12 transition-transform" />
+              <span>Ask Copilot</span>
+            </button>
+            <button
+              onClick={() => setIsPrModalOpen(true)}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Requisition</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2.5">
+
+        {/* Quick Operational Metrics Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Total PO Spend</span>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">${totalCommittedSpend.toLocaleString()}</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Active PRs</span>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">{requisitions.length}</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Pending Approval</span>
+            <div className="text-sm font-bold text-amber-600 dark:text-amber-400 font-mono mt-0.5">{pendingApprovalsCount}</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Vendor Network</span>
+            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">{suppliers.length} Certified</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Segmented Tab Navigation */}
+      <div className="flex items-center justify-between">
+        <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
           <button
-            onClick={() => setIsAiOpen(true)}
-            className="flex items-center gap-2 text-xs px-3 py-2 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 font-medium transition-all cursor-pointer"
+            onClick={() => setActiveTab('requisitions')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'requisitions'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Bot className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-            <span>AI Assistant</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>Requisitions</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-mono">
+              {requisitions.length}
+            </span>
           </button>
+
           <button
-            onClick={() => setIsPrModalOpen(true)}
-            className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer"
+            onClick={() => setActiveTab('suppliers')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'suppliers'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            <span>New Requisition</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Supplier Matrix</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-mono">
+              {suppliers.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('pos')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'pos'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <FileCheck className="w-3.5 h-3.5" />
+            <span>Purchase Orders</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-mono">
+              {purchaseOrders.length}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-        <button
-          onClick={() => setActiveTab('requisitions')}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-            activeTab === 'requisitions'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Requisitions ({requisitions.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('suppliers')}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-            activeTab === 'suppliers'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Supplier Matrix ({suppliers.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('pos')}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-            activeTab === 'pos'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Purchase Orders ({purchaseOrders.length})
-        </button>
-      </div>
-
-      {/* Tab 1: Requisitions */}
+      {/* Tab 1: Requisitions Table */}
       {activeTab === 'requisitions' && (
-        <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+              <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
                 <tr>
-                  <th className="p-3.5">PR Number</th>
-                  <th className="p-3.5">Requested Item</th>
-                  <th className="p-3.5">Quantity</th>
-                  <th className="p-3.5">Est. Total ($)</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Source</th>
-                  <th className="p-3.5 text-right">Actions</th>
+                  <th className="py-3.5 px-4 font-semibold">PR Identifier</th>
+                  <th className="py-3.5 px-4 font-semibold">Requested Scope</th>
+                  <th className="py-3.5 px-4 font-semibold">Quantity</th>
+                  <th className="py-3.5 px-4 font-semibold">Est. Total Value</th>
+                  <th className="py-3.5 px-4 font-semibold">Status</th>
+                  <th className="py-3.5 px-4 font-semibold">Origin</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Operational Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
                 {requisitions.map((pr) => (
-                  <tr key={pr._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                    <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{pr.prNumber}</td>
-                    <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">
+                  <tr key={pr._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{pr.prNumber}</td>
+                    <td className="py-3.5 px-4 font-medium text-zinc-900 dark:text-zinc-200">
                       {pr.items.map(i => i.productName).join(', ')}
                     </td>
-                    <td className="p-3.5 font-medium">{pr.items.reduce((s, i) => s + i.quantity, 0)}</td>
-                    <td className="p-3.5 text-zinc-900 dark:text-zinc-100 font-semibold">${pr.totalAmount.toLocaleString()}</td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                        pr.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                        pr.status === 'CONVERTED_TO_PO' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    <td className="py-3.5 px-4 font-mono font-medium">
+                      {pr.items.reduce((s, i) => s + i.quantity, 0).toLocaleString()} units
+                    </td>
+                    <td className="py-3.5 px-4 text-zinc-900 dark:text-zinc-100 font-bold font-mono">
+                      ${pr.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        pr.status === 'APPROVED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                        pr.status === 'CONVERTED_TO_PO' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-800/60' :
+                        'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60'
                       }`}>
+                        {pr.status === 'APPROVED' && <CheckCircle2 className="w-3 h-3" />}
                         {pr.status}
                       </span>
                     </td>
-                    <td className="p-3.5">
+                    <td className="py-3.5 px-4">
                       {pr.aiGenerated ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-mono">
-                          Grok AI
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 font-mono font-medium">
+                          <Bot className="w-3 h-3" /> Grok AI
                         </span>
                       ) : (
-                        <span className="text-[10px] text-zinc-500">Manual</span>
+                        <span className="text-[10px] text-zinc-400 font-mono">Manual Input</span>
                       )}
                     </td>
-                    <td className="p-3.5 text-right space-x-2">
+                    <td className="py-3.5 px-4 text-right">
                       {pr.status === 'PENDING' && (
                         <button
                           onClick={() => handleApprovePr(pr._id)}
                           disabled={submitting}
-                          className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] transition-all cursor-pointer disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-xs transition-all shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
-                          Approve
+                          Approve PR
                         </button>
                       )}
                       {pr.status === 'APPROVED' && (
                         <button
                           onClick={() => setSelectedPrForPo(pr)}
                           disabled={submitting}
-                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 font-semibold text-xs border border-indigo-200/80 dark:border-indigo-800/80 transition-all inline-flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
                           <span>Convert to PO</span>
                           <ArrowRight className="w-3 h-3" />
                         </button>
                       )}
                       {pr.status === 'CONVERTED_TO_PO' && (
-                        <span className="text-[10px] text-zinc-400 font-mono">PO Issued</span>
+                        <span className="text-[11px] text-zinc-400 font-mono font-medium">✓ Dispatched</span>
                       )}
                     </td>
                   </tr>
@@ -266,94 +328,116 @@ export default function ProcurementPage() {
         </div>
       )}
 
-      {/* Tab 2: Suppliers Matrix */}
+      {/* Tab 2: Supplier Matrix Grid */}
       {activeTab === 'suppliers' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {suppliers.map((sup, idx) => (
-            <div key={sup._id} className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-5 rounded-xl space-y-3 transition-colors">
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/80 pb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">{sup.name}</h4>
-                    {idx === 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20 flex items-center gap-1">
-                        <Award className="w-3 h-3" /> Top Pick
-                      </span>
-                    )}
+            <div key={sup._id} className="relative bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-2xl flex flex-col justify-between space-y-4 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm group">
+              
+              {/* Card Header */}
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm tracking-tight">{sup.name}</h4>
+                      {idx === 0 && (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1 uppercase tracking-wider">
+                          <Award className="w-3 h-3" /> Preferred
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">{sup.code} • {sup.category}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-zinc-500">{sup.code} • {sup.category}</span>
+
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span>{sup.rating}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-medium">
-                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span>{sup.rating} / 5.0</span>
-                  </span>
-                  {sup.score && (
-                    <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400">Score: {sup.score}/100</span>
-                  )}
-                </div>
+
+                {/* Score / Performance Bar */}
+                {sup.score && (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between text-[10px] font-medium text-zinc-500">
+                      <span>Evaluation Index</span>
+                      <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{sup.score} / 100</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full"
+                        style={{ width: `${sup.score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Performance Metrics */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-zinc-50 dark:bg-zinc-950 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                  <span className="text-zinc-500 block text-[10px]">On-Time Delivery (OTD)</span>
-                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm">{sup.otdScore}%</strong>
+              {/* Performance Metrics Stats */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-zinc-50 dark:bg-zinc-950/50 p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">OTD Score</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-bold text-sm">{sup.otdScore}%</strong>
                 </div>
-                <div className="bg-zinc-50 dark:bg-zinc-950 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                  <span className="text-zinc-500 block text-[10px]">Lead Time</span>
-                  <strong className="text-zinc-800 dark:text-zinc-200 font-semibold text-sm">{sup.leadTimeDays} Days</strong>
+                <div className="bg-zinc-50 dark:bg-zinc-950/50 p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Avg Lead Time</span>
+                  <strong className="text-zinc-800 dark:text-zinc-200 font-mono font-bold text-sm">{sup.leadTimeDays} Days</strong>
                 </div>
               </div>
 
               {/* Rationale Explanation */}
               {sup.recommendationReason && (
-                <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
+                <div className="p-3 rounded-xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
                   {sup.recommendationReason}
                 </div>
               )}
 
-              <div className="text-[11px] text-zinc-500 flex items-center justify-between pt-1">
-                <span>Email: {sup.email}</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">{sup.status}</span>
+              <div className="text-[11px] text-zinc-400 flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/80 font-mono">
+                <span className="truncate max-w-[160px]">{sup.email}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{sup.status}</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tab 3: Purchase Orders */}
+      {/* Tab 3: Purchase Orders Table */}
       {activeTab === 'pos' && (
-        <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+              <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
                 <tr>
-                  <th className="p-3.5">PO Number</th>
-                  <th className="p-3.5">Supplier</th>
-                  <th className="p-3.5">Items Summary</th>
-                  <th className="p-3.5">Total Amount ($)</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Issued Date</th>
+                  <th className="py-3.5 px-4 font-semibold">PO Number</th>
+                  <th className="py-3.5 px-4 font-semibold">Dispatched Supplier</th>
+                  <th className="py-3.5 px-4 font-semibold">Line Items Summary</th>
+                  <th className="py-3.5 px-4 font-semibold">Committed Amount</th>
+                  <th className="py-3.5 px-4 font-semibold">Fulfillment State</th>
+                  <th className="py-3.5 px-4 font-semibold">Date Dispatched</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
                 {purchaseOrders.map((po) => (
-                  <tr key={po._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                    <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{po.poNumber}</td>
-                    <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">{po.supplierName}</td>
-                    <td className="p-3.5 text-zinc-500 dark:text-zinc-400">{po.items.map(i => `${i.quantity} x ${i.productName}`).join(', ')}</td>
-                    <td className="p-3.5 text-zinc-900 dark:text-zinc-100 font-bold">${po.totalAmount.toLocaleString()}</td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                        po.status === 'RECEIVED' || po.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                        po.status === 'PARTIALLY_RECEIVED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                  <tr key={po._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{po.poNumber}</td>
+                    <td className="py-3.5 px-4 font-semibold text-zinc-900 dark:text-zinc-200">{po.supplierName}</td>
+                    <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 font-mono">
+                      {po.items.map(i => `${i.quantity} × ${i.productName}`).join(', ')}
+                    </td>
+                    <td className="py-3.5 px-4 text-zinc-900 dark:text-zinc-100 font-bold font-mono">
+                      ${po.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        po.status === 'RECEIVED' || po.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                        po.status === 'PARTIALLY_RECEIVED' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60' :
                         'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
                       }`}>
                         {po.status}
                       </span>
                     </td>
-                    <td className="p-3.5 text-zinc-500 text-[11px]">{new Date(po.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">
+                      {new Date(po.createdAt).toLocaleDateString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -364,59 +448,83 @@ export default function ProcurementPage() {
 
       {/* New PR Modal */}
       {isPrModalOpen && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Create Purchase Requisition</h3>
-            <form onSubmit={handleCreatePr} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Item Description</label>
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Draft Purchase Requisition</h3>
+              </div>
+              <button
+                onClick={() => setIsPrModalOpen(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePr} className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Item Specification / Description</label>
                 <input
                   type="text"
                   value={newPrItem}
                   onChange={(e) => setNewPrItem(e.target.value)}
-                  placeholder="e.g. 500 Safety Helmets"
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                  placeholder="e.g. Industrial Safety Helmets"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   required
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Quantity</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Required Quantity</label>
                   <input
                     type="number"
                     min="1"
                     value={newPrQty}
                     onChange={(e) => setNewPrQty(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Est. Unit Price ($)</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Est. Unit Price ($)</label>
                   <input
                     type="number"
                     min="1"
                     value={newPrPrice}
                     onChange={(e) => setNewPrPrice(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     required
                   />
                 </div>
               </div>
+
+              {/* Total Calculation Preview */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <span className="text-zinc-500 font-medium">Estimated Expenditure:</span>
+                <span className="font-mono font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  ${(Number(newPrQty || 0) * Number(newPrPrice || 0)).toLocaleString()}
+                </span>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsPrModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold hover:bg-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? 'Submitting...' : 'Submit PR'}
+                  {submitting ? 'Submitting...' : 'Issue Requisition'}
                 </button>
               </div>
             </form>
@@ -426,53 +534,80 @@ export default function ProcurementPage() {
 
       {/* Convert PR to PO Modal */}
       {selectedPrForPo && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Issue PO for {selectedPrForPo.prNumber}</h3>
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <FileCheck className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Convert to Purchase Order</h3>
+              </div>
+              <button
+                onClick={() => setSelectedPrForPo(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
             <form onSubmit={handleCreatePo} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Select Recommended Supplier</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Assign Certified Supplier</label>
                 <select
                   value={selectedSupplierId}
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   required
                 >
-                  <option value="">-- Choose Supplier --</option>
+                  <option value="">-- Choose Evaluated Supplier --</option>
                   {suppliers.map(s => (
                     <option key={s._id} value={s._id}>
-                      {s.name} (Score: {s.score}/100 | OTD: {s.otdScore}%)
+                      {s.name} (Index: {s.score}/100 • OTD: {s.otdScore}%)
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1 text-zinc-700 dark:text-zinc-300">
-                <div className="font-semibold text-zinc-900 dark:text-zinc-100">Item: {selectedPrForPo.items[0]?.productName}</div>
-                <div>Quantity: {selectedPrForPo.items[0]?.quantity} units</div>
-                <div className="text-zinc-900 dark:text-zinc-100 font-bold">Total PO Amount: ${selectedPrForPo.totalAmount.toLocaleString()}</div>
+              {/* Target PR Summary Box */}
+              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl space-y-2 text-zinc-700 dark:text-zinc-300">
+                <div className="flex items-center justify-between font-mono text-[11px]">
+                  <span className="text-zinc-400">Target Requisition:</span>
+                  <strong className="text-zinc-900 dark:text-zinc-100">{selectedPrForPo.prNumber}</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-400">Scope:</span>
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{selectedPrForPo.items[0]?.productName}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                  <span className="text-zinc-500 font-medium">Total PO Commitment:</span>
+                  <strong className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                    ${selectedPrForPo.totalAmount.toLocaleString()}
+                  </strong>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setSelectedPrForPo(null)}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !selectedSupplierId}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? 'Issuing PO...' : 'Issue Purchase Order'}
+                  {submitting ? 'Generating PO...' : 'Dispatch Purchase Order'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }
