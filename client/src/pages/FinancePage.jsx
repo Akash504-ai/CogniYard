@@ -10,11 +10,19 @@ import {
   ExternalLink, 
   Lock,
   Plus,
-  Trash2
+  Trash2,
+  Sparkles,
+  RefreshCw,
+  Scale,
+  DollarSign,
+  ShieldAlert,
+  ArrowRight,
+  X,
+  Building2
 } from 'lucide-react';
 
 export default function FinancePage() {
-  const { showNotification } = useAuth();
+  const { showNotification, setIsAiOpen } = useAuth();
   const [activeTab, setActiveTab] = useState('invoices');
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -155,114 +163,167 @@ export default function FinancePage() {
     }
   };
 
+  const totalInvoicedSpend = invoices.reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
+  const matchedCount = invoices.filter(i => i.matchStatus === 'MATCHED').length;
+  const mismatchCount = invoices.filter(i => i.matchStatus === 'MISMATCH').length;
+  const pendingPaymentsAmount = payments.filter(p => p.paymentStatus !== 'PAID').reduce((acc, p) => acc + (p.amount || 0), 0);
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 p-5 rounded-xl transition-colors">
-        <div>
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 tracking-tight">
-            <Receipt className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-            <span>Autonomous P2P 3-Way Matching & Payment Workflow</span>
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Automated verification across Purchase Order, Goods Receipt, and Cloudinary Invoices.
-          </p>
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
+      
+      {/* Top Banner & Control Deck Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs">
+                <Scale className="w-5 h-5" />
+              </span>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                Finance & Autonomous 3-Way Match
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
+              Automated cross-reconciliation across Purchase Orders, Goods Receipts, and Invoices. Zero-touch payment approval with exception locking.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAiOpen(true)}
+              className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-indigo-500 group-hover:rotate-12 transition-transform" />
+              <span>Audit Copilot</span>
+            </button>
+            <button
+              onClick={() => {
+                setInvNumber(`INV-${Math.floor(1000 + Math.random() * 9000)}`);
+                setIsInvoiceModalOpen(true);
+              }}
+              disabled={submitting}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ingest Invoice</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Operational Metrics Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Total Invoiced</span>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">${totalInvoicedSpend.toLocaleString()}</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Clean Matches</span>
+            <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{matchedCount} Verified</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Discrepancy Holds</span>
+            <div className="text-sm font-bold text-rose-600 dark:text-rose-400 font-mono mt-0.5">{mismatchCount} Locked</div>
+          </div>
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Pending Outflow</span>
+            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">${pendingPaymentsAmount.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Segmented Tab Navigation */}
+      <div className="flex items-center justify-between">
+        <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
           <button
-            onClick={() => {
-              setInvNumber(`INV-${Math.floor(1000 + Math.random() * 9000)}`);
-              setIsInvoiceModalOpen(true);
-            }}
-            disabled={submitting}
-            className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            onClick={() => setActiveTab('invoices')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'invoices'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            <span>Upload Invoice</span>
+            <Receipt className="w-3.5 h-3.5" />
+            <span>Invoices & 3-Way Match</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-mono">
+              {invoices.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'payments'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Payment Executions</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-mono">
+              {payments.length}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-        <button
-          onClick={() => setActiveTab('invoices')}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-            activeTab === 'invoices'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Invoices & 3-Way Match ({invoices.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('payments')}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-            activeTab === 'payments'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Payment Executions ({payments.length})
-        </button>
-      </div>
-
-      {/* Tab 1: Invoices */}
+      {/* Tab 1: Invoices Table */}
       {activeTab === 'invoices' && (
-        <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+              <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
                 <tr>
-                  <th className="p-3.5">Invoice #</th>
-                  <th className="p-3.5">PO Ref</th>
-                  <th className="p-3.5">Supplier</th>
-                  <th className="p-3.5">Billed Amount ($)</th>
-                  <th className="p-3.5">Document</th>
-                  <th className="p-3.5">3-Way Match Status</th>
-                  <th className="p-3.5 text-right">Actions</th>
+                  <th className="py-3.5 px-4 font-semibold">Invoice #</th>
+                  <th className="py-3.5 px-4 font-semibold">PO Reference</th>
+                  <th className="py-3.5 px-4 font-semibold">Supplier Vendor</th>
+                  <th className="py-3.5 px-4 font-semibold">Billed Amount</th>
+                  <th className="py-3.5 px-4 font-semibold">Cloudinary Proof</th>
+                  <th className="py-3.5 px-4 font-semibold">3-Way Match Verification</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Auditing Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
                 {invoices.map((inv) => (
-                  <tr key={inv._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                    <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{inv.invoiceNumber}</td>
-                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200 font-medium">{inv.poNumber}</td>
-                    <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">{inv.supplierName}</td>
-                    <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-100">${inv.totalAmount.toLocaleString()}</td>
-                    <td className="p-3.5">
+                  <tr key={inv._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{inv.invoiceNumber}</td>
+                    <td className="py-3.5 px-4 font-mono font-semibold text-zinc-800 dark:text-zinc-200">{inv.poNumber}</td>
+                    <td className="py-3.5 px-4 font-medium text-zinc-900 dark:text-zinc-200">{inv.supplierName}</td>
+                    <td className="py-3.5 px-4 text-zinc-900 dark:text-zinc-100 font-bold font-mono">
+                      ${inv.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4">
                       <a
                         href={inv.fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium"
+                        className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium group"
                       >
                         <FileText className="w-3.5 h-3.5" />
-                        <span>Cloudinary View</span>
-                        <ExternalLink className="w-3 h-3 opacity-60" />
+                        <span>View Document</span>
+                        <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
                       </a>
                     </td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border flex items-center gap-1 w-max ${
-                        inv.matchStatus === 'MATCHED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                        inv.matchStatus === 'MISMATCH' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        inv.matchStatus === 'MATCHED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                        inv.matchStatus === 'MISMATCH' ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60' :
+                        'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60'
                       }`}>
                         {inv.matchStatus === 'MATCHED' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                         <span>{inv.matchStatus}</span>
                       </span>
                     </td>
-                    <td className="p-3.5 text-right space-x-2">
+                    <td className="py-3.5 px-4 text-right space-x-1.5">
                       <button
                         onClick={() => setSelectedInvoiceForMatch(inv)}
-                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium text-[11px] border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer"
                       >
                         Inspect Audit
                       </button>
                       <button
                         onClick={() => handleRunMatch(inv._id)}
                         disabled={submitting}
-                        className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-[11px] shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
                       >
                         Re-Match
                       </button>
@@ -270,7 +331,7 @@ export default function FinancePage() {
                         onClick={() => handleDeleteInvoice(inv._id)}
                         disabled={submitting}
                         title="Delete Invoice"
-                        className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
+                        className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -283,62 +344,70 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* Tab 2: Payments */}
+      {/* Tab 2: Payments Table */}
       {activeTab === 'payments' && (
-        <div className="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-100 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-zinc-800 font-medium">
+              <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
                 <tr>
-                  <th className="p-3.5">Payment Ref</th>
-                  <th className="p-3.5">Invoice #</th>
-                  <th className="p-3.5">PO Ref</th>
-                  <th className="p-3.5">Supplier</th>
-                  <th className="p-3.5">Amount ($)</th>
-                  <th className="p-3.5">3-Way Match</th>
-                  <th className="p-3.5">Payment Status</th>
-                  <th className="p-3.5 text-right">Actions</th>
+                  <th className="py-3.5 px-4 font-semibold">Payment Ref</th>
+                  <th className="py-3.5 px-4 font-semibold">Invoice Ref</th>
+                  <th className="py-3.5 px-4 font-semibold">PO Ref</th>
+                  <th className="py-3.5 px-4 font-semibold">Beneficiary Supplier</th>
+                  <th className="py-3.5 px-4 font-semibold">Total Amount</th>
+                  <th className="py-3.5 px-4 font-semibold">3-Way Integrity</th>
+                  <th className="py-3.5 px-4 font-semibold">Settlement Status</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Execution</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-300">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
                 {payments.map((pay) => (
-                  <tr key={pay._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                    <td className="p-3.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">{pay.paymentNumber}</td>
-                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200">{pay.invoiceNumber}</td>
-                    <td className="p-3.5 font-mono text-zinc-900 dark:text-zinc-200">{pay.poNumber}</td>
-                    <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-200">{pay.supplierName}</td>
-                    <td className="p-3.5 font-bold text-zinc-900 dark:text-zinc-100">${pay.amount.toLocaleString()}</td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                        pay.matchStatus === 'MATCHED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                  <tr key={pay._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{pay.paymentNumber}</td>
+                    <td className="py-3.5 px-4 font-mono text-zinc-800 dark:text-zinc-200">{pay.invoiceNumber}</td>
+                    <td className="py-3.5 px-4 font-mono text-zinc-800 dark:text-zinc-200">{pay.poNumber}</td>
+                    <td className="py-3.5 px-4 font-semibold text-zinc-900 dark:text-zinc-200">{pay.supplierName}</td>
+                    <td className="py-3.5 px-4 font-bold font-mono text-zinc-900 dark:text-zinc-100">${pay.amount.toLocaleString()}</td>
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        pay.matchStatus === 'MATCHED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                        'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60'
                       }`}>
                         {pay.matchStatus}
                       </span>
                     </td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                        pay.paymentStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                        pay.paymentStatus === 'APPROVED' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
-                        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        pay.paymentStatus === 'PAID' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60' :
+                        pay.paymentStatus === 'APPROVED' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-800/60' :
+                        'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60'
                       }`}>
                         {pay.paymentStatus}
                       </span>
                     </td>
-                    <td className="p-3.5 text-right space-x-2">
+                    <td className="py-3.5 px-4 text-right space-x-1.5">
                       {pay.paymentStatus !== 'PAID' ? (
                         <button
                           onClick={() => handleUpdatePayment(pay._id, 'PAID')}
                           disabled={submitting || pay.matchStatus === 'MISMATCH'}
-                          className={`px-2.5 py-1 rounded font-semibold text-[11px] transition-all cursor-pointer disabled:opacity-50 ${
+                          className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 ${
                             pay.matchStatus === 'MISMATCH'
-                              ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed border border-zinc-300 dark:border-zinc-700'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                              ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed border border-zinc-200 dark:border-zinc-700'
+                              : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
                           }`}
                         >
-                          {pay.matchStatus === 'MISMATCH' ? <span className="flex items-center gap-1"><Lock className="w-3 h-3"/> Locked (Mismatch)</span> : 'Pay Invoice'}
+                          {pay.matchStatus === 'MISMATCH' ? (
+                            <span className="flex items-center gap-1.5">
+                              <Lock className="w-3 h-3 text-rose-500" />
+                              <span>Locked (Mismatch)</span>
+                            </span>
+                          ) : (
+                            'Authorize Outflow'
+                          )}
                         </button>
                       ) : (
-                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
                           Txn: {pay.transactionId}
                         </span>
                       )}
@@ -346,7 +415,7 @@ export default function FinancePage() {
                         onClick={() => handleDeletePayment(pay._id)}
                         disabled={submitting}
                         title="Delete Payment Record"
-                        className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
+                        className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -361,16 +430,33 @@ export default function FinancePage() {
 
       {/* Upload Invoice Modal */}
       {isInvoiceModalOpen && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Upload Supplier Invoice</h3>
-            <form onSubmit={handleCreateInvoice} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-emerald-600 dark:text-emerald-400 font-semibold mb-1">⚡ Quick Autofill from Purchase Order</label>
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Upload & Ingest Vendor Invoice</h3>
+              </div>
+              <button
+                onClick={() => setIsInvoiceModalOpen(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateInvoice} className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Autofill from Released Purchase Order</span>
+                </label>
                 <select
                   value={invPoNumber}
                   onChange={(e) => handleSelectPo(e.target.value)}
-                  className="w-full bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none font-medium cursor-pointer"
+                  className="w-full bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/80 rounded-xl px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none font-medium cursor-pointer"
                 >
                   <option value="">-- Choose PO to Pre-fill Form --</option>
                   {purchaseOrders.map((p) => (
@@ -381,58 +467,59 @@ export default function FinancePage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Invoice Number</label>
-                <input
-                  type="text"
-                  value={invNumber}
-                  onChange={(e) => setInvNumber(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-mono"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={invNumber}
+                    onChange={(e) => setInvNumber(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">PO Number</label>
+                  <input
+                    type="text"
+                    value={invPoNumber}
+                    onChange={(e) => setInvPoNumber(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    required
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Purchase Order Reference</label>
-                <input
-                  type="text"
-                  value={invPoNumber}
-                  onChange={(e) => setInvPoNumber(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-mono"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Supplier Name</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Supplier Vendor Name</label>
                 <input
                   type="text"
                   value={invSupplier}
                   onChange={(e) => setInvSupplier(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Total Billed Amount ($)</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Billed Total Amount ($)</label>
                 <input
                   type="number"
                   min="1"
                   value={invAmount}
                   onChange={(e) => setInvAmount(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500 font-semibold"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 font-mono text-zinc-900 dark:text-zinc-100 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-zinc-600 dark:text-zinc-400 mb-1">Cloudinary File Storage URL</label>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Cloudinary File Storage URL</label>
                 <input
                   type="text"
                   value={invFileUrl}
                   onChange={(e) => setInvFileUrl(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-500"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
 
@@ -440,16 +527,16 @@ export default function FinancePage() {
                 <button
                   type="button"
                   onClick={() => setIsInvoiceModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded-md bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm hover:bg-zinc-800 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? 'Processing...' : 'Save & Trigger 3-Way Match'}
+                  {submitting ? 'Running OCR...' : 'Save & Trigger 3-Way Match'}
                 </button>
               </div>
             </form>
@@ -459,75 +546,94 @@ export default function FinancePage() {
 
       {/* Match Audit Inspection Modal */}
       {selectedInvoiceForMatch && (
-        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-lg p-6 rounded-xl shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-              <span>3-Way Match Audit Inspector</span>
-              <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                selectedInvoiceForMatch.matchStatus === 'MATCHED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-xl p-6 rounded-2xl shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                  <Scale className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">3-Way Match Audit Inspector</h3>
+              </div>
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
+                selectedInvoiceForMatch.matchStatus === 'MATCHED'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60'
               }`}>
                 {selectedInvoiceForMatch.matchStatus}
               </span>
-            </h3>
+            </div>
 
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-3 text-xs text-zinc-700 dark:text-zinc-300">
-              <div className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2 font-mono">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl space-y-3 text-xs text-zinc-700 dark:text-zinc-300">
+              <div className="flex justify-between border-b border-zinc-200/60 dark:border-zinc-800/80 pb-2 font-mono">
                 <span>Invoice: <strong className="text-zinc-900 dark:text-zinc-100">{selectedInvoiceForMatch.invoiceNumber}</strong></span>
                 <span>PO Ref: <strong className="text-zinc-900 dark:text-zinc-200">{selectedInvoiceForMatch.poNumber}</strong></span>
               </div>
 
               {/* 3-Way Comparison Matrix Table */}
-              <div className="overflow-x-auto my-2">
-                <table className="w-full text-center text-[11px] border border-zinc-200 dark:border-zinc-800 rounded-md">
-                  <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 uppercase text-[9px] font-semibold">
+              <div className="overflow-x-auto my-2 rounded-lg border border-zinc-200/80 dark:border-zinc-800">
+                <table className="w-full text-center text-[11px]">
+                  <thead className="bg-zinc-100/70 dark:bg-zinc-900/80 text-zinc-500 dark:text-zinc-400 uppercase text-[9px] font-semibold">
                     <tr>
-                      <th className="p-2 text-left">Metric</th>
-                      <th className="p-2">PO Record</th>
-                      <th className="p-2">Goods Receipt</th>
-                      <th className="p-2">Invoice Billed</th>
-                      <th className="p-2">Match</th>
+                      <th className="p-2.5 text-left">Audit Metric</th>
+                      <th className="p-2.5">PO Target</th>
+                      <th className="p-2.5">GRN Accepted</th>
+                      <th className="p-2.5">Billed Quantity</th>
+                      <th className="p-2.5">Match Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-800 dark:text-zinc-300 font-mono">
+                  <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300 font-mono">
                     <tr>
-                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Quantity</td>
-                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.poQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
-                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.acceptedQty !== undefined ? selectedInvoiceForMatch.ocrData.acceptedQty : (selectedInvoiceForMatch.matchStatus === 'MATCHED' ? selectedInvoiceForMatch.items[0]?.quantity : 0)).toLocaleString()}</td>
-                      <td className="p-2">{(selectedInvoiceForMatch.ocrData?.invoiceQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
-                      <td className="p-2 font-bold">{selectedInvoiceForMatch.matchStatus === 'MATCHED' ? '✓' : '❌'}</td>
+                      <td className="p-2.5 text-left font-sans font-medium text-zinc-500 dark:text-zinc-400">Total Quantity</td>
+                      <td className="p-2.5">{(selectedInvoiceForMatch.ocrData?.poQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
+                      <td className="p-2.5">{(selectedInvoiceForMatch.ocrData?.acceptedQty !== undefined ? selectedInvoiceForMatch.ocrData.acceptedQty : (selectedInvoiceForMatch.matchStatus === 'MATCHED' ? selectedInvoiceForMatch.items[0]?.quantity : 0)).toLocaleString()}</td>
+                      <td className="p-2.5">{(selectedInvoiceForMatch.ocrData?.invoiceQty || selectedInvoiceForMatch.items[0]?.quantity || 0).toLocaleString()}</td>
+                      <td className="p-2.5 font-bold">
+                        {selectedInvoiceForMatch.matchStatus === 'MATCHED' ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">✓ Match</span>
+                        ) : (
+                          <span className="text-rose-600 dark:text-rose-400">✗ Mismatch</span>
+                        )}
+                      </td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Unit Price</td>
-                      <td className="p-2">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
-                      <td className="p-2">—</td>
-                      <td className="p-2">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
-                      <td className="p-2 font-bold">✓</td>
+                      <td className="p-2.5 text-left font-sans font-medium text-zinc-500 dark:text-zinc-400">Unit Price ($)</td>
+                      <td className="p-2.5">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
+                      <td className="p-2.5 text-zinc-400">—</td>
+                      <td className="p-2.5">${(selectedInvoiceForMatch.items[0]?.unitPrice || (selectedInvoiceForMatch.totalAmount / (selectedInvoiceForMatch.items[0]?.quantity || 1))).toFixed(2)}</td>
+                      <td className="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">✓ Match</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-left font-sans font-medium text-zinc-600 dark:text-zinc-400">Total Amount</td>
-                      <td className="p-2">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
-                      <td className="p-2">—</td>
-                      <td className="p-2">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
-                      <td className="p-2 font-bold">{selectedInvoiceForMatch.matchStatus === 'MATCHED' ? '✓' : '❌'}</td>
+                      <td className="p-2.5 text-left font-sans font-medium text-zinc-500 dark:text-zinc-400">Gross Total ($)</td>
+                      <td className="p-2.5 font-bold text-zinc-900 dark:text-zinc-100">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
+                      <td className="p-2.5 text-zinc-400">—</td>
+                      <td className="p-2.5 font-bold text-zinc-900 dark:text-zinc-100">${(selectedInvoiceForMatch.totalAmount).toLocaleString()}</td>
+                      <td className="p-2.5 font-bold">
+                        {selectedInvoiceForMatch.matchStatus === 'MATCHED' ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">✓ Match</span>
+                        ) : (
+                          <span className="text-rose-600 dark:text-rose-400">✗ Mismatch</span>
+                        )}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               {selectedInvoiceForMatch.ocrData?.reasons && selectedInvoiceForMatch.ocrData.reasons.length > 0 ? (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-600 dark:text-rose-400 space-y-1">
-                  <div className="font-medium flex items-center gap-1">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-xl text-rose-700 dark:text-rose-400 space-y-1">
+                  <div className="font-semibold flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Match Discrepancies Found:</span>
+                    <span>Match Discrepancies Detected:</span>
                   </div>
                   {selectedInvoiceForMatch.ocrData.reasons.map((r, i) => (
-                    <p key={i} className="text-[11px] leading-relaxed">{r}</p>
+                    <p key={i} className="text-[11px] leading-relaxed">• {r}</p>
                   ))}
                 </div>
               ) : (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>3-Way Match Verified: Purchase Order, Goods Receipt, and Invoice quantities & amounts match 100%.</span>
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-emerald-700 dark:text-emerald-300 font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>3-Way Match Verified: Purchase Order, Goods Receipt, and Invoice quantities & values match 100%.</span>
                 </div>
               )}
             </div>
@@ -535,7 +641,7 @@ export default function FinancePage() {
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setSelectedInvoiceForMatch(null)}
-                className="px-3.5 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-xs transition-all cursor-pointer"
               >
                 Close Inspector
               </button>
@@ -543,6 +649,7 @@ export default function FinancePage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
