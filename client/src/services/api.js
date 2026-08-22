@@ -87,6 +87,7 @@ export const aiAPI = {
 
 export const analyticsAPI = {
   getAnalytics: () => api.get('/analytics'),
+  getControlTower: () => api.get('/analytics/control-tower'),
 };
 
 export default api;

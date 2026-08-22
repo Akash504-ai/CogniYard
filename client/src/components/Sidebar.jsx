@@ -20,6 +20,7 @@ export default function Sidebar() {
 
   const allNavItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: [ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE, ROLES.ADMIN] },
+    { path: '/control-tower', label: 'Control Tower', icon: Sparkles, roles: [ROLES.ADMIN] },
     { path: '/procurement', label: 'Procurement', icon: ShoppingCart, roles: [ROLES.PROCUREMENT, ROLES.ADMIN] },
     { path: '/logistics', label: 'Logistics & Yard', icon: Truck, roles: [ROLES.WAREHOUSE, ROLES.ADMIN] },
     { path: '/finance', label: 'Finance (3-Way)', icon: Receipt, roles: [ROLES.FINANCE, ROLES.ADMIN] },
