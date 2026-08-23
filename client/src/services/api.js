@@ -59,7 +59,12 @@ export const logisticsAPI = {
   getTrucks: () => api.get('/trucks'),
   updateTruckStatus: (truckId, data) => api.patch(`/trucks/${truckId}`, data),
   simulateMovement: () => api.post('/trucks/simulate'),
-  simulateDelay: (truckId) => api.post(`/trucks/${truckId}/delay`),
+  simulateDelay: (truckId, data) => api.post(`/trucks/${truckId}/delay`, data),
+  getSimulationState: () => api.get('/trucks/simulation/state'),
+  startSimulation: (speed) => api.post('/trucks/simulation/start', { speed }),
+  pauseSimulation: () => api.post('/trucks/simulation/pause'),
+  resetSimulation: () => api.post('/trucks/simulation/reset'),
+  setSimulationSpeed: (speed) => api.post('/trucks/simulation/speed', { speed }),
   getDocks: () => api.get('/docks'),
   recommendDock: (truckId) => api.get(`/docks/recommend/${truckId}`),
   assignDock: (data) => api.post('/docks/assign', data),
@@ -95,6 +100,12 @@ export const exceptionAPI = {
   getExceptionById: (id) => api.get(`/exceptions/${id}`),
   acknowledgeException: (id) => api.patch(`/exceptions/${id}/acknowledge`),
   resolveException: (id, resolutionNote) => api.patch(`/exceptions/${id}/resolve`, { resolutionNote }),
+};
+
+export const inventoryPlanningAPI = {
+  getSummary: () => api.get('/inventory-planning/summary'),
+  getProducts: () => api.get('/inventory-planning/products'),
+  getProductById: (id) => api.get(`/inventory-planning/products/${id}`),
 };
 
 export default api;

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { logisticsAPI, procurementAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TruckMap from '../components/TruckMap';
+import YardDigitalTwin from '../components/YardDigitalTwin';
 import { 
   Truck, 
   Boxes, 
@@ -18,7 +19,15 @@ import {
   CheckCircle2,
   Layers,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Play,
+  Pause,
+  RotateCcw,
+  Gauge,
+  Activity,
+  User,
+  Building2,
+  ExternalLink
 } from 'lucide-react';
 
 export default function LogisticsPage() {
@@ -32,6 +41,14 @@ export default function LogisticsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [delayAlert, setDelayAlert] = useState(null);
 
+  // Simulation Controls & Telemetry State
+  const [activeView, setActiveView] = useState('twin'); // 'map' or 'twin'
+  const [simRunning, setSimRunning] = useState(false);
+  const [simSpeed, setSimSpeed] = useState(1);
+  const [yardCapacity, setYardCapacity] = useState({ occupied: 4, max: 10 });
+  const [eventLogs, setEventLogs] = useState([]);
+  const [selectedTruckDetail, setSelectedTruckDetail] = useState(null);
+
   // Recommendation State
   const [recommendedDock, setRecommendedDock] = useState(null);
   const [selectedTruckForRec, setSelectedTruckForRec] = useState(null);
@@ -42,25 +59,34 @@ export default function LogisticsPage() {
   const [damagedQty, setDamagedQty] = useState(0);
   const [receivingRemarks, setReceivingRemarks] = useState('');
 
-  useEffect(() => {
-    fetchLogisticsData();
-  }, []);
+  // Polling ref for cleanup
+  const pollTimerRef = useRef(null);
 
   const fetchLogisticsData = async () => {
     try {
       setLoading(true);
-      const [truckRes, dockRes, invRes, grRes, poRes] = await Promise.all([
+      const [truckRes, dockRes, invRes, grRes, poRes, simStateRes] = await Promise.all([
         logisticsAPI.getTrucks(),
         logisticsAPI.getDocks(),
         logisticsAPI.getInventory(),
         logisticsAPI.getGoodsReceipts(),
-        procurementAPI.getPurchaseOrders().catch(() => ({ data: { purchaseOrders: [] } }))
+        procurementAPI.getPurchaseOrders().catch(() => ({ data: { purchaseOrders: [] } })),
+        logisticsAPI.getSimulationState().catch(() => null)
       ]);
-      setTrucks(truckRes.data.trucks || []);
+
+      setTrucks(simStateRes?.data?.state?.trucks || truckRes.data.trucks || []);
       setDocks(dockRes.data.docks || []);
       setInventory(invRes.data.inventory || []);
       setGoodsReceipts(grRes.data.receipts || []);
       setPurchaseOrders(poRes.data.purchaseOrders || []);
+
+      if (simStateRes?.data?.state) {
+        const s = simStateRes.data.state;
+        setSimRunning(s.isRunning);
+        setSimSpeed(s.speed);
+        if (s.yardCapacity) setYardCapacity(s.yardCapacity);
+        if (s.eventLogs) setEventLogs(s.eventLogs);
+      }
     } catch (err) {
       console.error('Error fetching logistics data:', err);
     } finally {
@@ -68,17 +94,84 @@ export default function LogisticsPage() {
     }
   };
 
-  const handleSimulateMovement = async () => {
-    if (submitting) return;
+  useEffect(() => {
+    fetchLogisticsData();
+  }, []);
+
+  // Real-time polling tick when simulation is active (1.5s interval)
+  useEffect(() => {
+    if (simRunning) {
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const [res, invRes] = await Promise.all([
+            logisticsAPI.getSimulationState(),
+            logisticsAPI.getInventory().catch(() => null)
+          ]);
+          if (res.data?.state) {
+            const s = res.data.state;
+            setTrucks(s.trucks || []);
+            setSimRunning(s.isRunning);
+            setSimSpeed(s.speed);
+            if (s.yardCapacity) setYardCapacity(s.yardCapacity);
+            if (s.eventLogs) setEventLogs(s.eventLogs);
+          }
+          if (invRes?.data?.inventory) {
+            setInventory(invRes.data.inventory);
+          }
+        } catch (e) {
+          console.error('Simulation polling error:', e);
+        }
+      }, 1500);
+    } else {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    }
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [simRunning]);
+
+  // Simulation Controls
+  const handleStartSimulation = async () => {
     try {
-      setSubmitting(true);
-      const res = await logisticsAPI.simulateMovement();
-      setTrucks(res.data.trucks || []);
-      showNotification('Simulated live truck movement towards CogniYard Hub', 'info');
+      const res = await logisticsAPI.startSimulation(simSpeed);
+      setSimRunning(true);
+      if (res.data?.state?.trucks) setTrucks(res.data.state.trucks);
+      showNotification(`Started live yard truck simulation (${simSpeed}x speed)`, 'success');
     } catch (err) {
-      showNotification('Error simulating movement', 'warning');
-    } finally {
-      setSubmitting(false);
+      showNotification('Error starting simulation', 'warning');
+    }
+  };
+
+  const handlePauseSimulation = async () => {
+    try {
+      await logisticsAPI.pauseSimulation();
+      setSimRunning(false);
+      showNotification('Paused yard simulation', 'info');
+    } catch (err) {
+      showNotification('Error pausing simulation', 'warning');
+    }
+  };
+
+  const handleResetSimulation = async () => {
+    try {
+      const res = await logisticsAPI.resetSimulation();
+      setSimRunning(false);
+      if (res.data?.state?.trucks) setTrucks(res.data.state.trucks);
+      if (res.data?.state?.eventLogs) setEventLogs(res.data.state.eventLogs);
+      showNotification('Reset yard simulation to baseline telemetry', 'info');
+    } catch (err) {
+      showNotification('Error resetting simulation', 'warning');
+    }
+  };
+
+  const handleSpeedChange = async (speed) => {
+    setSimSpeed(speed);
+    try {
+      await logisticsAPI.setSimulationSpeed(speed);
+      showNotification(`Simulation speed updated to ${speed}x`, 'info');
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -89,7 +182,7 @@ export default function LogisticsPage() {
       setSubmitting(true);
       const res = await logisticsAPI.simulateDelay(targetId);
       setDelayAlert(res.data.alertMessage || `⚠️ Truck ${targetId} delayed. Dock planning may require reassignment.`);
-      showNotification(`Simulated delay for Truck ${targetId} (ETA updated to 12:15 PM)`, 'warning');
+      showNotification(`Simulated delay for Truck ${targetId} (Status: DELAYED)`, 'warning');
       fetchLogisticsData();
     } catch (err) {
       showNotification('Error simulating delay', 'warning');
@@ -193,39 +286,110 @@ export default function LogisticsPage() {
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
       
-      {/* Top Banner & Control Deck Header */}
+      {/* Top Banner & Simulation Control Deck Header */}
       <div className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs">
                 <Truck className="w-5 h-5" />
               </span>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Yard Logistics & Inbound Fleet (E2)
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                <span>Intelligent Yard Truck Simulation</span>
+                <span className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-mono font-semibold border ${
+                  simRunning
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${simRunning ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
+                  {simRunning ? `● LIVE SIMULATION (${simSpeed}x)` : '● PAUSED'}
+                </span>
               </h2>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
-              GPS telemetry routing, real-time yard turnarounds, explainable dock allocation algorithms, and dockside quality inspection workflows.
+              Real-time route interpolation, state machine progression (`IN_TRANSIT` $\rightarrow$ `AT_GATE` $\rightarrow$ `IN_YARD` $\rightarrow$ `AT_DOCK`), dynamic ETAs, and dock allocation logic.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          {/* VIEW SWITCHER & SIMULATION CONTROLS DECK */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Toggle Pill */}
+            <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
+              <button
+                onClick={() => setActiveView('map')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeView === 'map'
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>🗺 Map View</span>
+              </button>
+              <button
+                onClick={() => setActiveView('twin')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeView === 'twin'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>🏢 Yard Digital Twin</span>
+              </button>
+            </div>
+
+            {/* Speed Multiplier Buttons */}
+            <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
+              {[1, 2, 5, 10].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSpeedChange(s)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    simSpeed === s
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  {s}x
+                </button>
+              ))}
+            </div>
+
+            {/* Simulation Controls */}
+            {simRunning ? (
+              <button
+                onClick={handlePauseSimulation}
+                className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs transition-all cursor-pointer"
+              >
+                <Pause className="w-3.5 h-3.5 fill-amber-500" />
+                <span>Pause</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStartSimulation}
+                className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Start Simulation</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleResetSimulation}
+              className="p-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer"
+              title="Reset Simulation Baseline"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => handleSimulateDelay(trucks[0]?.truckId)}
               disabled={submitting}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer disabled:opacity-50"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5" />
               <span>Simulate Delay</span>
-            </button>
-            <button
-              onClick={handleSimulateMovement}
-              disabled={submitting}
-              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span>Simulate Movement</span>
             </button>
           </div>
         </div>
@@ -233,20 +397,25 @@ export default function LogisticsPage() {
         {/* Quick Operations Telemetry Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-zinc-100 dark:border-zinc-800/80">
           <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Inbound In-Transit</span>
-            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">{trucks.length} Trucks</div>
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Active Inbound Fleet</span>
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-0.5">{trucks.filter(t => t.status !== 'COMPLETED').length} Active</div>
           </div>
+
+          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Yard Capacity</span>
+            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">
+              {yardCapacity.occupied} / {yardCapacity.max} Trucks ({Math.round((yardCapacity.occupied / yardCapacity.max) * 100)}%)
+            </div>
+          </div>
+
           <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
             <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Available Docks</span>
             <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{availableDocksCount} / {docks.length} Open</div>
           </div>
+
           <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Transit Anomalies</span>
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Delayed Trucks</span>
             <div className="text-sm font-bold text-rose-600 dark:text-rose-400 font-mono mt-0.5">{delayedTrucksCount} Delayed</div>
-          </div>
-          <div className="bg-zinc-50/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-zinc-800/60 p-3 rounded-xl">
-            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Receipts Generated</span>
-            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">{goodsReceipts.length} GRNs</div>
           </div>
         </div>
       </div>
@@ -269,8 +438,111 @@ export default function LogisticsPage() {
         </div>
       )}
 
-      {/* Real-time Fleet Telemetry Map */}
-      <TruckMap trucks={trucks} onSimulateStep={handleSimulateMovement} />
+      {/* Main Logistics Telemetry Layer (Map View vs Yard Digital Twin) */}
+      {activeView === 'map' ? (
+        <TruckMap
+          trucks={trucks}
+          isRunning={simRunning}
+          speed={simSpeed}
+          onSimulateStep={handleStartSimulation}
+          onSelectTruck={(t) => setSelectedTruckDetail(t)}
+        />
+      ) : (
+        <YardDigitalTwin
+          trucks={trucks}
+          docks={docks}
+          simRunning={simRunning}
+          simSpeed={simSpeed}
+          yardCapacity={yardCapacity}
+          eventLogs={eventLogs}
+          onSelectTruck={(t) => setSelectedTruckDetail(t)}
+          onSelectDock={(d) => {
+            const dockedTruck = trucks.find(t => t.assignedDock === d.dockNumber || t.truckId === d.currentTruckId);
+            if (dockedTruck) setSelectedTruckDetail(dockedTruck);
+          }}
+          onRecommendDock={handleGetDockRecommendation}
+          onReceiveGoods={(poNum) => {
+            const foundPo = purchaseOrders.find(p => p.poNumber === poNum);
+            const itemName = foundPo?.items?.[0]?.productName || 'Safety Helmet - High Visibility Yellow';
+            const itemQty = foundPo?.items?.[0]?.quantity || 500;
+            setReceivingPo({ poNumber: poNum, item: itemName, ordered: itemQty });
+            setReceivedQty(itemQty);
+            setDamagedQty(0);
+          }}
+          onReleaseDock={handleReleaseDock}
+        />
+      )}
+
+      {/* Live Event Stream & Yard Capacity Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Live Event Feed (2 Cols) */}
+        <div className="lg:col-span-2 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-2xl shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                Live Simulation Event Stream
+              </h3>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-mono">{eventLogs.length} Events Logged</span>
+          </div>
+
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {eventLogs.length === 0 ? (
+              <p className="text-center text-xs text-zinc-400 py-6 font-mono">No simulation events recorded yet. Click ▶ Start Simulation to begin.</p>
+            ) : (
+              eventLogs.map((log) => (
+                <div key={log.id} className="flex items-start gap-2.5 text-xs font-mono p-2 rounded-lg bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/50 dark:border-zinc-800/50">
+                  <span className="text-zinc-400 shrink-0">{log.time}</span>
+                  <span className={`leading-snug ${
+                    log.level === 'error' ? 'text-rose-600 dark:text-rose-400 font-bold' :
+                    log.level === 'success' ? 'text-emerald-600 dark:text-emerald-400 font-bold' :
+                    log.level === 'warning' ? 'text-amber-600 dark:text-amber-400' :
+                    'text-zinc-800 dark:text-zinc-200'
+                  }`}>
+                    {log.text}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Yard Capacity Gauge (1 Col) */}
+        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+          <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2.5">
+            <Gauge className="w-4 h-4 text-purple-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Yard Slot Capacity Gauge
+            </h3>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-end text-xs font-mono">
+              <span className="text-zinc-400">Current Occupancy:</span>
+              <strong className="text-base font-bold text-zinc-900 dark:text-zinc-100">{yardCapacity.occupied} / {yardCapacity.max} Slots</strong>
+            </div>
+
+            {/* Custom Bar Gauge */}
+            <div className="w-full h-3 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-700">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  (yardCapacity.occupied / yardCapacity.max) > 0.8 ? 'bg-rose-500' :
+                  (yardCapacity.occupied / yardCapacity.max) > 0.5 ? 'bg-amber-500' :
+                  'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(100, (yardCapacity.occupied / yardCapacity.max) * 100)}%` }}
+              />
+            </div>
+
+            <p className="text-[11px] text-zinc-400 font-mono mt-1">
+              {(yardCapacity.occupied / yardCapacity.max) > 0.8 ? '⚠️ High yard congestion. Gate entry throttled.' : '🟢 Yard throughput optimal. Gates operating cleanly.'}
+            </p>
+          </div>
+        </div>
+
+      </div>
 
       {/* Dock Allocation Bay Matrix */}
       <div className="space-y-3">
@@ -334,16 +606,16 @@ export default function LogisticsPage() {
         </div>
       </div>
 
-      {/* Active Inbound Truck Queue Table */}
+      {/* Active Inbound Truck Queue Table with Lifecycle Progress Bar */}
       <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Truck className="w-4 h-4 text-zinc-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
-              Active Truck Manifest & Dockside Receiving
+              Active Truck Manifest & Lifecycle Progress
             </h3>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono">Real-time GPS sync</span>
+          <span className="text-[11px] text-zinc-400 font-mono">Real-time GPS & State Sync</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -353,16 +625,29 @@ export default function LogisticsPage() {
                 <th className="py-3.5 px-4 font-semibold">Truck ID</th>
                 <th className="py-3.5 px-4 font-semibold">PO Reference</th>
                 <th className="py-3.5 px-4 font-semibold">Trailer & Driver</th>
-                <th className="py-3.5 px-4 font-semibold">Estimated Arrival</th>
-                <th className="py-3.5 px-4 font-semibold">Status</th>
-                <th className="py-3.5 px-4 font-semibold">Allocated Dock</th>
+                <th className="py-3.5 px-4 font-semibold">Simulated ETA</th>
+                <th className="py-3.5 px-4 font-semibold">Status Stage</th>
+                <th className="py-3.5 px-4 font-semibold">Lifecycle Progress</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Yard Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
-              {trucks.filter(truck => truck.status !== 'COMPLETED').map((truck) => (
-                <tr key={truck._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">{truck.truckId}</td>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300 font-medium">
+              {trucks.filter(t => t.status !== 'COMPLETED').length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-xs text-zinc-400 font-mono">
+                    🟢 All inbound trucks have completed unloading, goods receiving, and dock release.
+                  </td>
+                </tr>
+              ) : (
+                trucks.filter(t => t.status !== 'COMPLETED').map((truck) => (
+                <tr
+                  key={truck._id || truck.truckId}
+                  onClick={() => setSelectedTruckDetail(truck)}
+                  className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer group"
+                >
+                  <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                    {truck.truckId}
+                  </td>
                   <td className="py-3.5 px-4 font-mono font-semibold text-zinc-800 dark:text-zinc-200">{truck.poNumber}</td>
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-zinc-900 dark:text-zinc-100">{truck.trailerId}</div>
@@ -379,10 +664,21 @@ export default function LogisticsPage() {
                       {truck.status}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono font-semibold text-zinc-700 dark:text-zinc-300">
-                    {truck.assignedDock || <span className="text-zinc-400 font-normal">Unassigned</span>}
+                  <td className="py-3.5 px-4 w-40">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-mono">
+                        <span className="text-zinc-400">Progress</span>
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">{truck.progress || 0}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                          style={{ width: `${truck.progress || 0}%` }}
+                        />
+                      </div>
+                    </div>
                   </td>
-                  <td className="py-3.5 px-4 text-right space-x-1.5">
+                  <td className="py-3.5 px-4 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleSimulateDelay(truck.truckId)}
                       disabled={submitting}
@@ -414,7 +710,7 @@ export default function LogisticsPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -465,6 +761,71 @@ export default function LogisticsPage() {
           </table>
         </div>
       </div>
+
+      {/* Truck Detail Slide-Over Drawer */}
+      {selectedTruckDetail && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end">
+          <div className="bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 w-full max-w-md h-full overflow-y-auto p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-mono">
+                  {selectedTruckDetail.truckId} Telemetry
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedTruckDetail(null)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">Status Stage</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">{selectedTruckDetail.status}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">PO Reference</span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono">{selectedTruckDetail.poNumber}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">Driver</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{selectedTruckDetail.driverName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">Trailer ID</span>
+                  <span className="font-mono text-zinc-900 dark:text-zinc-100">{selectedTruckDetail.trailerId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">Simulated ETA</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">{selectedTruckDetail.eta}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 font-mono">Assigned Dock</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{selectedTruckDetail.assignedDock || 'Unassigned'}</span>
+                </div>
+              </div>
+
+              {selectedTruckDetail.delayReason && (
+                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 font-mono">
+                  <strong className="block mb-0.5">⚠️ Delay Anomaly Recorded:</strong>
+                  {selectedTruckDetail.delayReason} (+{selectedTruckDetail.delayMinutes || 15} min)
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelectedTruckDetail(null)}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition"
+            >
+              Close Telemetry Drawer
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Dock Recommendation Modal */}
       {recommendedDock && (

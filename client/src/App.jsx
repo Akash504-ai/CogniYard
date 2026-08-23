@@ -17,6 +17,7 @@ import FinancePage from './pages/FinancePage';
 import AdminPage from './pages/AdminPage';
 import ExecutiveControlTower from './pages/ExecutiveControlTower';
 import ExceptionCenter from './pages/ExceptionCenter';
+import InventoryPlanning from './pages/InventoryPlanning';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '672280661412-7vt6i4tb7gulv95t2ueskl2p39f9je93.apps.googleusercontent.com';
 
@@ -34,6 +35,7 @@ function AuthenticatedLayout() {
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/control-tower" element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]}><ExecutiveControlTower /></ProtectedRoute>} />
             <Route path="/exceptions" element={<ProtectedRoute><ExceptionCenter /></ProtectedRoute>} />
+            <Route path="/inventory-planning" element={<ProtectedRoute><InventoryPlanning /></ProtectedRoute>} />
             <Route path="/procurement" element={<ProtectedRoute allowedRoles={[ROLES.PROCUREMENT, ROLES.ADMIN]}><ProcurementPage /></ProtectedRoute>} />
             <Route path="/logistics" element={<ProtectedRoute allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}><LogisticsPage /></ProtectedRoute>} />
             <Route path="/finance" element={<ProtectedRoute allowedRoles={[ROLES.FINANCE, ROLES.ADMIN]}><FinancePage /></ProtectedRoute>} />

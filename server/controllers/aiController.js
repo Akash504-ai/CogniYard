@@ -841,6 +841,16 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     };
   }
 
+  // Yard Digital Twin Overview Intent ("what's happening in the yard", "yard state", "yard overview")
+  if (msg.includes('yard') && (msg.includes('happening') || msg.includes('right now') || msg.includes('overview') || msg.includes('state') || msg.includes('twin') || msg.includes('schematic'))) {
+    return {
+      intent: 'get_truck_status',
+      tool: 'getTruckStatus',
+      params: {},
+      replyText: 'Querying live Yard Digital Twin telemetry and active truck queue state...'
+    };
+  }
+
   // Follow-up truck context ("is it delayed?", "what's its ETA?", "where is it?")
   if ((msg.includes('eta') || msg.includes('delayed') || msg.includes('where') || msg.includes('status')) && (msg.includes('it') || msg.includes('its') || msg.includes('this truck'))) {
     const contextTruck = extractEntityFromContext(chatHistory, /TRK-\d+/i);

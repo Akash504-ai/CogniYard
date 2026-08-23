@@ -12,7 +12,8 @@ import {
   Boxes,
   Sparkles,
   ChevronRight,
-  CircleDot
+  CircleDot,
+  Calculator
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -23,6 +24,7 @@ export default function Sidebar() {
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: [ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE, ROLES.ADMIN] },
     { path: '/control-tower', label: 'Control Tower', icon: Sparkles, roles: [ROLES.ADMIN] },
     { path: '/exceptions', label: 'Exception Center', icon: ShieldAlert, roles: [ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE, ROLES.ADMIN] },
+    { path: '/inventory-planning', label: 'Inventory Intelligence', icon: Calculator, roles: [ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE, ROLES.ADMIN] },
     { path: '/procurement', label: 'Procurement', icon: ShoppingCart, roles: [ROLES.PROCUREMENT, ROLES.ADMIN] },
     { path: '/logistics', label: 'Logistics & Yard', icon: Truck, roles: [ROLES.WAREHOUSE, ROLES.ADMIN] },
     { path: '/finance', label: 'Finance (3-Way)', icon: Receipt, roles: [ROLES.FINANCE, ROLES.ADMIN] },

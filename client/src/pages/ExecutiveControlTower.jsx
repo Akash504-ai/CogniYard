@@ -499,11 +499,13 @@ export default function ExecutiveControlTower() {
 
         {/* Inventory Snapshot */}
         <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-5 rounded-2xl space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5">
-            <Boxes className="w-4 h-4 text-emerald-500" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
-              Inventory Stock Snapshot
-            </h4>
+          <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5 justify-between">
+            <div className="flex items-center gap-2">
+              <Boxes className="w-4 h-4 text-emerald-500" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                Inventory Stock Snapshot
+              </h4>
+            </div>
           </div>
           <div className="space-y-2 text-xs font-mono">
             <div className="flex justify-between">
@@ -517,6 +519,35 @@ export default function ExecutiveControlTower() {
             <div className="flex justify-between">
               <span className="text-zinc-500">Low Stock Alerts:</span>
               <strong className="text-amber-600 dark:text-amber-400">{snapshots.inventory.lowStockItems}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory Planning Intelligence Snapshot */}
+        <div 
+          onClick={() => navigate('/inventory-planning')}
+          className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent backdrop-blur-xl border border-indigo-500/30 p-5 rounded-2xl space-y-3 shadow-sm hover:border-indigo-500/60 transition cursor-pointer group"
+        >
+          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
+                Inventory Intelligence
+              </h4>
+            </div>
+            <ArrowRight className="w-4 h-4 text-indigo-500 group-hover:translate-x-1 transition-transform" />
+          </div>
+          <div className="space-y-2 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Monitored:</span>
+              <strong className="text-zinc-900 dark:text-zinc-100">{snapshots.inventoryPlanning?.totalMonitored || 3} SKUs</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Urgent Reorder:</span>
+              <strong className="text-rose-600 dark:text-rose-400">{snapshots.inventoryPlanning?.urgentCount || 1}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500 font-semibold text-indigo-600 dark:text-indigo-400">View Planning Engine →</span>
             </div>
           </div>
         </div>
