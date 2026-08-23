@@ -26,7 +26,8 @@ import {
   ChevronRight,
   TrendingUp,
   AlertCircle,
-  Radio
+  Radio,
+  Camera
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -548,6 +549,35 @@ export default function ExecutiveControlTower() {
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500 font-semibold text-indigo-600 dark:text-indigo-400">View Planning Engine →</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Computer Vision & Yard Intelligence Snapshot Tile */}
+        <div 
+          onClick={() => navigate('/vision')}
+          className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent backdrop-blur-xl border border-emerald-500/30 p-5 rounded-2xl space-y-3 shadow-sm hover:border-emerald-500/60 transition cursor-pointer group"
+        >
+          <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-emerald-500" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono">
+                Computer Vision Intelligence
+              </h4>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform" />
+          </div>
+          <div className="space-y-2 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Cameras Online:</span>
+              <strong className="text-emerald-500">4 / 4 Channels</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Congestion Score:</span>
+              <strong className="text-indigo-400">20 / 100 (LOW)</strong>
+            </div>
+            <div className="flex justify-between pt-1">
+              <span className="text-emerald-500 font-semibold">View Smart CCTV →</span>
             </div>
           </div>
         </div>

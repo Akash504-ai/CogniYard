@@ -108,4 +108,14 @@ export const inventoryPlanningAPI = {
   getProductById: (id) => api.get(`/inventory-planning/products/${id}`),
 };
 
+export const visionAPI = {
+  getCameras: () => api.get('/vision/cameras'),
+  getStatus: () => api.get('/vision/status'),
+  getDetections: (id) => api.get(`/vision/cameras/${id || 'CAM-01'}`),
+  getEvents: () => api.get('/vision/events'),
+  getAlerts: () => api.get('/vision/alerts'),
+  getCongestion: () => api.get('/vision/congestion'),
+  createEvent: (data) => api.post('/vision/events', data)
+};
+
 export default api;

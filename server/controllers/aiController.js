@@ -348,6 +348,34 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
         };
       }
 
+      // 6e. Vision AI Tools
+      case 'getVisionStatus':
+      case 'getCameraStatus':
+      case 'getVisionDetections':
+      case 'getGateActivity':
+      case 'getVehicleCount':
+      case 'getYardCongestion':
+      case 'getVisionAlerts':
+      case 'getUnknownVehicles':
+      case 'getDockVisionStatus': {
+        const visionService = require('../services/visionService');
+        const cameras = await visionService.getCameras();
+        const congestion = await visionService.calculateCongestionScore();
+        return {
+          success: true,
+          action: 'VISION_INTELLIGENCE',
+          camerasOnline: cameras.filter(c => c.status === 'ONLINE').length,
+          totalCameras: cameras.length,
+          realVisualObservation: 'CAM-01 currently detects vehicles using TensorFlow.js COCO-SSD pixel inference.',
+          businessAssociation: 'Vehicles are associated with active POs (e.g. TRK-1004 / PO-1004) via demo vehicle mapping.',
+          congestionScore: congestion.score,
+          congestionRisk: congestion.riskLevel,
+          primaryCause: congestion.primaryCause,
+          recommendedAction: congestion.recommendedAction,
+          details: `Smart CCTV System: CAM-01 performs real TensorFlow.js COCO-SSD pixel inference. Vehicle identification uses DEMO VEHICLE ASSOCIATION mapping. Yard Congestion: ${congestion.score}/100 (${congestion.riskLevel}).`
+        };
+      }
+
       // 7. Get Smart Dock Recommendation
       case 'recommendDock': {
         const { truckId } = params;
@@ -838,6 +866,16 @@ const fallbackIntentParser = (message, chatHistory = []) => {
       tool: 'getControlTowerSummary',
       params: {},
       replyText: 'Aggregating Executive Control Tower telemetry metrics...'
+    };
+  }
+
+  // Vision AI / CCTV Intent ("camera", "cctv", "vision", "seeing", "unknown vehicle", "why is the yard congested")
+  if (msg.includes('camera') || msg.includes('cctv') || msg.includes('vision') || msg.includes('seeing') || msg.includes('congested') || msg.includes('unknown')) {
+    return {
+      intent: 'get_vision_status',
+      tool: 'getVisionStatus',
+      params: {},
+      replyText: 'Querying Smart CCTV AI Computer Vision subsystem telemetry and congestion intelligence...'
     };
   }
 

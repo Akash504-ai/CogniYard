@@ -87,6 +87,30 @@ const syncExceptionsFromCollections = async () => {
       }
     }
 
+    // 5. Vision AI High Yard Congestion Alert
+    try {
+      const visionService = require('../services/visionService');
+      const congestion = await visionService.calculateCongestionScore();
+      if (congestion.score > 80) {
+        const exists = await Exception.findOne({ type: 'YARD_CONGESTION_HIGH', status: { $ne: 'RESOLVED' } });
+        if (!exists) {
+          await Exception.create({
+            type: 'YARD_CONGESTION_HIGH',
+            category: 'SYSTEM',
+            severity: 'CRITICAL',
+            title: `High Yard Congestion Alert (${congestion.score}/100)`,
+            description: `Smart CCTV Vision AI detected critical yard congestion: ${congestion.primaryCause}`,
+            sourceType: 'SYSTEM',
+            sourceId: 'CAM-02',
+            status: 'OPEN',
+            metadata: { congestionScore: congestion.score, cause: congestion.primaryCause }
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore if vision service init fails
+    }
+
     // 3. Payments On Hold (WARNING)
     const onHoldPayments = await Payment.find({ paymentStatus: 'ON_HOLD' });
     for (const pay of onHoldPayments) {
