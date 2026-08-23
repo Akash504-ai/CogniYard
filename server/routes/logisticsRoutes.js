@@ -3,11 +3,18 @@ const router = express.Router();
 const logistics = require('../controllers/logisticsController');
 const { protect, authorize } = require('../middleware/auth');
 
-// Trucks & Yard Logistics
+// Trucks & Yard Logistics & Real-Time Simulation
 router.get('/trucks', protect, logistics.getTrucks);
 router.patch('/trucks/:truckId', protect, authorize('warehouse_manager', 'admin'), logistics.updateTruckStatus);
 router.post('/trucks/simulate', protect, authorize('warehouse_manager', 'admin'), logistics.simulateMovement);
 router.post('/trucks/:truckId/delay', protect, authorize('warehouse_manager', 'admin'), logistics.simulateDelay);
+
+// Yard Simulation Controls
+router.get('/trucks/simulation/state', protect, logistics.getSimulationState);
+router.post('/trucks/simulation/start', protect, authorize('warehouse_manager', 'admin'), logistics.startSimulation);
+router.post('/trucks/simulation/pause', protect, authorize('warehouse_manager', 'admin'), logistics.pauseSimulation);
+router.post('/trucks/simulation/reset', protect, authorize('warehouse_manager', 'admin'), logistics.resetSimulation);
+router.post('/trucks/simulation/speed', protect, authorize('warehouse_manager', 'admin'), logistics.setSimulationSpeed);
 
 // Docks & Recommendation Engine
 router.get('/docks', protect, logistics.getDocks);

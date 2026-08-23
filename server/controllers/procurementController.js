@@ -5,6 +5,7 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 const Shipment = require('../models/Shipment');
 const Truck = require('../models/Truck');
 const AuditLog = require('../models/AuditLog');
+const yardSimulationService = require('../services/yardSimulationService');
 
 // --- Products ---
 exports.getProducts = async (req, res, next) => {
@@ -312,6 +313,11 @@ exports.createPurchaseOrder = async (req, res, next) => {
         assignedDock: null
       });
       await truck.save();
+    }
+
+    // Register newly created truck with live yard simulation engine
+    if (truck) {
+      yardSimulationService.registerTruck(truck);
     }
 
     await AuditLog.create({

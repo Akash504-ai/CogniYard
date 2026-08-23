@@ -31,6 +31,7 @@ app.use('/api', require('./routes/financeRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/exceptions', require('./routes/exceptionRoutes'));
+app.use('/api/inventory-planning', require('./routes/inventoryPlanningRoutes'));
 
 // Health Check
 app.get('/api/health', (req, res) => {

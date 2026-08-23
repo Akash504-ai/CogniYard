@@ -41,6 +41,19 @@ const syncExceptionsFromCollections = async () => {
       }
     }
 
+    // Auto-resolve delayed truck exceptions when truck is no longer DELAYED
+    const openDelayedExceptions = await Exception.find({ type: 'DELAYED_TRUCK', status: { $ne: 'RESOLVED' } });
+    for (const ex of openDelayedExceptions) {
+      const trk = await Truck.findOne({ truckId: ex.metadata?.truckId });
+      if (trk && trk.status !== 'DELAYED') {
+        ex.status = 'RESOLVED';
+        ex.resolvedBy = 'System Exception Engine';
+        ex.resolvedAt = new Date();
+        ex.resolutionNote = `Truck delay cleared automatically. Vehicle resumed operational transit (Status: ${trk.status}).`;
+        await ex.save();
+      }
+    }
+
     // 2. Invoice Mismatches (CRITICAL)
     const mismatchInvoices = await Invoice.find({ matchStatus: 'MISMATCH' });
     for (const inv of mismatchInvoices) {

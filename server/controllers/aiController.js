@@ -11,6 +11,8 @@ const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const Exception = require('../models/Exception');
 const AuditLog = require('../models/AuditLog');
+const inventoryPlanning = require('./inventoryPlanningController');
+const yardSimulationService = require('../services/yardSimulationService');
 
 const GROK_API_URL = 'https://api.x.ai/v1/chat/completions';
 
@@ -209,52 +211,65 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
       // 5. Get Truck Status (Single or All)
       case 'getTruckStatus':
       case 'getSingleTruck': {
+        const simState = yardSimulationService.getState();
         const { truckId } = params;
+
         if (!truckId) {
-          const trucks = await Truck.find().limit(10);
+          const liveTrucks = simState.trucks || [];
           return {
             success: true,
             action: 'TRUCK_STATUS',
-            count: trucks.length,
-            trucks: trucks.map(t => ({ truckId: t.truckId, poNumber: t.poNumber, status: t.status, eta: t.eta, yardLocation: t.yardLocation })),
-            details: trucks.length > 0 ? `Yard log currently tracks ${trucks.length} truck(s).` : 'No active trucks in yard.'
+            count: liveTrucks.length,
+            trucks: liveTrucks.map(t => ({ truckId: t.truckId, poNumber: t.poNumber, status: t.status, eta: t.eta, yardLocation: t.yardLocation })),
+            details: `Yard telemetry tracks ${liveTrucks.length} truck(s). Occupied yard slots: ${simState.yardCapacity.occupied}/${simState.yardCapacity.max}.`
           };
         }
 
         const cleanTruckId = truckId.trim().toUpperCase();
-        let truck = await Truck.findOne({ truckId: new RegExp(cleanTruckId, 'i') });
+        let simTruck = simState.trucks.find(t => t.truckId.toUpperCase() === cleanTruckId);
 
-        if (!truck && (cleanTruckId === 'TRK-001' || cleanTruckId === 'TRK-1')) {
-          truck = await Truck.findOne({ truckId: 'TRK-9001' });
+        if (!simTruck && (cleanTruckId === 'TRK-001' || cleanTruckId === 'TRK-1')) {
+          simTruck = simState.trucks.find(t => t.truckId === 'TRK-9001');
         }
 
-        if (!truck) {
-          return { success: false, notFound: true, message: `Truck ${cleanTruckId} was not found in the yard log.` };
+        if (!simTruck) {
+          const mongoTruck = await Truck.findOne({ truckId: new RegExp(`^${cleanTruckId}$`, 'i') });
+          if (mongoTruck) {
+            simTruck = yardSimulationService.registerTruck(mongoTruck) || mongoTruck;
+          }
+        }
+
+        if (!simTruck) {
+          return { success: false, notFound: true, message: `Truck ${cleanTruckId} was not found in active yard simulation or database log.` };
         }
 
         return {
           success: true,
           action: 'TRUCK_STATUS',
-          truckId: truck.truckId,
-          status: truck.status,
-          eta: truck.eta || 'N/A',
-          yardLocation: truck.yardLocation || 'Zone A',
-          poNumber: truck.poNumber,
-          driverName: truck.driverName,
-          details: `Truck ${truck.truckId} (${truck.poNumber}) is currently ${truck.status} at ${truck.yardLocation || 'Zone A'} with ETA ${truck.eta || 'N/A'}. Driver: ${truck.driverName}.`
+          truckId: simTruck.truckId,
+          status: simTruck.status,
+          eta: simTruck.eta || 'N/A',
+          yardLocation: simTruck.yardLocation || 'Zone A',
+          poNumber: simTruck.poNumber,
+          driverName: simTruck.driverName,
+          progress: `${simTruck.progress}%`,
+          assignedDock: simTruck.assignedDock || 'Unassigned',
+          details: `Truck ${simTruck.truckId} (${simTruck.poNumber}) is currently ${simTruck.status} at ${simTruck.yardLocation} with ETA ${simTruck.eta}. Progress: ${simTruck.progress}%. Assigned Dock: ${simTruck.assignedDock || 'None'}.`
         };
       }
 
       // 6. Get Delayed Trucks
       case 'getDelayedTrucks': {
-        const delayed = await Truck.find({ status: 'DELAYED' });
+        const simState = yardSimulationService.getState();
+        const delayed = simState.trucks.filter(t => t.status === 'DELAYED');
+
         if (!delayed || delayed.length === 0) {
           return {
             success: true,
             action: 'DELAYED_TRUCKS',
             count: 0,
             trucks: [],
-            details: '🟢 No delayed trucks are currently recorded in the yard log.'
+            details: '🟢 No delayed trucks are currently recorded in the yard simulation telemetry.'
           };
         }
 
@@ -262,8 +277,74 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
           success: true,
           action: 'DELAYED_TRUCKS',
           count: delayed.length,
-          trucks: delayed.map(t => ({ truckId: t.truckId, poNumber: t.poNumber, eta: t.eta, yardLocation: t.yardLocation, driverName: t.driverName })),
-          details: `Found ${delayed.length} delayed truck(s): ${delayed.map(t => t.truckId).join(', ')}.`
+          trucks: delayed.map(t => ({ truckId: t.truckId, poNumber: t.poNumber, eta: t.eta, yardLocation: t.yardLocation, delayReason: t.delayReason })),
+          details: `Found ${delayed.length} delayed truck(s): ${delayed.map(t => `${t.truckId} (${t.delayReason || 'Delay'})`).join(', ')}.`
+        };
+      }
+
+      // 6b. Control Yard Simulation (Requires Human Approval Guard + RBAC)
+      case 'controlYardSimulation': {
+        if (!['warehouse_manager', 'admin'].includes(userRole)) {
+          return {
+            success: false,
+            message: `Forbidden: User role '${userRole}' is not authorized to control the yard simulation engine.`
+          };
+        }
+
+        const command = params.command || 'start';
+        const speed = params.speed || 1;
+
+        if (!confirmed) {
+          return {
+            requiresConfirmation: true,
+            actionType: 'CONTROL_SIMULATION',
+            params: { command, speed },
+            confirmationPrompt: `Are you sure you want to ${command.toUpperCase()} the live yard simulation at ${speed}x speed?`
+          };
+        }
+
+        let updatedState;
+        if (command === 'start') updatedState = yardSimulationService.startSimulation(speed);
+        else if (command === 'pause') updatedState = yardSimulationService.pauseSimulation();
+        else if (command === 'reset') updatedState = await yardSimulationService.resetSimulation();
+
+        return {
+          success: true,
+          action: 'CONTROL_SIMULATION',
+          command,
+          speed,
+          details: `Yard simulation execution updated: ${command.toUpperCase()} (${speed}x speed).`
+        };
+      }
+
+      // 6c. Get Dock Status
+      case 'getDockStatus': {
+        const docks = await Dock.find().sort({ dockNumber: 1 });
+        const available = docks.filter(d => d.status === 'AVAILABLE');
+        const occupied = docks.filter(d => d.status === 'OCCUPIED');
+        return {
+          success: true,
+          action: 'DOCK_STATUS',
+          totalDocks: docks.length,
+          availableCount: available.length,
+          occupiedCount: occupied.length,
+          docks: docks.map(d => ({ dockNumber: d.dockNumber, name: d.name, status: d.status, currentTruckId: d.currentTruckId || 'None' })),
+          details: `Yard tracks ${docks.length} dock bays: ${occupied.length} OCCUPIED (${occupied.map(d => `${d.dockNumber} by ${d.currentTruckId || 'Vehicle'}`).join(', ') || 'None'}), ${available.length} AVAILABLE (${available.map(d => d.dockNumber).join(', ')}).`
+        };
+      }
+
+      // 6d. Get Waiting Trucks
+      case 'getWaitingTrucks': {
+        const simState = yardSimulationService.getState();
+        const waiting = simState.trucks.filter(t => ['WAITING_FOR_DOCK', 'AT_GATE', 'IN_YARD'].includes(t.status));
+        return {
+          success: true,
+          action: 'WAITING_TRUCKS',
+          count: waiting.length,
+          trucks: waiting.map(t => ({ truckId: t.truckId, poNumber: t.poNumber, status: t.status, eta: t.eta, yardLocation: t.yardLocation })),
+          details: waiting.length > 0
+            ? `Found ${waiting.length} truck(s) waiting for dock allocation: ${waiting.map(t => `${t.truckId} (${t.status})`).join(', ')}.`
+            : '🟢 No trucks are currently waiting for dock assignment.'
         };
       }
 
@@ -328,6 +409,94 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
           lowStockCount: lowStock.length,
           lowStockItems: lowStock.map(i => ({ sku: i.sku, name: i.productName, stock: i.quantityOnHand })),
           details: `Inventory catalog contains ${items.length} SKUs. ${lowStock.length} item(s) require reorder attention (Stock ≤ 500 units).`
+        };
+      }
+
+      // 9b. Get Product Inventory Planning Intelligence Detail
+      case 'getProductPlanningDetail': {
+        const { item, productName, sku } = params;
+        const target = item || productName || sku || 'Safety Helmet';
+
+        const mockReq = { params: { id: target } };
+        let resultProduct = null;
+
+        const mockRes = {
+          status: () => mockRes,
+          json: (data) => { if (data.success) resultProduct = data.product; }
+        };
+
+        await inventoryPlanning.getPlanningProductById(mockReq, mockRes, () => {});
+
+        if (!resultProduct) {
+          return {
+            success: false,
+            notFound: true,
+            message: `Could not find planning intelligence record for '${target}'.`
+          };
+        }
+
+        const statusIcon = resultProduct.status === 'HEALTHY' ? '🟢'
+          : resultProduct.status === 'MONITOR' ? '🟡'
+          : resultProduct.status === 'REORDER_RECOMMENDED' ? '🟠'
+          : '🔴';
+
+        const detailFormatted = `### ${statusIcon} ${resultProduct.status.replace('_', ' ')} — ${resultProduct.productName} (${resultProduct.sku})
+
+• **Current Stock:** ${resultProduct.currentStock.toLocaleString()} ${resultProduct.unit}
+• **Incoming Open PO:** ${resultProduct.incomingPOQuantity.toLocaleString()} ${resultProduct.unit}
+• **Average Daily Demand:** ${resultProduct.avgDailyDemand.toLocaleString()} ${resultProduct.unit}/day (${resultProduct.avgMonthlyDemand.toLocaleString()}/month)
+• **Reorder Point:** ${resultProduct.reorderPoint.toLocaleString()} ${resultProduct.unit}
+• **Safety Stock:** ${resultProduct.safetyStock.toLocaleString()} ${resultProduct.unit}
+• **EOQ (Economic Order Quantity):** ${resultProduct.eoq.toLocaleString()} ${resultProduct.unit}
+• **Current Days of Supply:** ${resultProduct.daysOfSupply} days (Projected: ${resultProduct.projectedDaysOfSupply} days)
+
+**Recommended Order Quantity:** ${resultProduct.recommendedOrderQuantity > 0 ? `${resultProduct.recommendedOrderQuantity.toLocaleString()} ${resultProduct.unit}` : 'None required at this time'}
+
+**System Analysis:**
+${resultProduct.reasonText}`;
+
+        return {
+          success: true,
+          action: 'PRODUCT_PLANNING_DETAIL',
+          product: resultProduct,
+          details: detailFormatted
+        };
+      }
+
+      // 9c. Get Replenishment Recommendations / At Risk Products
+      case 'getReplenishmentRecommendations': {
+        let allProducts = [];
+        const mockReq = {};
+        const mockRes = {
+          json: (data) => { if (data.success) allProducts = data.products; }
+        };
+
+        await inventoryPlanning.getPlanningProducts(mockReq, mockRes, () => {});
+
+        const atRisk = allProducts.filter(p => p.status === 'URGENT_REORDER' || p.status === 'REORDER_RECOMMENDED' || p.status === 'MONITOR');
+
+        if (atRisk.length === 0) {
+          return {
+            success: true,
+            action: 'REPLENISHMENT_RECOMMENDATIONS',
+            details: '🟢 All monitored inventory items are in HEALTHY status. No replenishment orders are required at this time.'
+          };
+        }
+
+        let text = `### 📦 Inventory Planning Replenishment Recommendations\n\n`;
+        atRisk.forEach(p => {
+          const badge = p.status === 'URGENT_REORDER' ? '🔴 URGENT' : p.status === 'REORDER_RECOMMENDED' ? '🟠 REORDER' : '🟡 MONITOR';
+          text += `• **${p.productName}** (${p.sku}): ${badge}\n`;
+          text += `  Current Stock: ${p.currentStock.toLocaleString()} | Incoming PO: ${p.incomingPOQuantity.toLocaleString()} | Reorder Point: ${p.reorderPoint.toLocaleString()}\n`;
+          text += `  👉 **Recommended Order:** ${p.recommendedOrderQuantity.toLocaleString()} ${p.unit} (EOQ: ${p.eoq.toLocaleString()})\n\n`;
+        });
+
+        return {
+          success: true,
+          action: 'REPLENISHMENT_RECOMMENDATIONS',
+          count: atRisk.length,
+          atRiskProducts: atRisk,
+          details: text
         };
       }
 
@@ -672,6 +841,19 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     };
   }
 
+  // Follow-up truck context ("is it delayed?", "what's its ETA?", "where is it?")
+  if ((msg.includes('eta') || msg.includes('delayed') || msg.includes('where') || msg.includes('status')) && (msg.includes('it') || msg.includes('its') || msg.includes('this truck'))) {
+    const contextTruck = extractEntityFromContext(chatHistory, /TRK-\d+/i);
+    if (contextTruck) {
+      return {
+        intent: 'get_single_truck',
+        tool: 'getSingleTruck',
+        params: { truckId: contextTruck },
+        replyText: `Checking status for previously discussed Truck ${contextTruck}...`
+      };
+    }
+  }
+
   // Delayed Trucks Intent ("trucks late", "late trucks", "delayed trucks")
   if (msg.includes('late') || msg.includes('delayed') || (msg.includes('truck') && msg.includes('delay'))) {
     return {
@@ -682,17 +864,23 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     };
   }
 
-  // Follow-up truck context ("is it delayed?", "what's its ETA?")
-  if ((msg.includes('eta') || msg.includes('delayed') || msg.includes('where')) && (msg.includes('it') || msg.includes('its') || msg.includes('this truck'))) {
-    const contextTruck = extractEntityFromContext(chatHistory, /TRK-\d+/i);
-    if (contextTruck) {
-      return {
-        intent: 'get_single_truck',
-        tool: 'getSingleTruck',
-        params: { truckId: contextTruck },
-        replyText: `Checking status for previously discussed Truck ${contextTruck}...`
-      };
-    }
+  // Dock Status & Waiting Trucks Intent ("which docks are occupied", "available docks", "trucks waiting for dock")
+  if (msg.includes('waiting') && (msg.includes('dock') || msg.includes('truck'))) {
+    return {
+      intent: 'get_waiting_trucks',
+      tool: 'getWaitingTrucks',
+      params: {},
+      replyText: 'Checking queue for trucks waiting for dock allocation...'
+    };
+  }
+
+  if (msg.includes('dock') || msg.includes('bay')) {
+    return {
+      intent: 'get_dock_status',
+      tool: 'getDockStatus',
+      params: {},
+      replyText: 'Querying yard dock allocation and occupancy telemetry...'
+    };
   }
 
   // Payments On Hold Intent ("payments stuck", "on hold", "payment issues")
@@ -737,6 +925,30 @@ const fallbackIntentParser = (message, chatHistory = []) => {
       tool: 'compareSuppliers',
       params: {},
       replyText: 'Evaluating active suppliers based on rating, OTD score, and lead times...'
+    };
+  }
+
+  // Inventory Planning Intelligence Intent Queries
+  if (msg.includes('reorder') || msg.includes('eoq') || msg.includes('replenish') || msg.includes('stockout') || msg.includes('demand') || msg.includes('safety stock') || msg.includes('reorder point') || msg.includes('how much stock')) {
+    let extractedItem = null;
+    if (msg.includes('helmet')) extractedItem = 'Safety Helmet';
+    else if (msg.includes('glove')) extractedItem = 'Cut Resistant Gloves';
+    else if (msg.includes('vest')) extractedItem = 'Reflective Safety Vest';
+
+    if (extractedItem || msg.includes('helmet') || msg.includes('glove') || msg.includes('vest') || msg.includes('why') || msg.includes('this product')) {
+      return {
+        intent: 'get_product_planning_detail',
+        tool: 'getProductPlanningDetail',
+        params: { item: extractedItem || 'Safety Helmet' },
+        replyText: `Evaluating backend inventory planning metrics for ${extractedItem || 'specified product'}...`
+      };
+    }
+
+    return {
+      intent: 'get_replenishment_recommendations',
+      tool: 'getReplenishmentRecommendations',
+      params: {},
+      replyText: 'Auditing inventory planning replenishment recommendations across all SKUs...'
     };
   }
 
@@ -799,11 +1011,13 @@ Available tools:
 5. getDelayedTrucks (params: none)
 6. recommendDock (params: truckId)
 7. getInventoryStatus (params: none)
-8. getInvoiceStatus (params: none)
-9. getPaymentsOnHold (params: none)
-10. getExceptions (params: none)
-11. getControlTowerSummary (params: none)
-12. tracePoLifecycle (params: poNumber)
+8. getProductPlanningDetail (params: item)
+9. getReplenishmentRecommendations (params: none)
+10. getInvoiceStatus (params: none)
+11. getPaymentsOnHold (params: none)
+12. getExceptions (params: none)
+13. getControlTowerSummary (params: none)
+14. tracePoLifecycle (params: poNumber)
 
 Respond ONLY with valid JSON format:
 {

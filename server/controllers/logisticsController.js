@@ -5,6 +5,8 @@ const GoodsReceipt = require('../models/GoodsReceipt');
 const Inventory = require('../models/Inventory');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const AuditLog = require('../models/AuditLog');
+const Exception = require('../models/Exception');
+const yardSimulationService = require('../services/yardSimulationService');
 
 // --- Trucks & Yard ---
 exports.getTrucks = async (req, res, next) => {
@@ -45,6 +47,7 @@ exports.updateTruckStatus = async (req, res, next) => {
     if (eta) truck.eta = eta;
 
     await truck.save();
+    yardSimulationService.syncTruckState(truck.truckId, { status: truck.status, yardLocation: truck.yardLocation, assignedDock: truck.assignedDock, latitude: truck.latitude, longitude: truck.longitude, eta: truck.eta });
     res.json({ success: true, truck });
   } catch (error) {
     next(error);
@@ -53,26 +56,8 @@ exports.updateTruckStatus = async (req, res, next) => {
 
 exports.simulateMovement = async (req, res, next) => {
   try {
-    const trucks = await Truck.find({ status: { $ne: 'COMPLETED' } });
-    const updatedTrucks = [];
-
-    for (let truck of trucks) {
-      const latDelta = (Math.random() - 0.5) * 0.004;
-      const lngDelta = (Math.random() - 0.5) * 0.004;
-      truck.latitude = Math.max(-90, Math.min(90, truck.latitude + latDelta));
-      truck.longitude = Math.max(-180, Math.min(180, truck.longitude + lngDelta));
-
-      if (truck.status === 'IN_TRANSIT' && Math.random() > 0.5) {
-        truck.status = 'AT_GATE';
-      } else if (truck.status === 'AT_GATE' && Math.random() > 0.5) {
-        truck.status = 'IN_YARD';
-      }
-
-      await truck.save();
-      updatedTrucks.push(truck);
-    }
-
-    res.json({ success: true, count: updatedTrucks.length, trucks: updatedTrucks });
+    const simState = yardSimulationService.startSimulation(req.body.speed || 1);
+    res.json({ success: true, count: simState.trucks.length, trucks: simState.trucks, simState });
   } catch (error) {
     next(error);
   }
@@ -81,6 +66,9 @@ exports.simulateMovement = async (req, res, next) => {
 exports.simulateDelay = async (req, res, next) => {
   try {
     const { truckId } = req.params;
+    const delayMinutes = Number(req.body.delayMinutes) || 15;
+    const delayReason = req.body.delayReason || 'Traffic Congestion & Gate Queue';
+
     const truck = await Truck.findOne({ truckId });
     if (!truck) {
       return res.status(404).json({ success: false, message: 'Truck not found in yard log.' });
@@ -90,20 +78,91 @@ exports.simulateDelay = async (req, res, next) => {
     truck.eta = '12:15 PM';
     await truck.save();
 
+    // Auto-create/ensure DELAYED_TRUCK exception in Exception Center
+    const existingEx = await Exception.findOne({
+      sourceId: truckId,
+      type: 'DELAYED_TRUCK',
+      status: { $ne: 'RESOLVED' }
+    });
+
+    if (!existingEx) {
+      await Exception.create({
+        type: 'DELAYED_TRUCK',
+        category: 'TRUCK',
+        severity: 'CRITICAL',
+        title: `Truck ${truckId} Delayed`,
+        description: `PO Ref: ${truck.poNumber} | Driver: ${truck.driverName} | Delay Reason: ${delayReason}`,
+        sourceType: 'Truck',
+        sourceId: truckId,
+        metadata: { truckId, poNumber: truck.poNumber, delayMinutes, delayReason }
+      });
+    }
+
     await AuditLog.create({
       user: req.user?.name || 'Warehouse Manager',
       role: req.user?.role || 'warehouse_manager',
       action: 'SIMULATE_DELAY',
       entity: 'Truck',
       entityId: truckId,
-      details: `Simulated delay for Truck ${truckId}. Status set to DELAYED, new ETA: 12:15 PM`
+      details: `Simulated delay for Truck ${truckId} (${delayMinutes} min). Reason: ${delayReason}`
     });
+
+    const simState = await yardSimulationService.triggerDelay(truckId, delayMinutes, delayReason);
 
     res.json({
       success: true,
       truck,
-      alertMessage: '⚠️ Truck delayed. Dock planning may require reassignment.'
+      simState,
+      alertMessage: `⚠️ Truck ${truckId} delayed by ${delayMinutes} min (${delayReason}).`
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- Yard Simulation Control Endpoints ---
+exports.startSimulation = async (req, res, next) => {
+  try {
+    const speed = req.body.speed || 1;
+    const state = yardSimulationService.startSimulation(speed);
+    res.json({ success: true, state });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.pauseSimulation = async (req, res, next) => {
+  try {
+    const state = yardSimulationService.pauseSimulation();
+    res.json({ success: true, state });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.resetSimulation = async (req, res, next) => {
+  try {
+    const state = await yardSimulationService.resetSimulation();
+    res.json({ success: true, state });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.setSimulationSpeed = async (req, res, next) => {
+  try {
+    const speed = req.body.speed || 1;
+    const state = yardSimulationService.setSpeed(speed);
+    res.json({ success: true, state });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getSimulationState = async (req, res, next) => {
+  try {
+    const state = yardSimulationService.getState();
+    res.json({ success: true, state });
   } catch (error) {
     next(error);
   }
@@ -217,6 +276,8 @@ exports.assignDock = async (req, res, next) => {
     truck.assignedDock = dockNumber;
     await truck.save();
 
+    yardSimulationService.syncTruckState(truckId, { status: 'AT_DOCK', assignedDock: dockNumber, yardLocation: `Dock Bay ${dockNumber}` });
+
     await AuditLog.create({
       user: req.user?.name || 'Warehouse Manager',
       role: req.user?.role || 'warehouse_manager',
@@ -265,6 +326,7 @@ exports.releaseDock = async (req, res, next) => {
         truck.status = 'COMPLETED';
         truck.assignedDock = null;
         await truck.save();
+        yardSimulationService.syncTruckState(assignedTruckId, { status: 'COMPLETED', assignedDock: null });
       }
     }
 
@@ -474,6 +536,8 @@ exports.processReceiving = async (req, res, next) => {
         truck.status = 'COMPLETED';
         truck.assignedDock = null;
         await truck.save();
+
+        yardSimulationService.syncTruckState(truck.truckId, { status: 'COMPLETED', assignedDock: null });
 
         if (assignedDockNumber) {
           const dock = await Dock.findOne({ dockNumber: assignedDockNumber });

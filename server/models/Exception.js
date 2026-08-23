@@ -4,12 +4,12 @@ const ExceptionSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['DELAYED_TRUCK', 'INVOICE_MISMATCH', 'PAYMENT_ON_HOLD', 'PENDING_PR', 'DOCK_OCCUPIED']
+    enum: ['DELAYED_TRUCK', 'INVOICE_MISMATCH', 'PAYMENT_ON_HOLD', 'PENDING_PR', 'DOCK_OCCUPIED', 'LOW_STOCK_CRITICAL']
   },
   category: {
     type: String,
     required: true,
-    enum: ['TRUCK', 'FINANCE', 'PROCUREMENT', 'DOCK']
+    enum: ['TRUCK', 'FINANCE', 'PROCUREMENT', 'DOCK', 'INVENTORY']
   },
   severity: {
     type: String,

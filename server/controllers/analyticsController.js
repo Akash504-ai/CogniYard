@@ -211,6 +211,12 @@ exports.getControlTower = async (req, res, next) => {
         totalItems: inventoryItems.length,
         totalStockOnHand: inventoryItems.reduce((sum, i) => sum + i.quantityOnHand, 0),
         lowStockItems: inventoryAlertsCount
+      },
+      inventoryPlanning: {
+        totalMonitored: inventoryItems.length,
+        urgentCount: inventoryItems.filter(i => (i.quantityOnHand || 0) < 100).length,
+        reorderCount: inventoryItems.filter(i => (i.quantityOnHand || 0) >= 100 && (i.quantityOnHand || 0) < 300).length,
+        healthyCount: inventoryItems.filter(i => (i.quantityOnHand || 0) >= 300).length
       }
     };
 

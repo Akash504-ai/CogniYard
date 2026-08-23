@@ -16,6 +16,7 @@ const Inventory = require('../models/Inventory');
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const AuditLog = require('../models/AuditLog');
+const DemandHistory = require('../models/DemandHistory');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cogniyard';
 
@@ -39,7 +40,8 @@ async function seedDatabase() {
       Inventory.deleteMany({}),
       Invoice.deleteMany({}),
       Payment.deleteMany({}),
-      AuditLog.deleteMany({})
+      AuditLog.deleteMany({}),
+      DemandHistory.deleteMany({})
     ]);
 
     // -------------------------------------------------------------
@@ -236,9 +238,23 @@ async function seedDatabase() {
       sku: products[1].sku,
       productName: products[1].name,
       warehouseLocation: 'Aisle B-04',
-      quantityOnHand: 440,
-      availableQuantity: 440
+      quantityOnHand: 40,
+      availableQuantity: 40
     });
+
+    await Inventory.create({
+      product: products[2]._id,
+      sku: products[2].sku,
+      productName: products[2].name,
+      warehouseLocation: 'Aisle C-12',
+      quantityOnHand: 1200,
+      availableQuantity: 1200
+    });
+
+    // Update Product models currentStock fields
+    await Product.findByIdAndUpdate(products[0]._id, { currentStock: 260 });
+    await Product.findByIdAndUpdate(products[1]._id, { currentStock: 40 });
+    await Product.findByIdAndUpdate(products[2]._id, { currentStock: 1200 });
 
     const inv2 = await Invoice.create({
       invoiceNumber: 'INV-8802',
@@ -345,6 +361,36 @@ async function seedDatabase() {
       matchStatus: 'MATCHED',
       paymentStatus: 'PAID'
     });
+
+    // -------------------------------------------------------------
+    // DEMAND HISTORY (6-MONTH DETERMINISTIC DATA FOR PLANNING ENGINE)
+    // -------------------------------------------------------------
+    await DemandHistory.create([
+      // SKU-HLMT-01 (Safety Helmet - Scenario 2: REORDER_RECOMMENDED)
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-03', monthName: 'March', quantity: 1800 },
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-04', monthName: 'April', quantity: 1950 },
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-05', monthName: 'May', quantity: 2010 },
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-06', monthName: 'June', quantity: 2100 },
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-07', monthName: 'July', quantity: 2050 },
+      { product: products[0]._id, sku: products[0].sku, productName: products[0].name, period: '2026-08', monthName: 'August', quantity: 2150 },
+
+      // SKU-GLVS-02 (Cut Resistant Gloves - Scenario 3: URGENT_REORDER)
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-03', monthName: 'March', quantity: 1400 },
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-04', monthName: 'April', quantity: 1550 },
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-05', monthName: 'May', quantity: 1600 },
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-06', monthName: 'June', quantity: 1750 },
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-07', monthName: 'July', quantity: 1800 },
+      { product: products[1]._id, sku: products[1].sku, productName: products[1].name, period: '2026-08', monthName: 'August', quantity: 1900 },
+
+      // SKU-VEST-03 (Reflective Safety Vest - Scenario 1: HEALTHY)
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-03', monthName: 'March', quantity: 210 },
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-04', monthName: 'April', quantity: 230 },
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-05', monthName: 'May', quantity: 220 },
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-06', monthName: 'June', quantity: 240 },
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-07', monthName: 'July', quantity: 250 },
+      { product: products[2]._id, sku: products[2].sku, productName: products[2].name, period: '2026-08', monthName: 'August', quantity: 260 }
+    ]);
+    console.log('Created 18 DemandHistory records across 3 products.');
 
     // -------------------------------------------------------------
     // INITIAL AUDIT LOGS
