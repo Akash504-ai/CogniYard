@@ -21,7 +21,8 @@ import {
   ArrowDown,
   Navigation,
   Sparkles,
-  ShieldAlert
+  ShieldAlert,
+  ArrowRight
 } from 'lucide-react';
 
 export default function YardDigitalTwin({
@@ -63,10 +64,10 @@ export default function YardDigitalTwin({
 
   const getHeatmapLevel = (count, maxThreshold) => {
     const ratio = count / maxThreshold;
-    if (ratio > 0.8) return { label: 'CRITICAL', bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
-    if (ratio > 0.5) return { label: 'HIGH', bg: 'bg-amber-500/20 text-amber-400 border-amber-500/40' };
-    if (ratio > 0.2) return { label: 'MODERATE', bg: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40' };
-    return { label: 'LOW', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
+    if (ratio > 0.8) return { label: 'CRITICAL', bg: 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-rose-500/10' };
+    if (ratio > 0.5) return { label: 'HIGH', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-amber-500/10' };
+    if (ratio > 0.2) return { label: 'MODERATE', bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 shadow-indigo-500/10' };
+    return { label: 'LOW', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10' };
   };
 
   const gateHeatmap = getHeatmapLevel(gateCount, 4);
@@ -124,144 +125,165 @@ export default function YardDigitalTwin({
     return { x: targetX, y: 70, stage: 'DOCKED' };
   };
 
-  // Check if any truck is currently processing at Gate 1
   const isGateActive = activeTrucks.some(t => t.status === 'AT_GATE' || (t.progress >= 24 && t.progress <= 36));
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100 p-6 space-y-6">
+    <div className="relative w-full rounded-3xl overflow-hidden border border-zinc-800/80 bg-zinc-950 text-zinc-100 p-6 space-y-6 shadow-2xl backdrop-blur-3xl font-sans">
       
       {/* DIGITAL TWIN HEADER BAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
-        <div className="flex items-center gap-3.5">
-          <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5 ring-1 ring-indigo-500/30">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2.5 font-mono">
-              <span>CogniYard Digital Twin — Fleet Simulation Console</span>
-              <span className={`inline-flex items-center gap-1.5 text-[10px] px-3 py-0.5 rounded-full font-semibold border shadow-sm ${
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-extrabold text-white tracking-tight font-mono">
+                CogniYard Digital Twin
+              </h2>
+              <span className="text-xs font-mono text-zinc-500 hidden sm:inline">|</span>
+              <span className="text-xs font-mono text-zinc-400 font-semibold uppercase tracking-wider">Fleet Simulation Console</span>
+              
+              <span className={`inline-flex items-center gap-1.5 text-[10px] px-3 py-1 rounded-full font-mono font-bold tracking-wider border shadow-sm ${
                 simRunning
-                  ? 'bg-emerald-950/80 text-emerald-400 border-emerald-700/80'
-                  : 'bg-zinc-900 text-zinc-400 border-zinc-700'
+                  ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-700/80'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${simRunning ? 'bg-emerald-400 animate-ping' : 'bg-zinc-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${simRunning ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
                 {simRunning ? `SIMULATION ACTIVE (${simSpeed}x)` : 'PAUSED'}
               </span>
-            </h3>
-            <p className="text-xs text-zinc-400 font-mono mt-0.5">
-              Live top-down 2D yard telemetry, realistic 18-wheeler vehicle assets, animated gate barrier, pneumatic dock doors & unloading cargo streams.
+            </div>
+            <p className="text-xs text-zinc-400 font-medium mt-1">
+              Real-time telemetry, top-down 2D yard schematic, automated gate barriers & pneumatic bay tracking.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowCameraModal(true)}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-indigo-400 border border-indigo-500/30 transition shadow-md cursor-pointer active:scale-95"
+            className="flex items-center gap-2 text-xs font-bold font-mono px-4 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:border-indigo-500/50 transition-all duration-200 shadow-md hover:shadow-indigo-500/10 cursor-pointer active:scale-95"
           >
             <Camera className="w-4 h-4 text-indigo-400" />
-            <span>📷 CCTV Feeds (Phase 4 Ready)</span>
+            <span>CCTV FEEDS (PHASE 4)</span>
           </button>
         </div>
       </div>
 
       {/* CONGESTION HEATMAP & TELEMETRY ROW */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] uppercase font-mono text-zinc-400 block tracking-wider">Gate Zone Risk</span>
-            <span className="text-xs font-bold text-zinc-100 font-mono mt-0.5 block">{gateCount} Vehicles Inbound</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Gate Zone Risk */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl flex items-center justify-between shadow-sm backdrop-blur-md hover:border-zinc-700 transition">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-mono font-bold text-zinc-500 tracking-wider">Gate Zone Risk</span>
+            <span className="text-sm font-bold text-zinc-100 font-mono block">{gateCount} Vehicles Inbound</span>
           </div>
-          <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${gateHeatmap.bg}`}>
+          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border shadow-sm ${gateHeatmap.bg}`}>
             {gateHeatmap.label}
           </span>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] uppercase font-mono text-zinc-400 block tracking-wider">Queue Zone Risk</span>
-            <span className="text-xs font-bold text-zinc-100 font-mono mt-0.5 block">{queueCount} Vehicles Waiting</span>
+        {/* Queue Zone Risk */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl flex items-center justify-between shadow-sm backdrop-blur-md hover:border-zinc-700 transition">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-mono font-bold text-zinc-500 tracking-wider">Queue Zone Risk</span>
+            <span className="text-sm font-bold text-zinc-100 font-mono block">{queueCount} Vehicles Waiting</span>
           </div>
-          <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${queueHeatmap.bg}`}>
+          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border shadow-sm ${queueHeatmap.bg}`}>
             {queueHeatmap.label}
           </span>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] uppercase font-mono text-zinc-400 block tracking-wider">Dock Bays Risk</span>
-            <span className="text-xs font-bold text-zinc-100 font-mono mt-0.5 block">{dockOccupiedCount} / {docks.length} Occupied</span>
+        {/* Dock Bays Risk */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl flex items-center justify-between shadow-sm backdrop-blur-md hover:border-zinc-700 transition">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-mono font-bold text-zinc-500 tracking-wider">Dock Bays Risk</span>
+            <span className="text-sm font-bold text-zinc-100 font-mono block">{dockOccupiedCount} / {docks.length} Occupied</span>
           </div>
-          <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${dockHeatmap.bg}`}>
+          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border shadow-sm ${dockHeatmap.bg}`}>
             {dockHeatmap.label}
           </span>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] uppercase font-mono text-zinc-400 block tracking-wider">Yard Slot Capacity</span>
-            <span className="text-xs font-bold text-indigo-400 font-mono mt-0.5 block">{yardCapacity.occupied} / {yardCapacity.max} ({Math.round((yardCapacity.occupied / yardCapacity.max) * 100)}%)</span>
+        {/* Yard Capacity */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl flex items-center justify-between shadow-sm backdrop-blur-md hover:border-zinc-700 transition">
+          <div className="space-y-1 w-full mr-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] uppercase font-mono font-bold text-zinc-500 tracking-wider">Yard Slot Capacity</span>
+              <span className="text-[11px] font-bold text-indigo-400 font-mono">
+                {Math.round((yardCapacity.occupied / yardCapacity.max) * 100)}%
+              </span>
+            </div>
+            <span className="text-sm font-bold text-zinc-100 font-mono block">{yardCapacity.occupied} / {yardCapacity.max} Slots</span>
+            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1.5">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-500" 
+                style={{ width: `${(yardCapacity.occupied / yardCapacity.max) * 100}%` }}
+              />
+            </div>
           </div>
-          <Gauge className="w-5 h-5 text-indigo-400" />
+          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+            <Gauge className="w-5 h-5" />
+          </div>
         </div>
       </div>
 
       {/* FLOATING REAL-TIME MILESTONE EVENT TOAST */}
       {activeToast && (
-        <div className="p-3.5 rounded-2xl bg-indigo-950/90 border border-indigo-500/40 text-indigo-200 text-xs font-mono font-semibold flex items-center gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-          <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" />
+        <div className="p-3.5 rounded-2xl bg-indigo-950/90 border border-indigo-500/40 text-indigo-200 text-xs font-mono font-medium flex items-center gap-3 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-lg">
+          <div className="p-1 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <Sparkles className="w-4 h-4 animate-spin" />
+          </div>
           <span>{activeToast}</span>
         </div>
       )}
 
       {/* 2D SCHEMATIC VISUAL CONTROL CANVAS CONTAINER */}
-      <div className="relative w-full h-[650px] rounded-3xl bg-[#0f1013] border border-zinc-800/90 overflow-hidden shadow-2xl">
+      <div className="relative w-full h-[660px] rounded-3xl bg-[#090a0f] border border-zinc-800/90 overflow-hidden shadow-2xl">
         
-        {/* Dark Charcoal Asphalt Surface Background */}
-        <div className="absolute inset-0 bg-[#121316] bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:24px_24px] opacity-80" />
+        {/* Dark Tactical Asphalt Surface Background */}
+        <div className="absolute inset-0 bg-[#0c0d12] bg-[radial-gradient(#1f222e_1px,transparent_1px)] [background-size:20px_20px] opacity-70" />
 
         {/* 1. INBOUND HIGHWAY ROADWAY (TOP) */}
-        <div className="absolute top-[6%] left-[2%] right-[2%] h-[14%] rounded-2xl bg-zinc-950/90 border-y-2 border-dashed border-amber-500/50 flex items-center justify-between px-6 shadow-inner">
-          <div className="flex items-center gap-2.5 text-xs font-mono font-bold text-amber-400">
+        <div className="absolute top-[5%] left-[2%] right-[2%] h-[14%] rounded-2xl bg-zinc-950/90 border-2 border-dashed border-amber-500/30 flex items-center justify-between px-6 shadow-inner backdrop-blur-sm">
+          <div className="flex items-center gap-2.5 text-xs font-mono font-bold text-amber-400 tracking-wider">
             <Navigation className="w-4 h-4 rotate-90 text-amber-400" />
             <span>INBOUND HIGHWAY ROADWAY (LANE 1)</span>
           </div>
-          {/* Yellow Centerline Dashes */}
-          <div className="absolute inset-x-0 top-1/2 border-b-2 border-dashed border-amber-500/40 pointer-events-none" />
-          <span className="text-[10px] font-mono text-zinc-500">Speed Limit: 25 km/h</span>
+          <div className="absolute inset-x-0 top-1/2 border-b-2 border-dashed border-amber-500/20 pointer-events-none" />
+          <span className="text-[10px] font-mono text-zinc-500 font-semibold bg-zinc-900 px-2 py-1 rounded border border-zinc-800 z-10">SPEED LIMIT: 25 KM/H</span>
         </div>
 
         {/* 2. GATE 1 CHECKPOINT & BARRIER ARM */}
-        <div className="absolute top-[26%] left-[26%] w-[170px] h-[85px] rounded-2xl bg-zinc-950 border border-zinc-800 p-3 flex flex-col justify-between shadow-2xl z-10">
+        <div className="absolute top-[25%] left-[26%] w-[180px] h-[90px] rounded-2xl bg-zinc-950/95 border border-zinc-800/90 p-3 flex flex-col justify-between shadow-2xl z-10 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-mono">
-            <strong className="text-amber-400 font-bold">GATE 1 CHECKPOINT</strong>
-            <span className={`px-1.5 py-0.2 rounded-full font-bold ${isGateActive ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'}`}>
-              {isGateActive ? '🚧 PROCESSING' : '🟢 READY'}
+            <strong className="text-amber-400 font-bold tracking-wider">GATE 1 CHECKPOINT</strong>
+            <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${isGateActive ? 'bg-amber-950/80 text-amber-300 border-amber-800/80' : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80'}`}>
+              {isGateActive ? 'BUSY' : 'READY'}
             </span>
           </div>
 
-          {/* Barrier Arm Animation */}
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[9px] font-mono text-zinc-400">Barrier Gate Arm:</span>
-            <div className={`h-2 w-20 rounded-full transition-transform duration-500 origin-left shadow-lg ${
-              isGateActive ? '-rotate-45 bg-emerald-500 shadow-emerald-500/60' : 'rotate-0 bg-rose-500 shadow-rose-500/60'
+          <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
+            <span className="text-[9px] font-mono text-zinc-400">Barrier Arm:</span>
+            <div className={`h-1.5 w-20 rounded-full transition-all duration-500 origin-left shadow-lg ${
+              isGateActive ? '-rotate-45 bg-emerald-400 shadow-emerald-500/50' : 'rotate-0 bg-rose-500 shadow-rose-500/50'
             }`} />
           </div>
         </div>
 
         {/* 3. YARD HOLDING QUEUE STALLS (ZONE B) */}
-        <div className="absolute top-[38%] left-[44%] right-[4%] h-[95px] rounded-2xl bg-zinc-950/80 border border-zinc-800/80 p-3 flex flex-col justify-between shadow-inner">
-          <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400">
-            <span className="text-indigo-400 font-bold flex items-center gap-1.5">
-              <Boxes className="w-4 h-4" />
+        <div className="absolute top-[37%] left-[44%] right-[2%] h-[100px] rounded-2xl bg-zinc-950/80 border border-zinc-800/80 p-3.5 flex flex-col justify-between shadow-inner backdrop-blur-md">
+          <div className="flex justify-between items-center text-[10px] font-mono">
+            <span className="text-indigo-400 font-bold tracking-wider flex items-center gap-2">
+              <Boxes className="w-4 h-4 text-indigo-400" />
               YARD HOLDING QUEUE STALLS (PARKING BAY 1–4)
             </span>
-            <span>Priority Queueing Buffer</span>
+            <span className="text-zinc-500">PRIORITY QUEUEING BUFFER</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 pt-1">
+          <div className="grid grid-cols-4 gap-2.5 pt-1">
             {[1, 2, 3, 4].map((stallNum) => (
-              <div key={stallNum} className="h-11 rounded-xl bg-zinc-900/60 border border-dashed border-amber-500/30 flex items-center justify-center text-[9px] font-mono text-zinc-500 font-bold">
+              <div key={stallNum} className="h-11 rounded-xl bg-zinc-900/40 border border-dashed border-amber-500/25 flex items-center justify-center text-[9px] font-mono text-zinc-500 font-bold tracking-wider hover:border-amber-500/50 transition">
                 STALL {stallNum}
               </div>
             ))}
@@ -269,22 +291,22 @@ export default function YardDigitalTwin({
         </div>
 
         {/* 4. DOCK APPROACH & APRON LANES */}
-        <div className="absolute bottom-[28%] inset-x-[2%] h-[12%] border-t-2 border-dashed border-zinc-800 flex items-center justify-around text-[10px] font-mono text-zinc-600">
-          <span>Approach Lane 1</span>
-          <span>Approach Lane 2</span>
-          <span>Approach Lane 3</span>
-          <span>Approach Lane 4</span>
+        <div className="absolute bottom-[28%] inset-x-[2%] h-[10%] border-t-2 border-dashed border-zinc-800/80 flex items-center justify-around text-[10px] font-mono text-zinc-600 tracking-wider">
+          <span>LANE 01</span>
+          <span>LANE 02</span>
+          <span>LANE 03</span>
+          <span>LANE 04</span>
         </div>
 
         {/* 5. SVG ANIMATED NEON ROUTE PATH OVERLAYS */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
           <defs>
             <linearGradient id="neonPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.9" />
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
             </linearGradient>
           </defs>
-          <path d="M 5% 13% L 26% 13% L 34% 30% L 48% 46% L 48% 70%" fill="none" stroke="url(#neonPathGrad)" strokeWidth="2.5" strokeDasharray="6 6" className="animate-pulse" />
+          <path d="M 5% 12% L 26% 12% L 34% 29% L 48% 46% L 48% 68%" fill="none" stroke="url(#neonPathGrad)" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
         </svg>
 
         {/* 6. DYNAMICALLY ANIMATED TRUCK MARKERS WITH REAL TRUCK GRAPHIC */}
@@ -303,43 +325,41 @@ export default function YardDigitalTwin({
               }}
               className="absolute z-30 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-out cursor-pointer group"
             >
-              {/* Headlight Beam Light Cone Glow */}
-              <div className="absolute top-1/2 -right-12 -translate-y-1/2 w-16 h-8 bg-amber-400/20 filter blur-md rounded-r-full pointer-events-none opacity-80 animate-pulse" />
+              {/* Headlight Cone Glow */}
+              <div className="absolute top-1/2 -right-10 -translate-y-1/2 w-12 h-6 bg-amber-400/15 filter blur-sm rounded-r-full pointer-events-none opacity-80" />
 
-              {/* REAL SEMI-TRUCK VISUAL ASSET CONTAINER */}
               <div className="relative flex items-center gap-3">
-                {/* Truck Top-Down Vehicle Graphic Component */}
-                <div className="relative w-16 h-8 flex items-center justify-center">
+                {/* Truck Top-Down Vehicle Graphic */}
+                <div className="relative w-14 h-7 flex items-center justify-center">
                   <img
                     src="/truck.png"
                     alt="Semi Truck"
-                    className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform"
+                    className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] group-hover:scale-110 transition-transform"
                     onError={(e) => {
-                      // Fallback SVG top-down semi-truck graphic if image file load fails
                       e.target.style.display = 'none';
                     }}
                   />
                 </div>
 
                 {/* Glassmorphic Vehicle Telemetry Badge */}
-                <div className={`p-2.5 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 transition-all group-hover:scale-105 ${
+                <div className={`p-2.5 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 transition-all duration-200 group-hover:scale-105 ${
                   isDelayed
-                    ? 'bg-rose-950/90 border-rose-500 text-rose-100 shadow-rose-950/50'
+                    ? 'bg-rose-950/90 border-rose-500/80 text-rose-100 shadow-rose-950/50'
                     : isDocked
-                    ? 'bg-indigo-950/90 border-indigo-500 text-indigo-100 shadow-indigo-950/50'
+                    ? 'bg-indigo-950/90 border-indigo-500/80 text-indigo-100 shadow-indigo-950/50'
                     : 'bg-zinc-950/90 border-emerald-500/80 text-emerald-100 shadow-emerald-950/50'
                 }`}>
                   <div className={`p-1.5 rounded-xl ${isDelayed ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                    <Truck className="w-4 h-4 animate-pulse" />
+                    <Truck className="w-3.5 h-3.5" />
                   </div>
-                  <div className="text-[11px] font-mono leading-tight">
+                  <div className="text-[10px] font-mono leading-tight">
                     <div className="flex items-center gap-1.5">
                       <strong className="text-white font-bold">{truck.truckId}</strong>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-zinc-800 text-zinc-300 font-semibold">
+                      <span className="text-[8px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-300 font-bold border border-zinc-700">
                         {truck.priority || 'HIGH'}
                       </span>
                     </div>
-                    <div className="text-[9px] text-zinc-400 mt-0.5">
+                    <div className="text-[9px] text-zinc-400 font-medium mt-0.5">
                       {truck.poNumber} • {truck.status} ({truck.progress || 0}%)
                     </div>
                   </div>
@@ -361,55 +381,55 @@ export default function YardDigitalTwin({
               <div
                 key={dock._id || dock.dockNumber}
                 onClick={() => onSelectDock && onSelectDock(dock)}
-                className={`relative p-4 rounded-2xl border transition-all cursor-pointer bg-zinc-950/95 flex flex-col justify-between space-y-2.5 shadow-2xl ${
+                className={`relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer bg-zinc-950/90 backdrop-blur-md flex flex-col justify-between space-y-2 shadow-xl ${
                   isMaintenance
-                    ? 'border-rose-500/40 bg-zinc-950 opacity-85'
+                    ? 'border-rose-500/30 bg-zinc-950/80'
                     : dock.status === 'AVAILABLE'
-                    ? 'border-emerald-500/40 hover:border-emerald-400 hover:shadow-emerald-500/20'
+                    ? 'border-emerald-500/30 hover:border-emerald-400/60'
                     : isUnloading
-                    ? 'border-purple-500/50 hover:border-purple-400 hover:shadow-purple-500/20'
+                    ? 'border-purple-500/40 hover:border-purple-400/60'
                     : isOccupied
-                    ? 'border-indigo-500/50 hover:border-indigo-400 hover:shadow-indigo-500/20'
-                    : 'border-zinc-800 opacity-60'
+                    ? 'border-indigo-500/40 hover:border-indigo-400/60'
+                    : 'border-zinc-800'
                 }`}
               >
                 {/* Dock Header */}
                 <div className="flex items-center justify-between text-[11px] font-mono">
-                  <span className="font-bold px-2.5 py-0.5 rounded-lg bg-zinc-900 text-zinc-100 border border-zinc-800">
+                  <span className="font-bold px-2 py-0.5 rounded-lg bg-zinc-900 text-zinc-100 border border-zinc-800">
                     {dock.dockNumber}
                   </span>
-                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] border ${
-                    isMaintenance ? 'bg-rose-950 text-rose-400 border-rose-800' :
-                    dock.status === 'AVAILABLE' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' :
-                    isUnloading ? 'bg-purple-950 text-purple-400 border-purple-800' :
-                    isOccupied ? 'bg-indigo-950 text-indigo-400 border-indigo-800' :
+                  <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${
+                    isMaintenance ? 'bg-rose-950/80 text-rose-400 border-rose-800/80' :
+                    dock.status === 'AVAILABLE' ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80' :
+                    isUnloading ? 'bg-purple-950/80 text-purple-400 border-purple-800/80' :
+                    isOccupied ? 'bg-indigo-950/80 text-indigo-400 border-indigo-800/80' :
                     'bg-zinc-900 text-zinc-400 border-zinc-700'
                   }`}>
                     {dock.status}
                   </span>
                 </div>
 
-                {/* Metallic Pneumatic Dock Door & Unloading Stream */}
-                <div className="relative h-14 w-full rounded-xl bg-zinc-900 border border-zinc-800 p-2 flex items-center justify-between overflow-hidden text-[10px] font-mono shadow-inner">
-                  <span className="text-zinc-400">Pneumatic Door:</span>
+                {/* Pneumatic Door Visualizer */}
+                <div className="relative h-12 w-full rounded-xl bg-zinc-900/80 border border-zinc-800 p-2 flex items-center justify-between overflow-hidden text-[10px] font-mono shadow-inner">
+                  <span className="text-zinc-400 font-medium">Pneumatic Door:</span>
                   <strong className={isMaintenance ? 'text-rose-400' : isOccupied ? 'text-rose-400' : 'text-emerald-400'}>
-                    {isMaintenance ? '🔧 LOCKED' : isOccupied ? '🚪 SEALED' : '🚪 OPEN'}
+                    {isMaintenance ? 'LOCKED' : isOccupied ? 'SEALED' : 'OPEN'}
                   </strong>
 
-                  {/* Animated Package Box Stream during Unloading */}
+                  {/* Unloading Package Stream Animation */}
                   {isUnloading && (
-                    <div className="absolute inset-0 bg-purple-950/95 border border-purple-800 flex items-center justify-center gap-1.5 text-purple-200 font-bold animate-bounce z-10 shadow-lg">
+                    <div className="absolute inset-0 bg-purple-950/95 border border-purple-800/80 flex items-center justify-center gap-1.5 text-purple-200 font-bold animate-pulse z-10 shadow-lg">
                       <Boxes className="w-4 h-4 text-purple-400" />
-                      <span>UNLOADING 📦📦📦</span>
+                      <span className="text-[10px] tracking-wider">UNLOADING CARGO...</span>
                     </div>
                   )}
                 </div>
 
-                {/* Dock Operational Actions */}
+                {/* Actions */}
                 <div className="pt-0.5">
                   {isMaintenance ? (
-                    <button disabled className="w-full py-1.5 rounded-xl bg-zinc-900 text-rose-400/80 text-[10px] border border-rose-950 font-mono font-semibold cursor-not-allowed">
-                      🔧 MAINTENANCE — LOCKED
+                    <button disabled className="w-full py-1.5 rounded-xl bg-zinc-900/80 text-rose-400/80 text-[10px] border border-rose-950 font-mono font-semibold cursor-not-allowed">
+                      MAINTENANCE LOCKED
                     </button>
                   ) : isOccupied ? (
                     <div className="flex gap-1.5">
@@ -420,7 +440,7 @@ export default function YardDigitalTwin({
                             onReceiveGoods(dockedTruck.poNumber);
                           }
                         }}
-                        className="w-full py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-[10px] transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-md"
+                        className="w-full py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-[10px] font-mono transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-md shadow-indigo-600/20"
                       >
                         <PackageCheck className="w-3.5 h-3.5" />
                         <span>Receive Goods</span>
@@ -444,7 +464,7 @@ export default function YardDigitalTwin({
                           onRecommendDock(activeTrucks[0]);
                         }
                       }}
-                      className="w-full py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-[10px] border border-zinc-800 transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      className="w-full py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-[10px] font-mono border border-zinc-800 transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                     >
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
                       <span>Recommend Dock</span>
@@ -458,18 +478,18 @@ export default function YardDigitalTwin({
 
       </div>
 
-      {/* CCTV CAMERA FEEDS PLACEHOLDER MODAL (PHASE 4 READY) */}
+      {/* CCTV CAMERA FEEDS MODAL */}
       {showCameraModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl p-6 rounded-3xl shadow-2xl space-y-5 text-zinc-100">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl p-6 rounded-3xl shadow-2xl space-y-5 text-zinc-100 font-sans">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   <Camera className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white font-mono">CCTV Security Camera Vision Panel</h3>
-                  <p className="text-[10px] text-zinc-400 font-mono">Phase 4 Computer Vision System Integration Placeholder</p>
+                  <h3 className="text-sm font-bold text-white font-mono">CCTV Security Vision Feed</h3>
+                  <p className="text-[10px] text-zinc-400 font-mono">Phase 4 AI Computer Vision Subsystem</p>
                 </div>
               </div>
               <button
@@ -481,7 +501,6 @@ export default function YardDigitalTwin({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* CAM 01 */}
               <div className="relative rounded-2xl bg-zinc-950 border border-zinc-800 p-4 space-y-2 text-center h-44 flex flex-col justify-between overflow-hidden shadow-inner">
                 <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400 z-10">
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
@@ -492,12 +511,11 @@ export default function YardDigitalTwin({
                 </div>
                 <div className="my-auto space-y-1 z-10">
                   <Camera className="w-8 h-8 text-indigo-400/40 mx-auto" />
-                  <p className="text-xs font-mono font-bold text-zinc-300">ANPR License Plate Scanner Stream</p>
-                  <p className="text-[10px] text-zinc-500 font-mono">Camera AI Stream Ready for Phase 4 Computer Vision</p>
+                  <p className="text-xs font-mono font-bold text-zinc-300">ANPR License Plate Scanner</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">Ready for Phase 4 Computer Vision</p>
                 </div>
               </div>
 
-              {/* CAM 02 */}
               <div className="relative rounded-2xl bg-zinc-950 border border-zinc-800 p-4 space-y-2 text-center h-44 flex flex-col justify-between overflow-hidden shadow-inner">
                 <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400 z-10">
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
@@ -508,8 +526,8 @@ export default function YardDigitalTwin({
                 </div>
                 <div className="my-auto space-y-1 z-10">
                   <Camera className="w-8 h-8 text-indigo-400/40 mx-auto" />
-                  <p className="text-xs font-mono font-bold text-zinc-300">Dock Door & Unloading Visual Stream</p>
-                  <p className="text-[10px] text-zinc-500 font-mono">Camera AI Stream Ready for Phase 4 Computer Vision</p>
+                  <p className="text-xs font-mono font-bold text-zinc-300">Dock Door Visual Monitor</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">Ready for Phase 4 Computer Vision</p>
                 </div>
               </div>
             </div>
@@ -517,7 +535,7 @@ export default function YardDigitalTwin({
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setShowCameraModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition cursor-pointer active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs font-mono transition cursor-pointer active:scale-95 shadow-md shadow-indigo-600/20"
               >
                 Close Camera View
               </button>
