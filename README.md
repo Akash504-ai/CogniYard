@@ -29,45 +29,67 @@ The platform provides dedicated workflows for:
 
 ```mermaid
 flowchart TB
+
     U[Users<br/>Admin • Procurement • Warehouse • Finance • Supplier]
 
-    FE[React + Vite Frontend<br/>Role-Based Workspaces]
+    subgraph VERCEL["Frontend — Vercel"]
+        FE[React 18 + Vite<br/>Role-Based Workspaces]
+        CV[Computer Vision<br/>Camera • Tesseract OCR • COCO-SSD]
+    end
 
-    API[Express REST API<br/>Authentication • Authorization • Business Logic]
+    subgraph RENDER["Backend — Render"]
+        API[Node.js + Express REST API<br/>JWT • RBAC • Business Logic]
 
-    DB[(MongoDB<br/>Persistent Business Data)]
+        AI[AI Services<br/>Groq API • Deterministic Local Fallback]
 
-    AI[AI Services<br/>Groq API + Local Fallback]
+        DOC[Document Services<br/>PDFKit • Multer]
 
-    CV[Computer Vision<br/>Camera • Tesseract OCR • COCO-SSD]
+        P2P[Autonomous Procure-to-Pay<br/>PR → Supplier Intelligence → PO → GRN → Invoice → 3-Way Match → Payment]
 
-    DOC[Document Services<br/>PDFKit • Multer • Cloudinary / Local Storage]
+        YARD[Warehouse & Yard Execution<br/>Gate Verification → Yard → Dock → Receiving]
 
-    P2P[Procure-to-Pay<br/>PR → PO → GRN → Invoice → 3-Way Match → Payment]
+        DASH[Analytics & Control Tower<br/>KPIs • Exceptions • Operational Monitoring]
+    end
 
-    YARD[Warehouse & Yard Execution<br/>Gate Verification → Dock Assignment → Receiving]
+    subgraph DATA["Persistent Data & Storage"]
+        DB[(MongoDB Atlas<br/>Users • Suppliers • PRs • POs • Trucks • GRNs • Inventory • Invoices • Payments)]
 
-    DASH[Analytics & Dashboards<br/>Procurement • Warehouse • Finance • Control Tower]
+        CLOUD[(Cloudinary<br/>Supplier Invoice Documents)]
+    end
+
+    subgraph CICD["CI/CD — GitHub Actions"]
+        CI1[Server CI<br/>Automated Backend Tests]
+        CI2[Client CI<br/>Production Build Validation]
+    end
+
+    GH[GitHub Repository]
 
     U --> FE
 
     FE --> API
     FE --> CV
-    FE --> AI
 
-    API --> DB
     API --> AI
     API --> DOC
     API --> P2P
     API --> YARD
     API --> DASH
+    API --> DB
 
     CV --> API
-    DOC --> API
+    DOC --> CLOUD
 
     P2P --> DB
     YARD --> DB
     DASH --> DB
+
+    P2P --> YARD
+
+    GH --> CI1
+    GH --> CI2
+
+    CI1 -. CI Validation .-> RENDER
+    CI2 -. CI Validation .-> VERCEL
 ```
 
 ---
@@ -198,22 +220,31 @@ Invoice processing supports:
 
 ## Technology Stack
 
-| Layer           | Technology                   |
-| --------------- | ---------------------------- |
-| Frontend        | React 18, Vite, Tailwind CSS |
-| Routing         | React Router                 |
-| Charts          | Recharts                     |
-| Maps            | React Leaflet                |
-| Backend         | Node.js 20+, Express         |
-| Database        | MongoDB, Mongoose            |
-| Authentication  | JWT, bcrypt                  |
-| Documents       | PDFKit, Multer               |
-| File Storage    | Cloudinary / Local Storage   |
-| OCR             | Tesseract                    |
-| Computer Vision | TensorFlow.js, COCO-SSD      |
-| AI              | Groq API with local fallback |
-| Testing         | Node Test Runner             |
-| Build           | Vite                         |
+| Layer                           | Technology                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Frontend**                    | React 18, Vite, Tailwind CSS                                                                    |
+| **Frontend Hosting**            | **Vercel**                                                                                      |
+| **Routing**                     | React Router                                                                                    |
+| **Charts**                      | Recharts                                                                                        |
+| **Maps**                        | React Leaflet                                                                                   |
+| **Backend**                     | Node.js 20+, Express                                                                            |
+| **Backend Hosting**             | **Render**                                                                                      |
+| **Database**                    | **MongoDB Atlas, Mongoose**                                                                     |
+| **Authentication**              | JWT, bcrypt, RBAC                                                                               |
+| **AI / Copilot**                | **Groq API + deterministic local fallback**                                                     |
+| **AI Procurement Intelligence** | Natural-language extraction, supplier scoring, EOQ validation, autonomous PR → PO orchestration |
+| **Computer Vision**             | TensorFlow.js, COCO-SSD                                                                         |
+| **OCR**                         | Tesseract                                                                                       |
+| **Documents**                   | PDFKit, Multer                                                                                  |
+| **File Storage**                | **Cloudinary**                                                                                  |
+| **Testing**                     | Node.js Test Runner                                                                             |
+| **CI/CD**                       | **GitHub Actions**                                                                              |
+| **Client CI**                   | Automated Vite production build validation                                                      |
+| **Server CI**                   | Automated backend test validation                                                               |
+| **API**                         | REST API                                                                                        |
+| **Build Tool**                  | Vite                                                                                            |
+| **Version Control**             | Git, GitHub                                                                                     |
+
 
 ---
 
@@ -221,32 +252,37 @@ Invoice processing supports:
 
 ```text
 CogniYard/
-├── client/                         # React + Vite frontend
+├── client/                              # React + Vite frontend
 │   ├── public/
 │   └── src/
-│       ├── components/
-│       ├── context/
-│       ├── pages/
-│       └── services/
+│       ├── components/                  # Reusable UI & Copilot components
+│       ├── context/                     # Auth, theme & application state
+│       ├── pages/                       # Procurement, Logistics, Finance, etc.
+│       └── services/                    # API service integrations
 │
-├── server/                         # Express + MongoDB backend
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   ├── seed/
-│   ├── services/
-│   └── tests/
+├── server/                              # Node.js + Express backend
+│   ├── controllers/                     # Business logic & API controllers
+│   ├── middleware/                      # Auth, RBAC & file-upload middleware
+│   ├── models/                          # MongoDB/Mongoose models
+│   ├── routes/                           # REST API routes
+│   ├── seed/                             # Demo/bootstrap data
+│   ├── services/                         # AI, procurement & document services
+│   └── tests/                            # Backend & integration tests
 │
 ├── docs/
-│   └── IMPLEMENTATION_REPORT.md
+│   └── IMPLEMENTATION_REPORT.md          # Detailed implementation & verification report
 │
-├── .env.example
+├── .github/
+│   └── workflows/
+│       ├── client-ci.yml                 # Frontend build CI
+│       └── server-ci.yml                 # Backend test CI
+│
+├── .env.example                          # Environment variable template
 ├── .gitignore
-├── package.json
+├── package.json                          # Root workspace configuration
 ├── package-lock.json
 ├── README.md
-└── START_COGNIYARD_WINDOWS.bat
+└── START_COGNIYARD_WINDOWS.bat           # Windows development launcher
 ```
 
 `node_modules` and environment files containing secrets are excluded from version control.
