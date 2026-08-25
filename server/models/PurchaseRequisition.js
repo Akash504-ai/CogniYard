@@ -20,6 +20,9 @@ const purchaseRequisitionSchema = new mongoose.Schema({
   },
   priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'], default: 'MEDIUM' },
   aiGenerated: { type: Boolean, default: false },
+  recommendedSupplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', default: null },
+  recommendedSupplierName: { type: String, default: '' },
+  businessReason: { type: String, default: '' },
   notes: { type: String }
 }, { timestamps: true });
 

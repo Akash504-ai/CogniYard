@@ -208,6 +208,8 @@ async function computeProductPlanningData(product) {
   };
 }
 
+exports.computeProductPlanningData = computeProductPlanningData;
+
 /**
  * GET /api/inventory-planning/summary
  * Aggregate KPIs for all monitored products

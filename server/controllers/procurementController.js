@@ -7,6 +7,99 @@ const Truck = require('../models/Truck');
 const AuditLog = require('../models/AuditLog');
 const yardSimulationService = require('../services/yardSimulationService');
 
+function evaluateSupplierDocuments(suppliers = []) {
+  const evaluatedSuppliers = suppliers.map(s => {
+    const otdScore = s.otdScore || 90;
+    const qualityScore = (s.rating / 5) * 100;
+    const leadTimeScore = Math.max(0, 100 - (s.leadTimeDays * 10));
+    const aiScore = Number(((otdScore * 0.4) + (qualityScore * 0.4) + (leadTimeScore * 0.2)).toFixed(1));
+
+    return {
+      _id: s._id,
+      name: s.name,
+      code: s.code,
+      email: s.email,
+      category: s.category,
+      rating: s.rating,
+      leadTimeDays: s.leadTimeDays,
+      otdScore,
+      aiScore,
+      score: aiScore,
+      recommendationRationale: `AI Weighted Score: ${aiScore}/100 based on OTD (${otdScore}%), Rating (${s.rating}/5), and Lead Time (${s.leadTimeDays} days)`
+    };
+  });
+
+  evaluatedSuppliers.sort((a, b) => b.aiScore - a.aiScore);
+  return evaluatedSuppliers;
+}
+
+async function createRequisitionRecord(payload, user = {}, options = {}) {
+  const { items, notes, priority, recommendedSupplier, recommendedSupplierName, businessReason } = payload;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    const error = new Error('Requisition must contain at least one item.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const processedItems = [];
+  for (const item of items) {
+    const qty = Number(item.quantity);
+    if (isNaN(qty) || qty <= 0) {
+      const error = new Error(`Invalid item quantity '${item.quantity}'. Must be greater than 0.`);
+      error.statusCode = 400;
+      throw error;
+    }
+    const rawUnitPrice = item.estimatedUnitPrice ?? item.unitPrice;
+    const unitPrice = Number(rawUnitPrice);
+    if (isNaN(unitPrice) || unitPrice <= 0) {
+      const error = new Error(`Invalid unit price for item '${item.productName}'. Must be greater than 0.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    processedItems.push({
+      product: item.product || undefined,
+      productName: item.productName || 'Industrial Item',
+      quantity: qty,
+      estimatedUnitPrice: unitPrice,
+      totalPrice: qty * unitPrice
+    });
+  }
+
+  const totalAmount = processedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  const count = await PurchaseRequisition.countDocuments();
+  const prNumber = `PR-${1000 + count + 1}`;
+
+  const requisition = new PurchaseRequisition({
+    prNumber,
+    requestedBy: user?.name || 'Procurement Manager',
+    items: processedItems,
+    totalAmount,
+    priority: priority || 'HIGH',
+    status: 'PENDING',
+    aiGenerated: options.aiGenerated === true,
+    recommendedSupplier: recommendedSupplier || undefined,
+    recommendedSupplierName: recommendedSupplierName || '',
+    businessReason: businessReason || '',
+    notes: notes || ''
+  });
+
+  await requisition.save();
+
+  await AuditLog.create({
+    user: user?.name || 'System',
+    role: user?.role || 'procurement_manager',
+    action: options.auditAction || 'CREATE_PR',
+    entity: 'PurchaseRequisition',
+    entityId: prNumber,
+    details: options.auditDetails || `Created Purchase Requisition ${prNumber} with total amount ₹${totalAmount}`
+  });
+
+  return requisition;
+}
+
 // --- Products ---
 exports.getProducts = async (req, res, next) => {
   try {
@@ -40,29 +133,7 @@ exports.getSuppliers = async (req, res, next) => {
 exports.evaluateSuppliers = async (req, res, next) => {
   try {
     const suppliers = await Supplier.find({ status: 'ACTIVE' });
-
-    const evaluatedSuppliers = suppliers.map(s => {
-      const otdScore = s.otdScore || 90;
-      const qualityScore = (s.rating / 5) * 100;
-      const leadTimeScore = Math.max(0, 100 - (s.leadTimeDays * 10));
-
-      const aiScore = Number(((otdScore * 0.4) + (qualityScore * 0.4) + (leadTimeScore * 0.2)).toFixed(1));
-
-      return {
-        _id: s._id,
-        name: s.name,
-        code: s.code,
-        email: s.email,
-        rating: s.rating,
-        leadTimeDays: s.leadTimeDays,
-        otdScore,
-        aiScore,
-        score: aiScore,
-        recommendationRationale: `AI Weighted Score: ${aiScore}/100 based on OTD (${otdScore}%), Rating (${s.rating}/5), and Lead Time (${s.leadTimeDays} days)`
-      };
-    });
-
-    evaluatedSuppliers.sort((a, b) => b.aiScore - a.aiScore);
+    const evaluatedSuppliers = evaluateSupplierDocuments(suppliers);
 
     res.json({
       success: true,
@@ -87,60 +158,12 @@ exports.getRequisitions = async (req, res, next) => {
 
 exports.createRequisition = async (req, res, next) => {
   try {
-    const { items, notes, priority } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Requisition must contain at least one item.' });
-    }
-
-    const processedItems = [];
-    for (const item of items) {
-      const qty = Number(item.quantity);
-      if (isNaN(qty) || qty <= 0) {
-        return res.status(400).json({ success: false, message: `Invalid item quantity '${item.quantity}'. Must be greater than 0.` });
-      }
-      const rawUnitPrice = item.estimatedUnitPrice ?? item.unitPrice;
-      const unitPrice = Number(rawUnitPrice);
-      if (isNaN(unitPrice) || unitPrice <= 0) {
-        return res.status(400).json({ success: false, message: `Invalid unit price for item '${item.productName}'. Must be greater than 0.` });
-      }
-
-      processedItems.push({
-        productName: item.productName || 'Industrial Item',
-        quantity: qty,
-        estimatedUnitPrice: unitPrice,
-        totalPrice: qty * unitPrice
-      });
-    }
-
-    const totalAmount = processedItems.reduce((sum, item) => sum + item.totalPrice, 0);
-
-    const count = await PurchaseRequisition.countDocuments();
-    const prNumber = `PR-${1000 + count + 1}`;
-
-    const requisition = new PurchaseRequisition({
-      prNumber,
-      requestedBy: req.user?.name || 'Procurement Manager',
-      items: processedItems,
-      totalAmount,
-      priority: priority || 'HIGH',
-      status: 'PENDING',
-      notes: notes || ''
-    });
-
-    await requisition.save();
-
-    await AuditLog.create({
-      user: req.user?.name || 'System',
-      role: req.user?.role || 'procurement_manager',
-      action: 'CREATE_PR',
-      entity: 'PurchaseRequisition',
-      entityId: prNumber,
-      details: `Created Purchase Requisition ${prNumber} with total amount ₹${totalAmount}`
-    });
-
+    const requisition = await createRequisitionRecord(req.body, req.user);
     res.status(201).json({ success: true, requisition });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -194,19 +217,6 @@ exports.createPurchaseOrder = async (req, res, next) => {
   try {
     const { prId, supplierId, items, taxRate = 0 } = req.body;
 
-    if (!supplierId) {
-      return res.status(400).json({ success: false, message: 'Supplier ID is required to issue a Purchase Order.' });
-    }
-
-    const supplier = await Supplier.findById(supplierId);
-    if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Supplier not found.' });
-    }
-
-    if (supplier.status !== 'ACTIVE') {
-      return res.status(400).json({ success: false, message: `Supplier '${supplier.name}' is inactive and cannot receive Purchase Orders.` });
-    }
-
     let requisition = null;
     if (prId) {
       requisition = await PurchaseRequisition.findById(prId);
@@ -223,6 +233,20 @@ exports.createPurchaseOrder = async (req, res, next) => {
       if (requisition.status !== 'APPROVED') {
         return res.status(400).json({ success: false, message: `Cannot issue Purchase Order for requisition in '${requisition.status}' status.` });
       }
+    }
+
+    const effectiveSupplierId = supplierId || requisition?.recommendedSupplier;
+    if (!effectiveSupplierId) {
+      return res.status(400).json({ success: false, message: 'Supplier ID is required to issue a Purchase Order.' });
+    }
+
+    const supplier = await Supplier.findById(effectiveSupplierId);
+    if (!supplier) {
+      return res.status(404).json({ success: false, message: 'Supplier not found.' });
+    }
+
+    if (supplier.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: `Supplier '${supplier.name}' is inactive and cannot receive Purchase Orders.` });
     }
 
     const itemsToProcess = items || (requisition ? requisition.items : []);
@@ -243,6 +267,7 @@ exports.createPurchaseOrder = async (req, res, next) => {
       }
 
       processedItems.push({
+        product: item.product || undefined,
         productName: item.productName || 'Industrial Item',
         quantity: qty,
         unitPrice: unitPrice,
@@ -358,3 +383,6 @@ exports.getPOByNumber = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.evaluateSupplierDocuments = evaluateSupplierDocuments;
+exports.createRequisitionRecord = createRequisitionRecord;

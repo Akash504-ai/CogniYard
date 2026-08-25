@@ -13,9 +13,13 @@ const Exception = require('../models/Exception');
 const AuditLog = require('../models/AuditLog');
 const inventoryPlanning = require('./inventoryPlanningController');
 const yardSimulationService = require('../services/yardSimulationService');
+const procurementIntelligence = require('../services/procurementIntelligenceService');
+const { evaluateSupplierDocuments } = require('./procurementController');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const TOOL_ROLES = {
+  prepareProcurementIntelligence: ['procurement_manager', 'admin'],
+  convertApprovedRecommendationToPurchaseOrder: ['procurement_manager', 'admin'],
   createPurchaseRequisition: ['procurement_manager', 'admin'],
   approvePurchaseRequisition: ['procurement_manager', 'admin'],
   searchSuppliers: ['procurement_manager', 'admin'],
@@ -53,6 +57,55 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
     switch (toolName) {
 
       // 1. Create Purchase Requisition (Requires Human Approval Guard + RBAC)
+      case 'prepareProcurementIntelligence': {
+        if (!['procurement_manager', 'admin'].includes(userRole)) {
+          return {
+            success: false,
+            message: `Forbidden: User role '${userRole}' is not authorized to run procurement intelligence.`
+          };
+        }
+
+        if (!confirmed) {
+          const preview = await procurementIntelligence.buildProcurementPreview(params);
+          if (!preview.success) return preview;
+          return {
+            ...preview,
+            requiresConfirmation: true,
+            actionType: 'APPROVE_PROCUREMENT_RECOMMENDATION',
+            params: preview.params,
+            confirmationPrompt: 'Approve Procurement Recommendation'
+          };
+        }
+
+        return procurementIntelligence.createPrFromRecommendation(params, user);
+      }
+
+      case 'convertApprovedRecommendationToPurchaseOrder': {
+        if (!['procurement_manager', 'admin'].includes(userRole)) {
+          return {
+            success: false,
+            message: `Forbidden: User role '${userRole}' is not authorized to convert approved recommendations to Purchase Orders.`
+          };
+        }
+
+        const prNumber = String(params.prNumber || params.requisitionNumber || '').trim().toUpperCase();
+        if (!prNumber) {
+          return { success: false, message: 'PR number is required to create a Purchase Order from an approved recommendation.' };
+        }
+
+        if (!confirmed) {
+          return {
+            success: true,
+            requiresConfirmation: true,
+            actionType: 'CREATE_PO_FROM_APPROVED_RECOMMENDATION',
+            params: { prNumber },
+            confirmationPrompt: `Approve Recommendation & Create PO for ${prNumber}`
+          };
+        }
+
+        return procurementIntelligence.convertApprovedRecommendationToPurchaseOrder({ prNumber }, user);
+      }
+
       case 'createPurchaseRequisition': {
         if (!['procurement_manager', 'admin'].includes(userRole)) {
           return {
@@ -196,25 +249,16 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
           return { success: false, message: 'No active suppliers found matching criteria.' };
         }
 
-        const evaluated = rawSuppliers.map(sup => {
-          const otdWeight = (sup.otdScore || 0) * 0.4;
-          const ratingWeight = ((sup.rating || 0) / 5) * 100 * 0.4;
-          const leadTimeScore = Math.max(0, 10 - (sup.leadTimeDays || 3)) * 10 * 0.2;
-          const totalScore = Math.round(otdWeight + ratingWeight + leadTimeScore);
-
-          return {
-            name: sup.name,
-            code: sup.code,
-            category: sup.category,
-            rating: sup.rating,
-            leadTimeDays: sup.leadTimeDays,
-            otdScore: `${sup.otdScore}%`,
-            score: totalScore,
-            recommendationReason: `OTD: ${sup.otdScore}% | Rating: ${sup.rating}/5.0 | Lead Time: ${sup.leadTimeDays}d`
-          };
-        });
-
-        evaluated.sort((a, b) => b.score - a.score);
+        const evaluated = evaluateSupplierDocuments(rawSuppliers).map(sup => ({
+          name: sup.name,
+          code: sup.code,
+          category: sup.category,
+          rating: sup.rating,
+          leadTimeDays: sup.leadTimeDays,
+          otdScore: `${sup.otdScore}%`,
+          score: sup.score,
+          recommendationReason: `OTD: ${sup.otdScore}% | Rating: ${sup.rating}/5.0 | Lead Time: ${sup.leadTimeDays}d`
+        }));
         const topPick = evaluated[0];
 
         return {
@@ -850,6 +894,25 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     }
   }
 
+  if (
+    /\bpr-\d+\b/i.test(message) &&
+    (
+      (msg.includes('convert') && msg.includes('po')) ||
+      (msg.includes('create') && msg.includes('po')) ||
+      (msg.includes('issue') && msg.includes('po')) ||
+      (msg.includes('approve recommendation') && msg.includes('po'))
+    )
+  ) {
+    const prMatch = message.match(/PR-\d+/i);
+    const prNumber = prMatch ? prMatch[0].toUpperCase() : null;
+    return {
+      intent: 'convert_approved_recommendation_to_purchase_order',
+      tool: 'convertApprovedRecommendationToPurchaseOrder',
+      params: { prNumber },
+      replyText: `Preparing Purchase Order conversion for approved recommendation ${prNumber}.`
+    };
+  }
+
   // Follow-up context tracing ("has it been paid?", "why is it on hold?", "trace it")
   if ((msg.includes('paid') || msg.includes('difference') || msg.includes('on hold') || msg.includes('trace')) && (msg.includes('it') || msg.includes('this po') || msg.includes('this invoice'))) {
     const contextPo = extractEntityFromContext(chatHistory, /PO-\d+/i);
@@ -894,10 +957,10 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     }
 
     return {
-      intent: 'create_purchase_requisition',
-      tool: 'createPurchaseRequisition',
-      params: { item: request.item, quantity: request.quantity, estimatedPrice: request.estimatedPrice },
-      replyText: `Verified request: ${request.quantity} × ${request.item} at ₹${request.estimatedPrice.toLocaleString('en-IN')} per unit.`
+      intent: 'prepare_procurement_intelligence',
+      tool: 'prepareProcurementIntelligence',
+      params: request,
+      replyText: `Preparing Procurement Intelligence for ${request.quantity} × ${request.item} at ₹${request.estimatedPrice.toLocaleString('en-IN')} per unit.`
     };
   }
 
@@ -1121,7 +1184,7 @@ exports.chat = async (req, res, next) => {
     // Handle user confirmation response for state-changing commands
     if (confirmed && pendingParams) {
       const pendingTool = pendingParams.__tool;
-      const allowedConfirmedTools = ['createPurchaseRequisition', 'approvePurchaseRequisition', 'controlYardSimulation'];
+      const allowedConfirmedTools = ['prepareProcurementIntelligence', 'convertApprovedRecommendationToPurchaseOrder', 'createPurchaseRequisition', 'approvePurchaseRequisition', 'controlYardSimulation'];
       if (!allowedConfirmedTools.includes(pendingTool)) {
         return res.status(400).json({ success: false, message: 'The pending action is missing or is not confirmable.' });
       }
@@ -1133,6 +1196,9 @@ exports.chat = async (req, res, next) => {
         userMessage: message,
         intent: `confirmed_${pendingTool}`,
         tool: pendingTool,
+        requiresConfirmation: toolResult.requiresConfirmation === true,
+        actionType: toolResult.actionType,
+        params: toolResult.params,
         reply: toolResult.details || toolResult.message || 'Action completed successfully.',
         toolResult
       });
@@ -1147,26 +1213,29 @@ ${JSON.stringify(message)}
 
 Identify the intent and map it to one approved tool when applicable:
 Available tools:
-1. createPurchaseRequisition (params: item, quantity, estimatedPrice)
-2. compareSuppliers (params: category)
-3. getPurchaseOrder (params: poNumber)
-4. getSingleTruck (params: truckId)
-5. getDelayedTrucks (params: none)
-6. recommendDock (params: truckId)
-7. getInventoryStatus (params: none)
-8. getProductPlanningDetail (params: item)
-9. getReplenishmentRecommendations (params: none)
-10. getInvoiceStatus (params: none)
-11. getPaymentsOnHold (params: none)
-12. getExceptions (params: none)
-13. getControlTowerSummary (params: none)
-14. tracePoLifecycle (params: poNumber)
+1. prepareProcurementIntelligence (params: item, sku, quantity, estimatedPrice, priority, reason)
+2. convertApprovedRecommendationToPurchaseOrder (params: prNumber)
+3. createPurchaseRequisition (params: item, quantity, estimatedPrice)
+4. compareSuppliers (params: category)
+5. getPurchaseOrder (params: poNumber)
+6. getSingleTruck (params: truckId)
+7. getDelayedTrucks (params: none)
+8. recommendDock (params: truckId)
+9. getInventoryStatus (params: none)
+10. getProductPlanningDetail (params: item)
+11. getReplenishmentRecommendations (params: none)
+12. getInvoiceStatus (params: none)
+13. getPaymentsOnHold (params: none)
+14. getExceptions (params: none)
+15. getControlTowerSummary (params: none)
+16. tracePoLifecycle (params: poNumber)
 
 Rules:
 - Never invent IDs, quantities, prices, suppliers, operational facts, or results.
 - Never infer that an action succeeded; tools perform all real work.
 - If a required identifier is absent, return tool null and explain exactly what is missing.
-- createPurchaseRequisition requires an exact item, quantity and human-supplied price per unit. Procurement extraction is validated by the server.
+- prepareProcurementIntelligence requires an exact existing Product/SKU, quantity and human-supplied price per unit. Procurement extraction is validated by the server.
+- convertApprovedRecommendationToPurchaseOrder requires an approved PR number and uses existing PO conversion logic.
 - Keep the explanation concise and professional.
 
 Respond ONLY with valid JSON format:
@@ -1218,7 +1287,9 @@ Respond ONLY with valid JSON format:
 
     // Execute backend tool with authenticated user context!
     if (parsedIntent.tool) {
-      if (parsedIntent.tool === 'createPurchaseRequisition') {
+      if (parsedIntent.tool === 'prepareProcurementIntelligence') {
+        parsedIntent.params = procurementRequest;
+      } else if (parsedIntent.tool === 'createPurchaseRequisition') {
         if (!procurementRequest.estimatedPrice || procurementRequest.estimatedPrice <= 0) {
           return res.json({
             success: true,

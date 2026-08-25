@@ -1,5 +1,26 @@
 const numberFromText = value => Number(String(value || '').replaceAll(',', ''));
 
+const normalizePriority = message => {
+  const source = String(message || '').toLowerCase();
+  if (/\b(emergency|critical|expedite|expedited)\b/.test(source)) return 'HIGH';
+  if (/\b(high priority|high-priority)\b/.test(source)) return 'HIGH';
+  if (/\burgent\b/.test(source)) return 'URGENT';
+  if (/\b(low priority|low-priority)\b/.test(source)) return 'LOW';
+  if (/\b(normal|standard|medium priority|medium-priority)\b/.test(source)) return 'MEDIUM';
+  return null;
+};
+
+const extractBusinessReason = message => {
+  const source = String(message || '').replace(/\s+/g, ' ').trim();
+  const prefixReason = source.match(/^([^:]{4,120}):\s*/);
+  if (prefixReason) return prefixReason[1].trim();
+
+  const reasonMatch = source.match(/\b(?:because|due to|reason\s*:?)\s+(.+?)(?:\.|$)/i);
+  if (reasonMatch) return reasonMatch[1].trim();
+
+  return '';
+};
+
 /** Extract an explicitly human-entered unit price, never a quantity. */
 function extractHumanUnitPrice(message) {
   const source = String(message || '');
@@ -27,9 +48,21 @@ function extractHumanUnitPrice(message) {
 function parseProcurementRequest(message) {
   const source = String(message || '').replace(/\s+/g, ' ').trim();
   const isProcurementIntent = /\b(?:buy|order|need|require|procure|purchase|requisition|raise\s+(?:a\s+)?pr|create\s+(?:a\s+)?pr)\b/i.test(source);
-  if (!isProcurementIntent) return { isProcurementIntent: false, item: '', quantity: null, estimatedPrice: null };
+  if (!isProcurementIntent) {
+    return {
+      isProcurementIntent: false,
+      item: '',
+      sku: '',
+      quantity: null,
+      estimatedPrice: null,
+      priority: null,
+      reason: ''
+    };
+  }
 
   const price = extractHumanUnitPrice(source);
+  const reason = extractBusinessReason(source);
+  const priority = normalizePriority(source);
   const withoutPrice = price
     ? `${source.slice(0, price.index)} ${source.slice(price.end)}`.replace(/\s+/g, ' ').trim()
     : source;
@@ -52,10 +85,32 @@ function parseProcurementRequest(message) {
   }
 
   let item = withoutPrice;
-  if (quantityMatch) item = `${item.slice(0, quantityMatch.index)} ${item.slice(quantityMatch.index + quantityMatch.token.length)}`;
+  if (reason && item.toLowerCase().startsWith(`${reason.toLowerCase()}:`)) {
+    item = item.slice(reason.length + 1).trim();
+  }
+
+  const fullSkuMatch = source.match(/\bSKU-[A-Z0-9_-]+\b/i);
+  const labelledSkuMatch = source.match(/\b(?:SKU|ITEM|PRODUCT)\s*[:#]\s*([A-Z0-9][A-Z0-9_-]{2,})\b/i);
+  const sku = fullSkuMatch ? fullSkuMatch[0].toUpperCase() : labelledSkuMatch ? labelledSkuMatch[1].toUpperCase() : '';
+
+  let usedItemPhrase = false;
+  const itemPhrasePatterns = [
+    /\b(?:need|require|buy|order|procure|purchase)\s+(?:of\s+|for\s+)?(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\.|$)/i,
+    /\b(?:create|raise|generate)\s+(?:a\s+)?(?:pr|requisition)\s+(?:for|of)?\s*(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\.|$)/i
+  ];
+  for (const pattern of itemPhrasePatterns) {
+    const match = pattern.exec(withoutPrice);
+    if (match && match[1]) {
+      item = match[1];
+      usedItemPhrase = true;
+      break;
+    }
+  }
+
+  if (quantityMatch && !usedItemPhrase) item = `${item.slice(0, quantityMatch.index)} ${item.slice(quantityMatch.index + quantityMatch.token.length)}`;
   item = item
-    .replace(/\b(?:please|kindly|i|we|want|would|like|to|a|an|create|make|raise|generate|new|purchase|procurement|requisition|pr|order|buy|need|required?|requires?|procure|for|of)\b/gi, ' ')
-    .replace(/\b(?:quantity|units?|pieces?|pcs?|items?|each|at|per\s+unit|unit\s+price|price|rate|cost|is|should\s+be)\b/gi, ' ')
+    .replace(/\b(?:please|kindly|i|we|our|want|would|like|to|a|an|create|make|raise|generate|new|purchase|procurement|requisition|pr|order|buy|need|required?|requires?|procure|for|of)\b/gi, ' ')
+    .replace(/\b(?:quantity|units?|pieces?|pcs?|items?|pairs?|each|approved|approval|at|per\s+unit|unit\s+price|price|rate|cost|is|should\s+be)\b/gi, ' ')
     .replace(/[^a-z0-9&+./()\-\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .replace(/^[\s\-:,.]+|[\s\-:,.]+$/g, '')
@@ -63,9 +118,12 @@ function parseProcurementRequest(message) {
 
   return {
     isProcurementIntent,
+    sku,
     item,
     quantity: quantityMatch?.value || null,
-    estimatedPrice: price?.value || null
+    estimatedPrice: price?.value || null,
+    priority,
+    reason
   };
 }
 
