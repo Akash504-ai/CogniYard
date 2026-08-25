@@ -1,296 +1,302 @@
 # CogniYard
 
-CogniYard is a connected Procure-to-Pay (PR2) and Yard/Dock Execution (E2) web application. This version extends the original project instead of replacing it: the existing React design, pages, maps, simulation, procurement flow, and MongoDB models are preserved while supplier onboarding, real invoices, 3-way matching, role security, dashboards, and startup have been connected end-to-end.
+CogniYard is an AI-enabled Procure-to-Pay and Yard/Dock Execution platform for supply-chain teams. It connects supplier onboarding, purchase requisitions, purchase orders, warehouse gate verification, yard simulation, goods receiving, supplier invoices, 3-way matching, payments, dashboards, and admin controls in one React + Express + MongoDB application.
 
-## Verified Corrections Build v2.3.1
+This build is **v2.3.1 Verified Corrections**. It includes role-based workspaces, real invoice document handling, live browser-camera OCR for gate checks, persisted analytics, and a one-click Windows startup flow.
 
-This release uses a dedicated one-click Windows address, `http://127.0.0.1:3101`, and displays a visible **Verified corrections v2.3.1** badge. This prevents an older process on port 3000 from being mistaken for the corrected application.
+## Quick Start
 
-- Every screen, form, table, and action is centre aligned.
-- Admin sees all management modules and supervision tools.
-- Procurement, Warehouse, Finance, and Supplier users see only the dashboard and tools required for their own job.
-- Admin-only pages are protected at the route level, so a manager cannot open a hidden module with a direct URL.
-- Redundant role instructions and “only your work” banners were removed to keep each screen focused.
-- Demo users can enter a role workspace with one click from the login screen.
-- Warehouse has two separate workspaces: automatic gate verification and intelligent yard truck simulation.
-- Supplier invoice upload is one action: document storage, database save, and Finance handoff happen automatically. Cloudinary is used whenever it is configured; a persistent local demo store prevents the hackathon workflow from being blocked when credentials are absent.
-- Finance cannot upload a replacement invoice. It fetches only the latest submitted supplier invoice linked to that PO.
-- The former full-page moving background was removed; light mode is white and dark mode is black.
-- Warehouse has real live-camera OCR for number plate and driver-ID serial matching. Dock and receiving actions stay locked until both checks pass.
-- Gate verification shows one real browser-camera feed and at least three clearly labelled dock-camera placeholders, expanding with the dock count.
-- The existing TensorFlow.js/COCO-SSD object-detection engine remains unchanged and runs continuously over the same camera feed.
-- Supplier invoices can be edited after submission; lines, quantities, prices, tax, shipping, invoice number/date, and document are refreshed in Finance and matching resets safely.
-- All operational charts use persisted records and show professional distribution names, axis labels, value labels, legends, and no-data states.
-
-## What works
-
-- Admin supplier management with persistent supplier IDs, portal accounts, status, edit, and safe deletion.
-- Dynamic Supplier Chain Matrix backed by the same MongoDB supplier records.
-- Human-entered quantity and price per unit; no AI/fixed-price fallback.
-- Actual price propagation through PR, PO, GRN, invoice, finance, match, and analytics.
-- Role-specific Procurement, Warehouse/Dock, Finance, and Admin dashboards using live records.
-- Truck lifecycle with consistent states and automatic dock release after completed receiving.
-- Separate supplier login and supplier-only portal.
-- Real PDF invoice generation, download/view link, document storage, and Finance ingestion.
-- PDF, image, HTML, Word, Excel, and CSV invoice upload validation on both client and server.
-- Field-level PO + GRN + invoice matching with `MATCHED`, `PARTIALLY_MATCHED`, and `MISMATCHED` results.
-- Groq-backed intent classification plus deterministic procurement entity validation, so item/quantity/human price cannot shift or be hallucinated.
-- One root command starts the frontend and backend.
-- Warehouse analytics includes real persisted gate-verification status.
-
-## Architecture
-
-```mermaid
-flowchart TD
-  UI["React + Vite UI"] --> API["Express REST API"]
-  API --> AUTH["JWT + RBAC"]
-  API --> DB["MongoDB / Mongoose"]
-  API --> DOCS["Cloudinary or persistent local demo storage"]
-  API --> AI["Groq API or local intent engine"]
-```
-
-The main transaction chain is:
-
-```mermaid
-flowchart TD
-  S["Admin Supplier"] --> PR["Requisition + Human Price"]
-  PR --> PO["Purchase Order"]
-  PO --> T["Truck + Live Plate/Driver OCR Gate"]
-  T --> GRN["Goods Receipt / GRN"]
-  GRN --> INV["Supplier Invoice Document"]
-  INV --> M["3-Way Match"]
-  M --> PAY["Payment or Hold"]
-```
-
-## Technology
-
-| Layer | Technology |
-| --- | --- |
-| Frontend | React 18, Vite, Tailwind CSS, Recharts, React-Leaflet |
-| Backend | Node.js 20+, Express 4 |
-| Database | MongoDB, Mongoose |
-| Authentication | JWT, bcrypt, optional verified Google sign-in |
-| Documents | PDFKit, Multer, Cloudinary |
-| Live vision | Browser camera, Tesseract.js OCR, existing TensorFlow.js COCO-SSD |
-| AI | Groq OpenAI-compatible API; deterministic fallback |
-| Tests | Node test runner, Vite production build |
-
-## Easiest setup
-
-### 1. Install prerequisites
+### Requirements
 
 - Node.js 20 or newer
 - npm
-- MongoDB running locally, or a MongoDB Atlas URL
+- MongoDB Community Server running locally, or a MongoDB Atlas connection string
+- Chrome or Edge for the warehouse camera/OCR workflow
 
-### 2. Create the environment file
+### 1. Create `.env`
 
-From the project root:
-
-**Windows Command Prompt**
-
-```bat
-copy .env.example .env
-```
-
-**PowerShell**
+Copy the example file from the project root:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-**macOS/Linux**
+On macOS/Linux:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and set at least:
+Set at least these values:
 
 ```env
 DATABASE_URL=mongodb://127.0.0.1:27017/cogniyard
-JWT_SECRET=replace_this_with_a_long_random_secret
+JWT_SECRET=replace_with_a_long_random_secret
 ```
 
-Groq is optional for local development; the connected local intent engine still performs supported data actions. Cloudinary is recommended for the real cloud workflow. The easiest setup is to paste one `CLOUDINARY_URL` into `.env`. Without it, supplier upload/generation still works through persistent local demo storage and Finance receives the correct PO-linked URL.
+Cloudinary, Groq AI, and Google sign-in are optional. The app still runs locally without them.
 
-### 3. Install, prepare, and run
+### 2. Install and prepare data
 
 ```bash
 npm install
 npm run bootstrap
+```
+
+`npm run bootstrap` safely prepares demo data only when needed. It does not wipe existing business records.
+
+### 3. Run the app
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open:
 
-`npm run bootstrap` is safe for normal startup. It creates the complete demonstration dataset only when the database is empty. If data already exists, it verifies/repairs only the five advertised demo accounts without deleting business records.
+```text
+http://localhost:3000
+```
 
-`npm run seed` remains available as a manual reset command. It clears the configured database before inserting demonstration records, so use it only when you intentionally want to reset a development database.
+## Windows One-Click Start
 
-### Windows double-click option
+On Windows, you can double-click:
 
-On Windows, double-click `START_COGNIYARD_WINDOWS.bat`. It creates `.env` if needed, installs dependencies on the first run, safely prepares an empty database, verifies all demo credentials, and starts both servers. You still need MongoDB running or an Atlas `DATABASE_URL`. No separate seed command is required for a new installation.
+```text
+START_COGNIYARD_WINDOWS.bat
+```
 
-## Demo logins
+The starter script creates `.env` if needed, installs dependencies, bootstraps demo accounts, starts the backend and frontend, and opens the verified build at:
 
-All seeded accounts use password `password123`.
+```text
+http://127.0.0.1:3101
+```
 
-| Role | Email | Main access |
+Keep the terminal window open while using the app. If MongoDB is not running, start the MongoDB Server service and run the starter again.
+
+## Demo Accounts
+
+All demo accounts use:
+
+```text
+password123
+```
+
+| Role | Email | Workspace |
 | --- | --- | --- |
-| Admin | `admin@cogniyard.com` | Users, suppliers, system overview |
-| Procurement Manager | `procurement@cogniyard.com` | PR, supplier matrix, PO, procurement dashboard |
-| Warehouse/Dock Manager | `warehouse@cogniyard.com` | Trucks, docks, receiving, GRN, warehouse dashboard |
-| Finance | `finance@cogniyard.com` | Invoice ingestion, match, payments |
-| Supplier | `supplier@cogniyard.com` | Assigned POs and own invoices only |
+| Admin | `admin@cogniyard.com` | Users, suppliers, control tower, exceptions, planning, CCTV, full supervision |
+| Procurement Manager | `procurement@cogniyard.com` | Requisitions, supplier matrix, purchase orders, AI help |
+| Warehouse/Dock Manager | `warehouse@cogniyard.com` | Gate verification, yard simulation, docks, receiving, GRNs |
+| Finance | `finance@cogniyard.com` | Supplier invoice review, 3-way match, payment approval/hold |
+| Supplier | `supplier@cogniyard.com` | Assigned POs, invoice generation/upload, invoice edits |
 
-## Main commands
+The login page also includes quick role buttons for the seeded demo users.
+
+## Main Features
+
+### Role-Based Workspaces
+
+- Admin, Procurement, Warehouse, Finance, and Supplier roles.
+- Route-level protection for restricted pages.
+- Each role sees only the tools needed for its work.
+- Supplier portal is ownership-scoped, so suppliers can access only their assigned POs and invoices.
+- Public registration can be disabled for production with `ALLOW_PUBLIC_REGISTRATION=false`.
+
+### Admin Management
+
+- Create, edit, activate/deactivate, and safely delete suppliers.
+- Create supplier portal accounts linked to supplier records.
+- Manage users and product records.
+- View system-wide records through dashboards and control views.
+
+### Procurement
+
+- Create purchase requisitions with human-entered unit prices.
+- Approve requisitions and convert them into purchase orders.
+- Supplier Chain Matrix uses real supplier records from MongoDB.
+- Actual quantities and prices flow through PR, PO, GRN, invoice, match, and analytics.
+- Admin and Procurement users can use the AI assistant for supported procurement actions.
+
+### Warehouse, Gate, and Yard
+
+- Automatic gate verification workspace with live browser-camera OCR.
+- Number plate scan must pass before driver-ID scan unlocks.
+- Driver ID and plate checks are persisted on the truck record.
+- Dock recommendation, dock assignment, and receiving are blocked until gate verification passes.
+- Intelligent Yard Truck Simulation tracks the truck lifecycle from arrival to unloading and completion.
+- Goods Receipt Notes update PO status, accepted quantities, inventory, and dock availability.
+- The existing COCO-SSD browser object detection demo remains available.
+
+### Supplier Portal
+
+- Suppliers see assigned purchase orders.
+- Generate a real PDF invoice from PO data.
+- Upload invoice files in supported formats.
+- Edit submitted invoices, including invoice number, date, line quantities, unit prices, tax, shipping, and optional replacement document.
+- Finance automatically receives the latest submitted invoice for each PO.
+
+### Finance and 3-Way Match
+
+- Finance sees only PO-linked supplier invoices backed by trusted storage.
+- Open the real invoice document from the Finance page.
+- Run 3-way matching across PO, GRN, and invoice data.
+- Matching checks supplier, PO number, item names, ordered quantity, accepted quantity, billed quantity, unit price, and subtotal.
+- Fully matched invoices become payment-eligible.
+- Partial or failed matches create payment holds.
+- Older or stale invoice submissions are rejected before matching.
+
+### Dashboards and Control Tower
+
+- Role-specific dashboards with live MongoDB data.
+- Procurement KPIs for PO count, pending orders, completed orders, spend, deliveries, and active suppliers.
+- Warehouse KPIs for trucks, dock utilization, received quantity, completion, and gate OCR approvals.
+- Finance KPIs for invoices, pending validation, matched invoices, exceptions, paid amount, and on-hold amount.
+- Admin overview for users, suppliers, POs, trucks, invoices, and payments.
+- Admin-only Control Tower, Exception Center, Inventory Planning, and Smart CCTV demo pages.
+
+### Documents and Storage
+
+- Cloudinary support for invoice documents.
+- Persistent local demo storage when Cloudinary is not configured.
+- Server-side validation for file size, extension, MIME type, and real file signature/content.
+- Real PDF invoice generation with buyer and supplier details.
+
+## End-to-End Demo Flow
+
+1. Sign in as Admin and add or review suppliers under **Add Suppliers & Users**.
+2. Sign in as Procurement and create a requisition with item, quantity, supplier, and unit price.
+3. Approve the requisition and convert it to a purchase order.
+4. Sign in as Warehouse and open **Receive Goods & GRN**.
+5. Run gate verification: start the camera, scan the truck plate, scan the driver ID, then proceed to the yard.
+6. Open **Intelligent Truck Simulation**, assign a dock, receive accepted quantities, and create the GRN.
+7. Sign in as Supplier and generate or upload the invoice for the assigned PO.
+8. Sign in as Finance, open the real invoice, run 3-way match, and approve payment or review the hold.
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, Vite, Tailwind CSS, React Router, Recharts, React Leaflet |
+| Backend | Node.js 20+, Express |
+| Database | MongoDB, Mongoose |
+| Authentication | JWT, bcrypt, optional Google sign-in |
+| Documents | PDFKit, Multer, Cloudinary or local demo storage |
+| Vision | Browser camera, Tesseract OCR, TensorFlow.js COCO-SSD |
+| AI | Groq API with deterministic local fallback |
+| Testing | Node test runner, Vite production build |
+
+## Project Structure
+
+```text
+CogniYard/
++-- client/                  React + Vite frontend
+|   +-- public/
+|   +-- src/
+|       +-- components/
+|       +-- context/
+|       +-- pages/
+|       +-- services/
++-- server/                  Express + MongoDB backend
+|   +-- controllers/
+|   +-- middleware/
+|   +-- models/
+|   +-- routes/
+|   +-- seed/
+|   +-- services/
+|   +-- tests/
++-- docs/
+|   +-- IMPLEMENTATION_REPORT.md
++-- .env.example
++-- START_COGNIYARD_WINDOWS.bat
++-- package.json
++-- README.md
+```
+
+## Useful Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm install` | Clean root/workspace dependency install |
-| `npm run bootstrap` | Safely initialize an empty database or repair demo logins |
-| `npm run dev` | Start API and web app together |
-| `npm run seed` | Reset and seed the development database |
-| `npm test` | Run backend unit tests and frontend production build |
-| `npm run build` | Build the React production bundle |
-| `npm start` | Serve API and built frontend in production mode |
+| `npm install` | Install root, client, and server workspace dependencies |
+| `npm run bootstrap` | Prepare empty database and repair demo credentials safely |
+| `npm run dev` | Start backend and frontend together |
+| `npm run seed` | Reset and reseed the development database |
+| `npm test` | Run backend tests and frontend production build |
+| `npm run build` | Build the frontend |
+| `npm start` | Start the production backend and serve the built frontend |
 
-For a production-like local run:
+Use `npm run seed` only when you intentionally want to clear and rebuild the development dataset.
 
-```bash
-npm run build
-```
+## Environment Variables
 
-Set `NODE_ENV=production`, then run:
-
-```bash
-npm start
-```
-
-## Environment variables
-
-| Variable | Required | Purpose |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | MongoDB connection URL |
-| `JWT_SECRET` | Yes in production | JWT signing secret |
-| `JWT_EXPIRES_IN` | No | Token lifetime; default `7d` |
-| `PORT` | No | API port; default `5000` |
-| `CLIENT_URL` | Yes in production | Allowed browser origin(s), comma-separated |
-| `ALLOW_PUBLIC_REGISTRATION` | No | Keep `false` in production; Admin creates controlled accounts |
-| `GROQ_API_KEY` | No | Enables Groq intent classification |
-| `GROQ_MODEL` | No | Default `openai/gpt-oss-120b` |
-| `CLOUDINARY_URL` | No | Easiest complete Cloudinary credential URL |
-| `CLOUDINARY_CLOUD_NAME` | No | Alternative Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | No | Alternative Cloudinary server API key |
-| `CLOUDINARY_API_SECRET` | No | Alternative Cloudinary server secret |
-| `CLOUDINARY_INVOICE_FOLDER` | No | Invoice folder in Cloudinary |
-| `CLOUDINARY_REQUIRED` | No | If `true`, do not fall back to local storage |
-| `GOOGLE_CLIENT_ID` | No | Server-side Google token audience check |
-| `VITE_GOOGLE_CLIENT_ID` | No | Enables the Google button in the browser |
-| `VITE_API_URL` | No | Browser API base; `/api` works with the Vite proxy |
-| `BUYER_COMPANY_NAME` | No | Buyer name printed on generated PDF invoices |
-| `BUYER_ADDRESS` | No | Buyer address printed on generated PDF invoices |
+| `DATABASE_URL` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | Secret used to sign JWT tokens |
+| `JWT_EXPIRES_IN` | No | Token lifetime, defaults to `7d` |
+| `PORT` | No | Backend port, defaults to `5000` |
+| `CLIENT_URL` | Production | Allowed browser origins |
+| `ALLOW_PUBLIC_REGISTRATION` | No | Enables/disables public registration |
+| `DEMO_ACCOUNTS_ENABLED` | No | Allows demo account bootstrap in development |
+| `GROQ_API_KEY` | No | Enables Groq-backed AI assistance |
+| `GROQ_MODEL` | No | Groq model name |
+| `CLOUDINARY_URL` | No | Easiest Cloudinary setup option |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name, alternative to `CLOUDINARY_URL` |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+| `CLOUDINARY_INVOICE_FOLDER` | No | Folder for invoice uploads |
+| `CLOUDINARY_REQUIRED` | No | Forces Cloudinary-only invoice storage when `true` |
+| `GOOGLE_CLIENT_ID` | No | Server-side Google token audience |
+| `VITE_GOOGLE_CLIENT_ID` | No | Enables Google sign-in button in the browser |
+| `VITE_API_URL` | No | Browser API base path |
+| `VITE_PORT` | No | Vite frontend port |
+| `VITE_API_TARGET` | No | Backend target for the Vite `/api` proxy |
+| `VITE_APP_VERSION` | No | Version label shown in the UI |
+| `BUYER_COMPANY_NAME` | No | Buyer name printed on generated invoices |
+| `BUYER_ADDRESS` | No | Buyer address printed on generated invoices |
 
-Never put real secrets in frontend source or commit `.env`.
+Never commit real `.env` secrets.
 
-## Complete demonstration flow
+## Invoice Upload Rules
 
-1. Sign in as Admin and create a supplier under **Admin → Supplier Management**. Add portal credentials if the supplier needs a login.
-2. Sign in as Procurement Manager. The supplier appears automatically in **Supplier Chain Matrix**.
-3. Create a requisition with item, quantity, and a human-entered price per unit. Approve it and convert it to a PO.
-4. Sign in as Warehouse Manager. Open **Automatic Gate Verification**, start Camera 1, select the truck, scan its number plate, scan the driver's ID serial, and click **Both OK — Proceed**. Then open **Intelligent Yard Truck Simulation**, assign a dock, receive the actual quantity, and create the GRN. A fully received truck changes to `COMPLETED` and releases the dock.
-5. Sign in as Supplier. Generate a real PDF or upload a supported invoice document. It is stored in Cloudinary when connected (otherwise the built-in persistent demo store) and submitted automatically. Use **Edit Invoice** to correct any submitted detail or replace the document; Finance is refreshed automatically.
-6. Sign in as Finance. The correct PO-linked supplier invoice is fetched automatically. Open **REAL INVOICE**, then run **3-Way Match**.
-7. Review every comparison row. Payment is eligible only when all required checks match; otherwise it is placed on hold.
-
-## Invoice upload rules
-
-Accepted extensions are:
+Supported file types:
 
 ```text
 PDF, JPG, JPEG, PNG, WEBP, HTML, HTM, DOC, DOCX, XLS, XLSX, CSV
 ```
 
-Maximum file size is 10 MB. Extension, MIME type, and the file's real signature/content are checked. Executable or renamed executable files are rejected. With Cloudinary configured, invoices use `resource_type: auto`. Without it, the server uses its persistent local demo store; the database and PO ownership rules remain the same, and Finance accepts only a real document created by this trusted storage service.
+Maximum file size is 10 MB. Executables and renamed executable files are rejected.
 
-## Live warehouse gate verification
+## Production-Like Run
 
-1. Open the Warehouse account and allow camera permission in Chrome or Edge.
-2. Select the arriving truck. Its expected plate and driver serial come from MongoDB.
-3. Place the number plate inside the purple guide and click **Scan & Match Number Plate**. Tesseract reads the real camera pixels; the server normalizes and compares the result.
-4. The driver-ID button unlocks only after the plate matches. Hold the card inside the guide and scan its serial.
-5. **Both OK — Proceed to Yard** unlocks only after both persisted checks pass. Dock recommendation, dock assignment, and receiving are also enforced on the server.
+Build the frontend:
 
-The first OCR-model load needs internet access. Use good lighting and hold the text steady. This is automatic text recognition—there is no manual plate/ID value entry. The existing COCO-SSD object detector was not rewritten or replaced.
+```bash
+npm run build
+```
 
-Invoice values are not guessed from a binary file. The app loads the correct PO lines, lets the authorized human confirm/edit invoice quantity and unit price, validates totals on the server, and stores those confirmed values with the actual document. This avoids claiming unreliable universal OCR while keeping matching auditable.
+Set production environment values, especially `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, and `CLIENT_URL`, then start:
 
-## 3-way matching rules
+```bash
+npm start
+```
 
-The server compares the persisted:
-
-- supplier identity;
-- PO number;
-- item names;
-- PO quantity, accepted GRN quantity, and invoice quantity;
-- unit price;
-- subtotal.
-
-An invoice is never marked matched merely because a document exists. A newer submitted supplier invoice supersedes older supplier drafts/submissions for that PO, and Finance is prevented from matching a stale invoice.
-
-## Role access
-
-| Capability | Admin | Procurement | Warehouse | Finance | Supplier |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| Supplier and user administration | Yes | No | No | No | No |
-| Requisitions, supplier matrix, POs | Yes | Yes | Read where required | Read where required | Assigned POs only |
-| Trucks, docks, receiving, GRNs | Yes | Limited ASN | Yes | GRN read | No |
-| Invoice validation and payments | Yes | No | No | Yes | Own invoices only |
-| Supplier portal | No | No | No | No | Yes |
-
-The Supplier portal remains isolated from Admin because every supplier document is ownership-scoped to the authenticated supplier. Admin can supervise the resulting supplier invoices through Finance without impersonating a supplier.
+For deployment, configure Cloudinary and keep `CLOUDINARY_REQUIRED=true` if invoice documents must never fall back to local storage.
 
 ## Troubleshooting
 
-- **Website opens but data does not load:** start MongoDB and check `DATABASE_URL`.
-- **Quick-role login says “Invalid credentials”:** close the app and run `START_COGNIYARD_WINDOWS.bat` again. The corrected starter verifies the five demo accounts before starting the site.
-- **`ECONNREFUSED 127.0.0.1:27017`:** MongoDB is not running or the Atlas URL is incorrect.
-- **Cloudinary is not configured:** uploads are no longer blocked; the portal clearly switches to built-in demo storage. For real cloud URLs, paste `CLOUDINARY_URL` in `.env` and restart.
-- **Camera does not open:** use Chrome/Edge at `http://localhost:3000`, click Allow for camera permission, and close other apps using the camera.
-- **OCR engine does not load:** connect to the internet once, refresh, improve lighting, and scan again.
-- **Groq unavailable:** check `GROQ_API_KEY`; the local intent engine remains available.
-- **Port already in use:** change `PORT` and, if needed, the proxy target in `client/vite.config.js`.
-- **Old packages or strange imports:** delete every `node_modules` directory and run `npm install` at the project root only.
+| Problem | Fix |
+| --- | --- |
+| Website opens but data does not load | Start MongoDB and verify `DATABASE_URL` |
+| Login says invalid credentials | Run `npm run bootstrap` or restart with `START_COGNIYARD_WINDOWS.bat` |
+| `ECONNREFUSED 127.0.0.1:27017` | MongoDB is not running, or the Atlas URL is incorrect |
+| Invoice upload says Cloudinary is missing | Add `CLOUDINARY_URL`, or keep local demo storage enabled |
+| Camera does not open | Use Chrome/Edge, allow camera permission, and close other camera apps |
+| OCR model does not load | Connect to the internet once, refresh, and scan again in good lighting |
+| Groq AI is unavailable | Add `GROQ_API_KEY`; deterministic local actions still work |
+| Port is already in use | Change `PORT`, `VITE_PORT`, or `VITE_API_TARGET` in `.env` |
+| Old UI keeps opening | Close old browser tabs and use the verified Windows URL `http://127.0.0.1:3101` |
 
-## Project structure
+## Notes
 
-```text
-CogniYard/
-├── client/                  React application
-│   └── src/
-│       ├── components/
-│       ├── context/
-│       ├── pages/
-│       └── services/
-├── server/                  Express application
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── seed/
-│   └── tests/
-├── docs/
-│   └── IMPLEMENTATION_REPORT.md
-├── .env.example
-├── START_COGNIYARD_WINDOWS.bat
-├── package.json
-└── package-lock.json
-```
+GPS movement and fixed-yard camera associations are simulated for hackathon/demo use where physical telemetry hardware is unavailable. Procurement records, authentication, supplier ownership, invoice generation/upload, document storage metadata, GRNs, 3-way matching, payments, dashboards, and role enforcement use real persisted application data.
 
-Detailed changed-file, schema, route, testing, and limitation notes are in [docs/IMPLEMENTATION_REPORT.md](docs/IMPLEMENTATION_REPORT.md).
-
-## Hackathon note
-
-This project is designed for the Cognizant NPN SCM hackathon. GPS movement and fixed-yard camera associations remain simulated where physical hardware is unavailable. The new warehouse gate uses a real browser camera, real Tesseract OCR pixels, and the existing real browser COCO-SSD inference. Procurement, authentication, MongoDB persistence, receiving, invoice generation/upload, matching, and role enforcement use real application records.
+For deeper implementation details, see [docs/IMPLEMENTATION_REPORT.md](docs/IMPLEMENTATION_REPORT.md).
