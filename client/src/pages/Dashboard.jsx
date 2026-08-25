@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   Activity, BarChart3, Boxes, Building2, IndianRupee, PackageCheck,
-  Receipt, RefreshCw, ShoppingCart, Truck, Users
+  Receipt, RefreshCw, ShoppingCart, Truck, Users, Sparkles
 } from 'lucide-react';
 import {
   Bar, BarChart, CartesianGrid, Cell, Label, LabelList, Legend, Line, LineChart, Pie, PieChart,
@@ -17,7 +17,7 @@ const currency = value => `₹${Number(value || 0).toLocaleString('en-IN', { max
 const compactNumber = value => Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
 
 export default function Dashboard() {
-  const { currentRole, showNotification } = useAuth();
+  const { currentRole, showNotification, setIsAiOpen } = useAuth();
   const { isDark } = useTheme();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -152,10 +152,25 @@ export default function Dashboard() {
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{dashboard.subtitle}</p>
           </div>
-          <button onClick={() => loadDashboard(true)} disabled={refreshing} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-semibold disabled:opacity-50">
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing…' : 'Refresh data'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAiOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Ask Copilot
+            </button>
+
+            <button
+              onClick={() => loadDashboard(true)}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-semibold disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing…' : 'Refresh data'}
+            </button>
+          </div>
         </div>
       </section>
 

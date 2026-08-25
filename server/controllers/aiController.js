@@ -405,19 +405,96 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
         };
       }
 
-      // 6c. Get Dock Status
+      // 6c. Get Dock Status (Supports all docks overview, specific dockNumber, or statusFilter)
       case 'getDockStatus': {
         const docks = await Dock.find().sort({ dockNumber: 1 });
+        const { dockNumber, statusFilter } = params || {};
+
+        // 1. Query for a specific dock bay (e.g. "Dock 4", "DOCK-04", "4")
+        if (dockNumber) {
+          const rawParam = String(dockNumber).trim();
+          const cleanNum = rawParam.replace(/^dock\s*#?\s*/i, '').trim();
+
+          const matchedDock = docks.find(d => {
+            const numPart = d.dockNumber.replace(/^DOCK-0*/i, '');
+            return (
+              d.dockNumber.toUpperCase() === rawParam.toUpperCase() ||
+              d.dockNumber.toUpperCase() === `DOCK-${cleanNum.padStart(2, '0')}`.toUpperCase() ||
+              d.dockNumber.toUpperCase() === `DOCK-${cleanNum}`.toUpperCase() ||
+              numPart === cleanNum ||
+              d.name.toLowerCase().includes(rawParam.toLowerCase())
+            );
+          });
+
+          if (!matchedDock) {
+            return {
+              success: false,
+              notFound: true,
+              message: `Dock bay '${rawParam}' was not found in the CogniYard database.`
+            };
+          }
+
+          const occupiedStr = matchedDock.currentTruckId ? ` (Occupied by Truck ${matchedDock.currentTruckId})` : '';
+          return {
+            success: true,
+            action: 'DOCK_STATUS',
+            dockNumber: matchedDock.dockNumber,
+            name: matchedDock.name,
+            status: matchedDock.status,
+            currentTruckId: matchedDock.currentTruckId || null,
+            details: `Dock Bay ${matchedDock.dockNumber} (${matchedDock.name}) is currently **${matchedDock.status}**${occupiedStr}.`
+          };
+        }
+
+        // 2. Query filtered by status (e.g. "AVAILABLE", "OCCUPIED", "MAINTENANCE")
+        if (statusFilter) {
+          const targetStatus = String(statusFilter).trim().toUpperCase();
+          const filtered = docks.filter(d => d.status.toUpperCase() === targetStatus);
+
+          let detailsText = '';
+
+          if (targetStatus === 'AVAILABLE') {
+            detailsText = filtered.length > 0
+              ? `The following ${filtered.length} dock bay(s) are currently **AVAILABLE**:\n` + filtered.map(d => `• **${d.dockNumber}** (${d.name})`).join('\n')
+              : '🔴 No dock bays are currently AVAILABLE.';
+          } else if (targetStatus === 'OCCUPIED') {
+            detailsText = filtered.length > 0
+              ? `The following ${filtered.length} dock bay(s) are currently **OCCUPIED**:\n` + filtered.map(d => `• **${d.dockNumber}** (${d.name}) — Occupied by ${d.currentTruckId || 'Vehicle'}`).join('\n')
+              : '🟢 No dock bays are currently OCCUPIED.';
+          } else if (targetStatus === 'MAINTENANCE') {
+            detailsText = filtered.length > 0
+              ? `The following ${filtered.length} dock bay(s) are currently under **MAINTENANCE**:\n` + filtered.map(d => `• **${d.dockNumber}** (${d.name})`).join('\n')
+              : '🟢 No dock bays are currently under MAINTENANCE.';
+          } else {
+            detailsText = filtered.length > 0
+              ? `Found ${filtered.length} dock bay(s) in **${targetStatus}** state: ` + filtered.map(d => d.dockNumber).join(', ')
+              : `No dock bays found in **${targetStatus}** state.`;
+          }
+
+          return {
+            success: true,
+            action: 'DOCK_STATUS',
+            statusFilter: targetStatus,
+            count: filtered.length,
+            docks: filtered.map(d => ({ dockNumber: d.dockNumber, name: d.name, status: d.status, currentTruckId: d.currentTruckId || null })),
+            details: detailsText
+          };
+        }
+
+        // 3. Default: Full overview of all docks
         const available = docks.filter(d => d.status === 'AVAILABLE');
         const occupied = docks.filter(d => d.status === 'OCCUPIED');
+        const maintenance = docks.filter(d => d.status === 'MAINTENANCE');
+
         return {
           success: true,
           action: 'DOCK_STATUS',
           totalDocks: docks.length,
           availableCount: available.length,
           occupiedCount: occupied.length,
+          maintenanceCount: maintenance.length,
           docks: docks.map(d => ({ dockNumber: d.dockNumber, name: d.name, status: d.status, currentTruckId: d.currentTruckId || 'None' })),
-          details: `Yard tracks ${docks.length} dock bays: ${occupied.length} OCCUPIED (${occupied.map(d => `${d.dockNumber} by ${d.currentTruckId || 'Vehicle'}`).join(', ') || 'None'}), ${available.length} AVAILABLE (${available.map(d => d.dockNumber).join(', ')}).`
+          details: `Yard tracks ${docks.length} dock bays: ${available.length} AVAILABLE (${available.map(d => d.dockNumber).join(', ') || 'None'}), ${occupied.length} OCCUPIED (${occupied.map(d => `${d.dockNumber} by ${d.currentTruckId || 'Vehicle'}`).join(', ') || 'None'}), ${maintenance.length} MAINTENANCE (${maintenance.map(d => d.dockNumber).join(', ') || 'None'}).`
         };
       }
 
