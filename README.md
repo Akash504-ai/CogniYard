@@ -25,6 +25,53 @@ The platform provides dedicated workflows for:
 
 ---
 
+## Architecture Overview
+
+```mermaid
+flowchart TB
+    U[Users<br/>Admin • Procurement • Warehouse • Finance • Supplier]
+
+    FE[React + Vite Frontend<br/>Role-Based Workspaces]
+
+    API[Express REST API<br/>Authentication • Authorization • Business Logic]
+
+    DB[(MongoDB<br/>Persistent Business Data)]
+
+    AI[AI Services<br/>Groq API + Local Fallback]
+
+    CV[Computer Vision<br/>Camera • Tesseract OCR • COCO-SSD]
+
+    DOC[Document Services<br/>PDFKit • Multer • Cloudinary / Local Storage]
+
+    P2P[Procure-to-Pay<br/>PR → PO → GRN → Invoice → 3-Way Match → Payment]
+
+    YARD[Warehouse & Yard Execution<br/>Gate Verification → Dock Assignment → Receiving]
+
+    DASH[Analytics & Dashboards<br/>Procurement • Warehouse • Finance • Control Tower]
+
+    U --> FE
+
+    FE --> API
+    FE --> CV
+    FE --> AI
+
+    API --> DB
+    API --> AI
+    API --> DOC
+    API --> P2P
+    API --> YARD
+    API --> DASH
+
+    CV --> API
+    DOC --> API
+
+    P2P --> DB
+    YARD --> DB
+    DASH --> DB
+```
+
+---
+
 ## Key Features
 
 ### Role-Based Access
