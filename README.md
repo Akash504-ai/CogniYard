@@ -300,7 +300,7 @@ CogniYard/
 
 ### 1. Configure Environment
 
-From the project root, create `.env` from the example file.
+For local development, create `.env` from the example file.
 
 Windows PowerShell:
 
@@ -321,9 +321,17 @@ DATABASE_URL=mongodb://127.0.0.1:27017/cogniyard
 JWT_SECRET=replace_with_a_long_random_secret
 ```
 
-Cloudinary, Groq AI, and Google Sign-In are optional.
+Optional integrations include:
+
+* Groq AI
+* Cloudinary
+* Google Sign-In
+
+Never commit real secrets or `.env` files to GitHub.
 
 ### 2. Install Dependencies
+
+From the project root:
 
 ```bash
 npm install
@@ -351,6 +359,66 @@ http://localhost:3000
 
 ---
 
+## Deployment
+
+CogniYard is deployed using a cloud-based application architecture:
+
+| Component | Platform |
+| --- | --- |
+| Frontend | **Vercel** |
+| Backend API | **Render** |
+| Database | **MongoDB Atlas** |
+| Invoice Document Storage | **Cloudinary** |
+| Source Control | **GitHub** |
+| Continuous Integration | **GitHub Actions** |
+
+The React frontend communicates with the deployed Express REST API through the configured `VITE_API_URL`.
+
+The Render backend connects to MongoDB Atlas for persistent business data and Cloudinary for supplier invoice documents.
+
+### Deployment Architecture
+
+```text
+User
+  │
+  ▼
+Vercel
+React + Vite Frontend
+  │
+  │ HTTPS / REST API
+  ▼
+Render
+Node.js + Express Backend
+  │
+  ├──────────────► MongoDB Atlas
+  │
+  ├──────────────► Cloudinary
+  │
+  └──────────────► Groq API
+```
+
+### Production Environment
+
+The deployed backend requires environment variables such as:
+
+```env
+NODE_ENV=production
+DATABASE_URL=...
+JWT_SECRET=...
+CLIENT_URL=...
+CLOUDINARY_REQUIRED=true
+```
+
+The deployed frontend requires:
+
+```env
+VITE_API_URL=...
+```
+
+Actual secret values are configured through the respective deployment platforms and are never committed to the repository.
+
+---
+
 ## Windows One-Click Start
 
 Windows users can run:
@@ -359,49 +427,51 @@ Windows users can run:
 START_COGNIYARD_WINDOWS.bat
 ```
 
-The startup script prepares the environment, installs dependencies, bootstraps demo accounts, starts the backend and frontend, and opens the verified application.
+The startup script prepares the environment, installs dependencies, bootstraps demo accounts, starts the backend and frontend, and opens the verified local application.
 
-Verified Windows URL:
+Verified local URL:
 
 ```text
 http://127.0.0.1:3101
 ```
 
-MongoDB must be running before starting the application.
+MongoDB must be running locally when using the local development configuration.
 
 ---
 
 ## Demo Accounts
 
-All demo accounts use:
+All seeded demo accounts use:
 
 ```text
 password123
 ```
 
-| Role                   | Email                       |
-| ---------------------- | --------------------------- |
-| Admin                  | `admin@cogniyard.com`       |
-| Procurement Manager    | `procurement@cogniyard.com` |
-| Warehouse/Dock Manager | `warehouse@cogniyard.com`   |
-| Finance                | `finance@cogniyard.com`     |
-| Supplier               | `supplier@cogniyard.com`    |
+| Role | Email |
+| --- | --- |
+| Admin | `admin@cogniyard.com` |
+| Procurement Manager | `procurement@cogniyard.com` |
+| Warehouse/Dock Manager | `warehouse@cogniyard.com` |
+| Finance | `finance@cogniyard.com` |
+| Supplier | `supplier@cogniyard.com` |
 
 The login page also provides quick-access options for the seeded demo roles.
+
+> **Demo note:** These credentials are intended only for the hackathon demonstration environment. They must not be used as production credentials.
 
 ---
 
 ## Useful Commands
 
-| Command             | Purpose                                   |
-| ------------------- | ----------------------------------------- |
-| `npm install`       | Install project dependencies              |
-| `npm run bootstrap` | Prepare demo data safely                  |
-| `npm run dev`       | Start frontend and backend                |
-| `npm run build`     | Build the frontend                        |
-| `npm test`          | Run tests and production build validation |
-| `npm start`         | Start the production backend              |
-| `npm run seed`      | Reset and reseed development data         |
+| Command | Purpose |
+| --- | --- |
+| `npm install` | Install project dependencies |
+| `npm run bootstrap` | Prepare demo data safely |
+| `npm run dev` | Start frontend and backend locally |
+| `npm run build` | Build the frontend |
+| `npm test` | Run backend tests and frontend production build |
+| `npm start` | Start the production backend |
+| `npm run seed` | Reset and reseed development data |
 
 Use `npm run seed` only when intentionally rebuilding the development dataset.
 
@@ -409,60 +479,162 @@ Use `npm run seed` only when intentionally rebuilding the development dataset.
 
 ## Environment Variables
 
-| Variable                    | Required   | Description                          |
-| --------------------------- | ---------- | ------------------------------------ |
-| `DATABASE_URL`              | Yes        | MongoDB connection string            |
-| `JWT_SECRET`                | Yes        | JWT signing secret                   |
-| `JWT_EXPIRES_IN`            | No         | JWT lifetime; defaults to `7d`       |
-| `PORT`                      | No         | Backend port; defaults to `5000`     |
-| `CLIENT_URL`                | Production | Allowed browser origins              |
-| `ALLOW_PUBLIC_REGISTRATION` | No         | Enables/disables public registration |
-| `DEMO_ACCOUNTS_ENABLED`     | No         | Enables demo account bootstrap       |
-| `GROQ_API_KEY`              | No         | Groq AI integration                  |
-| `GROQ_MODEL`                | No         | Groq model                           |
-| `CLOUDINARY_URL`            | No         | Cloudinary connection string         |
-| `CLOUDINARY_CLOUD_NAME`     | No         | Cloudinary cloud name                |
-| `CLOUDINARY_API_KEY`        | No         | Cloudinary API key                   |
-| `CLOUDINARY_API_SECRET`     | No         | Cloudinary API secret                |
-| `CLOUDINARY_INVOICE_FOLDER` | No         | Invoice storage folder               |
-| `CLOUDINARY_REQUIRED`       | No         | Forces Cloudinary storage            |
-| `GOOGLE_CLIENT_ID`          | No         | Google authentication configuration  |
-| `VITE_GOOGLE_CLIENT_ID`     | No         | Browser Google Sign-In configuration |
-| `VITE_API_URL`              | No         | Frontend API base URL                |
-| `VITE_PORT`                 | No         | Vite frontend port                   |
-| `VITE_API_TARGET`           | No         | Vite API proxy target                |
-| `VITE_APP_VERSION`          | No         | Application version label            |
-| `BUYER_COMPANY_NAME`        | No         | Buyer name for generated invoices    |
-| `BUYER_ADDRESS`             | No         | Buyer address for generated invoices |
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | JWT signing secret |
+| `JWT_EXPIRES_IN` | No | JWT lifetime; defaults to `7d` |
+| `PORT` | No | Backend port; defaults to `5000` |
+| `CLIENT_URL` | Production | Deployed Vercel frontend origin allowed by backend CORS |
+| `ALLOW_PUBLIC_REGISTRATION` | No | Enables/disables public registration |
+| `DEMO_ACCOUNTS_ENABLED` | No | Enables demo account bootstrap |
+| `GROQ_API_KEY` | No | Groq AI integration |
+| `GROQ_MODEL` | No | Groq model configuration |
+| `CLOUDINARY_URL` | No | Cloudinary connection string |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+| `CLOUDINARY_INVOICE_FOLDER` | No | Cloudinary invoice storage folder |
+| `CLOUDINARY_REQUIRED` | No | Forces invoice documents to use Cloudinary |
+| `GOOGLE_CLIENT_ID` | No | Google authentication configuration |
+| `VITE_GOOGLE_CLIENT_ID` | No | Browser Google Sign-In configuration |
+| `VITE_API_URL` | Production | Deployed Render backend API URL |
+| `VITE_PORT` | No | Local Vite frontend port |
+| `VITE_API_TARGET` | No | Local Vite API proxy target |
+| `VITE_APP_VERSION` | No | Application version label |
+| `BUYER_COMPANY_NAME` | No | Buyer name for generated invoices |
+| `BUYER_ADDRESS` | No | Buyer address for generated invoices |
 
-Never commit real `.env` files or production secrets.
+Never commit real `.env` files, API keys, database credentials, JWT secrets, or other production secrets.
 
 ---
 
 ## Invoice Uploads
 
-Supported formats:
+Supplier invoice processing supports:
 
 ```text
 PDF, JPG, JPEG, PNG, WEBP, HTML, HTM,
 DOC, DOCX, XLS, XLSX, CSV
 ```
 
-Maximum file size: **10 MB**
+Maximum file size:
 
-Uploaded files are validated using file extension, MIME type, size, and file signature/content checks. Executable files and disguised executable files are rejected.
+```text
+10 MB
+```
+
+Uploaded files are validated using:
+
+* File extension
+* MIME type
+* File size
+* File signature/content validation
+
+Executable files and disguised executable files are rejected.
+
+### Invoice Document Lifecycle
+
+```text
+Supplier
+   │
+   ▼
+Upload / Generate Invoice
+   │
+   ▼
+File Validation
+   │
+   ▼
+Cloudinary
+   │
+   ▼
+Invoice Record
+   │
+   ▼
+Finance Review
+   │
+   ▼
+3-Way Match
+```
+
+Cloudinary is the preferred document-storage provider for the deployed environment. Local storage remains available as a development/demo fallback when configured.
+
+---
+
+## Continuous Integration
+
+CogniYard uses **GitHub Actions** for automated CI validation.
+
+Two independent workflows are maintained:
+
+```text
+.github/
+└── workflows/
+    ├── client-ci.yml
+    └── server-ci.yml
+```
+
+### Server CI
+
+The server workflow:
+
+1. Installs backend dependencies.
+2. Runs the Node.js backend test suite.
+3. Validates backend functionality and regression coverage.
+
+### Client CI
+
+The client workflow:
+
+1. Installs frontend dependencies.
+2. Runs the Vite production build.
+3. Verifies that the frontend compiles successfully.
+
+### Current Verification
+
+The current backend test suite contains:
+
+```text
+31 tests
+31 passed
+0 failed
+```
+
+Coverage includes areas such as:
+
+* AI procurement parsing
+* Procurement intelligence
+* Supplier recommendation
+* PR → PO conversion
+* Logistics Copilot routing
+* RBAC enforcement
+* Invoice processing
+* Document validation
+* OCR and gate verification
+* 3-way matching
+* Payment controls
+* Cloudinary/local document handling
+* Regression scenarios
+
+The production frontend build also completes successfully.
 
 ---
 
 ## Production-Like Run
 
-Build the frontend:
+To validate the frontend locally:
 
 ```bash
 npm run build
 ```
 
-Configure the required production environment variables, including:
+To start the backend in production mode:
+
+```bash
+npm start
+```
+
+Required production environment variables include:
 
 ```env
 NODE_ENV=production
@@ -471,98 +643,218 @@ JWT_SECRET=...
 CLIENT_URL=...
 ```
 
-Then start the application:
-
-```bash
-npm start
-```
-
-For production deployments, configure Cloudinary and use:
+For deployed invoice processing:
 
 ```env
 CLOUDINARY_REQUIRED=true
 ```
 
-when invoice documents must not fall back to local storage.
+This ensures invoice documents use Cloudinary rather than relying on local server storage.
+
+The production deployment is hosted using:
+
+```text
+Frontend  → Vercel
+Backend   → Render
+Database  → MongoDB Atlas
+Documents → Cloudinary
+```
 
 ---
 
 ## Troubleshooting
 
-| Problem                                   | Solution                                                              |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| Application loads but data is unavailable | Start MongoDB and verify `DATABASE_URL`                               |
-| Invalid demo credentials                  | Run `npm run bootstrap`                                               |
-| `ECONNREFUSED 127.0.0.1:27017`            | Start MongoDB or verify the connection string                         |
-| Port 5000 is already in use               | Stop the existing Node process or change `PORT`                       |
-| Cloudinary configuration error            | Configure `CLOUDINARY_URL` or use local demo storage                  |
-| Camera does not open                      | Use Chrome/Edge and allow camera permissions                          |
-| OCR model does not load                   | Refresh after establishing an internet connection                     |
-| Groq AI is unavailable                    | Configure `GROQ_API_KEY`; local fallback remains available            |
-| Old frontend keeps opening                | Close old tabs and use `http://127.0.0.1:3101` for the verified build |
+| Problem | Solution |
+| --- | --- |
+| Application loads but data is unavailable | Verify MongoDB/Atlas connectivity and `DATABASE_URL` |
+| Invalid demo credentials | Run `npm run bootstrap` |
+| `ECONNREFUSED 127.0.0.1:27017` | Start MongoDB or use the MongoDB Atlas connection string |
+| Port 5000 is already in use | Stop the existing Node process or change `PORT` |
+| CORS error in deployed frontend | Verify `CLIENT_URL` matches the deployed Vercel origin |
+| Frontend cannot reach backend | Verify `VITE_API_URL` points to the deployed Render API |
+| Cloudinary configuration error | Verify Cloudinary environment variables |
+| Invoice upload fails | Check file type, file size, MIME type, and Cloudinary configuration |
+| Camera does not open | Use Chrome/Edge and allow camera permissions |
+| OCR model does not load | Refresh after establishing an internet connection |
+| Groq AI is unavailable | Configure `GROQ_API_KEY`; deterministic local fallback remains available |
+| GitHub Actions server CI fails | Open the Server CI workflow and inspect the failed backend test |
+| GitHub Actions client CI fails | Open the Client CI workflow and inspect the Vite build output |
+| Old frontend keeps opening locally | Close old tabs and use `http://127.0.0.1:3101` for the verified local build |
 
 ---
 
 ## Testing
 
-Run:
+### Run the Complete Test and Build Validation
+
+From the project root:
 
 ```bash
 npm test
 ```
 
-The test suite includes backend validation for areas such as:
+The root test command executes:
+
+```text
+Server Tests
+     │
+     ▼
+31+ Backend Tests
+     │
+     ▼
+Client Production Build
+     │
+     ▼
+Vite Build Validation
+```
+
+### Backend Tests Only
+
+```bash
+npm run test --workspace server
+```
+
+### Frontend Build Only
+
+```bash
+npm run build --workspace client
+```
+
+The test suite validates areas including:
 
 * AI procurement parsing
+* Procurement intelligence
+* Supplier recommendation
+* EOQ validation
+* PR creation
+* PR → PO conversion
+* Shipment and Truck lifecycle creation
+* Logistics Copilot
+* Finance Copilot
+* RBAC
+* Invoice processing
 * Document storage
 * File uploads
 * Gate verification
-* Invoice processing
+* OCR processing
+* 3-way matching
+* Payment controls
 * Regression scenarios
-
-The command also validates the frontend production build.
 
 ---
 
 ## Demo and Simulation Notes
 
-Some physical-world capabilities are simulated because the hackathon environment does not provide live warehouse hardware.
+CogniYard is a hackathon demonstration platform. Some physical-world capabilities are simulated because the development environment does not provide live warehouse hardware, GPS devices, production CCTV infrastructure, or real logistics partners.
 
-Simulated components include:
+### Simulated Components
+
+The following capabilities use controlled simulation or seeded telemetry:
 
 * GPS truck movement
-* Fixed-yard camera associations
 * Physical yard telemetry
+* Fixed-yard camera associations
+* Certain logistics events
 
-Core application workflows use persisted backend data, including:
+### Persisted Application Workflows
+
+Core business workflows use persistent backend data:
 
 * Authentication
 * Users
 * Suppliers
 * Purchase requisitions
 * Purchase orders
+* Shipments
 * Trucks
 * Gate verification
+* Dock assignments
 * Goods receipts
 * Inventory
 * Supplier invoices
 * Invoice documents
 * 3-way matching
 * Payments
+* Exceptions
 * Dashboards
 * Analytics
+* AI procurement recommendations
 * Role enforcement
 
-This allows CogniYard to demonstrate a realistic end-to-end supply-chain workflow while simulating physical infrastructure that is unavailable in the development environment.
+This allows CogniYard to demonstrate a realistic end-to-end supply-chain workflow while clearly separating simulated physical infrastructure from persisted enterprise business data.
+
+---
+
+## End-to-End Demo Flow
+
+The recommended demonstration flow is:
+
+```text
+Natural-Language Requirement
+          │
+          ▼
+Supply-Chain Copilot
+          │
+          ├── SKU Resolution
+          ├── Quantity / Price Extraction
+          ├── Priority & Business Reason
+          ├── Supplier Intelligence
+          └── EOQ Validation
+          │
+          ▼
+Human Approval
+          │
+          ▼
+Purchase Requisition
+          │
+          ▼
+Purchase Order
+          │
+          ├── Shipment Created
+          └── Truck Created
+                    │
+                    ▼
+              Gate Verification
+                    │
+                    ▼
+              Yard / Dock Assignment
+                    │
+                    ▼
+                Goods Receipt
+                    │
+                    ▼
+                  GRN
+                    │
+                    ▼
+             Supplier Invoice
+                    │
+                    ▼
+              3-Way Matching
+          ┌─────────┴─────────┐
+          ▼                   ▼
+       MATCHED             MISMATCH
+          │                   │
+          ▼                   ▼
+ Payment Eligible        Payment ON HOLD
+```
+
+This demonstrates the connection between the **AI procurement layer, operational yard execution, and autonomous Procure-to-Pay workflow**.
 
 ---
 
 ## Documentation
 
-Additional implementation details are available in:
+Additional implementation and verification details are available in:
 
 ```text
 docs/IMPLEMENTATION_REPORT.md
+```
+
+The repository also contains the GitHub Actions CI workflows:
+
+```text
+.github/workflows/client-ci.yml
+.github/workflows/server-ci.yml
 ```
 
 ---
@@ -571,28 +863,46 @@ docs/IMPLEMENTATION_REPORT.md
 
 **CogniYard v2.3.1 — Verified Corrections**
 
-The current build includes:
+The current deployed build includes:
 
 * Role-based workspaces
 * Supplier ownership controls
+* AI Supply-Chain Copilot
+* Natural-language procurement intelligence
+* SKU/product resolution
+* Supplier intelligence and scoring
+* EOQ-based procurement validation
+* Human approval safeguards
+* AI-assisted PR creation
+* AI-assisted PR → PO conversion
+* Automatic Shipment and Truck lifecycle creation
 * Procurement workflow
 * Purchase orders
 * Gate verification
 * Browser-camera OCR
 * Yard and dock simulation
+* Dock recommendation
 * Goods receiving and GRNs
+* Inventory updates
 * Supplier invoice generation and uploads
+* Cloudinary invoice document storage
 * Finance invoice review
 * 3-way matching
 * Payment workflow
-* AI-assisted procurement
+* Payment hold controls
+* Logistics Copilot
+* Finance Copilot
 * Operational dashboards
 * Control Tower
 * Exception Center
 * Inventory Planning
 * Smart CCTV
+* MongoDB Atlas persistence
+* Vercel frontend deployment
+* Render backend deployment
+* GitHub Actions CI
 * Automated Windows startup
-* Backend tests
+* Backend test suite
 * Production frontend build
 
 ---
@@ -601,4 +911,8 @@ The current build includes:
 
 This project was developed as a hackathon solution and demonstration platform.
 
-For implementation details, architecture information, and verification notes, refer to `docs/IMPLEMENTATION_REPORT.md`.
+For implementation details, architecture information, and verification notes, refer to:
+
+```text
+docs/IMPLEMENTATION_REPORT.md
+```
