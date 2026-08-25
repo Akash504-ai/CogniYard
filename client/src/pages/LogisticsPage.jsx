@@ -17,10 +17,12 @@ import {
   Pause,
   RotateCcw,
   Building2,
+  Sparkles,
+  RefreshCw
 } from "lucide-react";
 
-export default function LogisticsPage({ mode = "verification" }) {
-  const { showNotification } = useAuth();
+export default function LogisticsPage({ mode = 'verification' }) {
+  const { showNotification, setIsAiOpen } = useAuth();
   const [trucks, setTrucks] = useState([]);
   const [docks, setDocks] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -424,7 +426,7 @@ export default function LogisticsPage({ mode = "verification" }) {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl space-y-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-5 dark:border-zinc-800">
+      <header className="border-b border-zinc-200 pb-5 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
             <Truck className="h-4.5 w-4.5" aria-hidden="true" />
@@ -441,6 +443,23 @@ export default function LogisticsPage({ mode = "verification" }) {
                 : "Verify arriving trucks and drivers before yard entry, then complete receiving against the approved purchase order."}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => setIsAiOpen(true)}
+            className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-purple-500 group-hover:rotate-12 transition-transform" />
+            <span>Ask Copilot</span>
+          </button>
+          <button
+            onClick={() => fetchLogisticsData({ showLoader: true })}
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Data</span>
+          </button>
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { aiAPI } from '../services/api';
 import {
@@ -25,6 +26,7 @@ import {
 
 export default function AIAssistantModal() {
   const { isAiOpen, setIsAiOpen, showNotification } = useAuth();
+  const location = useLocation();
   const [messages, setMessages] = useState([
     {
       sender: 'bot',
@@ -59,15 +61,47 @@ export default function AIAssistantModal() {
 
   if (!isAiOpen) return null;
 
-  const quickPrompts = [
-    { label: 'Executive Summary', text: 'Give me an executive summary of the supply chain', icon: Activity },
-    { label: 'What Needs Attention?', text: 'What needs my attention right now?', icon: ShieldAlert },
-    { label: 'Show Delayed Trucks', text: 'Show delayed trucks', icon: Truck },
-    { label: 'Why Payments On Hold?', text: 'Why are payments on hold?', icon: TrendingUp },
-    { label: 'Trace PO-1003', text: 'Trace PO-1003', icon: FileText },
-    { label: 'Top Suppliers', text: 'Which suppliers are performing best?', icon: Building2 },
-    { label: 'Available Docks', text: 'Which docks are available?', icon: Boxes }
-  ];
+  const getWorkspaceContext = () => {
+    const path = location?.pathname || '';
+    if (path.startsWith('/logistics') || path.startsWith('/yard-simulation')) return 'logistics';
+    if (path.startsWith('/finance')) return 'finance';
+    if (path.startsWith('/procurement')) return 'procurement';
+    return 'general';
+  };
+
+  const currentContext = getWorkspaceContext();
+
+  const getQuickPrompts = () => {
+    if (currentContext === 'logistics') {
+      return [
+        { label: 'Where is TRK-1007?', text: 'Where is TRK-1007?', icon: Truck },
+        { label: 'Show Delayed Trucks', text: 'Show delayed trucks', icon: AlertTriangle },
+        { label: 'Which Trucks Waiting?', text: 'Which trucks are waiting?', icon: Clock },
+        { label: 'Recommend Dock (TRK-1007)', text: 'Recommend a dock for TRK-1007', icon: Boxes },
+        { label: 'What Is Blocking Receiving?', text: 'What is blocking receiving?', icon: ShieldAlert }
+      ];
+    }
+    if (currentContext === 'finance') {
+      return [
+        { label: 'Why Payments On Hold?', text: 'Why are payments on hold?', icon: TrendingUp },
+        { label: 'Show Mismatched Invoices', text: 'Show mismatched invoices', icon: AlertTriangle },
+        { label: 'Why INV-8802 On Hold?', text: 'Why is INV-8802 on hold?', icon: FileText },
+        { label: 'Trace INV-8802', text: 'Trace INV-8802', icon: Activity },
+        { label: 'Invoices Ready For Payment', text: 'Which invoices are ready for payment?', icon: CheckCircle2 }
+      ];
+    }
+    return [
+      { label: 'Executive Summary', text: 'Give me an executive summary of the supply chain', icon: Activity },
+      { label: 'What Needs Attention?', text: 'What needs my attention right now?', icon: ShieldAlert },
+      { label: 'Show Delayed Trucks', text: 'Show delayed trucks', icon: Truck },
+      { label: 'Why Payments On Hold?', text: 'Why are payments on hold?', icon: TrendingUp },
+      { label: 'Trace PO-1003', text: 'Trace PO-1003', icon: FileText },
+      { label: 'Top Suppliers', text: 'Which suppliers are performing best?', icon: Building2 },
+      { label: 'Available Docks', text: 'Which docks are available?', icon: Boxes }
+    ];
+  };
+
+  const quickPrompts = getQuickPrompts();
 
   const getBusinessActionLabel = (action) => {
     switch (action) {

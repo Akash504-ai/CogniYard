@@ -740,16 +740,22 @@ ${mismatchInvoices} 3-Way Match discrepancy invoice(s); ${paymentsOnHold} paymen
       // 14. Cross-Module Lifecycle Tracing (PR -> PO -> Shipment -> Truck -> Receiving -> Invoice -> Payment)
       case 'tracePoLifecycle': {
         const { poNumber } = params;
-        if (!poNumber) return { success: false, message: 'Please specify a PO number to trace (e.g. PO-1003).' };
+        if (!poNumber) return { success: false, message: 'Please specify a PO or Invoice number to trace (e.g. PO-1003 or INV-8802).' };
 
-        const cleanPo = poNumber.trim().toUpperCase();
-        const po = await PurchaseOrder.findOne({ poNumber: new RegExp(cleanPo, 'i') });
-        if (!po) return { success: false, notFound: true, message: `Purchase Order ${cleanPo} was not found in the CogniYard database.` };
+        let cleanPo = poNumber.trim().toUpperCase();
+        let po = await PurchaseOrder.findOne({ poNumber: new RegExp(cleanPo, 'i') });
+        if (!po && (cleanPo.startsWith('INV-') || cleanPo.includes('INV'))) {
+          const invRecord = await Invoice.findOne({ invoiceNumber: new RegExp(cleanPo, 'i') });
+          if (invRecord && invRecord.poNumber) {
+            po = await PurchaseOrder.findOne({ poNumber: new RegExp(invRecord.poNumber, 'i') });
+          }
+        }
+        if (!po) return { success: false, notFound: true, message: `${cleanPo} was not found in the CogniYard database.` };
 
-        const truck = await Truck.findOne({ poNumber: new RegExp(cleanPo, 'i') });
-        const gr = await GoodsReceipt.findOne({ poNumber: new RegExp(cleanPo, 'i') });
-        const invoice = await Invoice.findOne({ poNumber: new RegExp(cleanPo, 'i') });
-        const payment = await Payment.findOne({ poNumber: new RegExp(cleanPo, 'i') });
+        const truck = await Truck.findOne({ poNumber: new RegExp(po.poNumber, 'i') });
+        const gr = await GoodsReceipt.findOne({ poNumber: new RegExp(po.poNumber, 'i') });
+        const invoice = await Invoice.findOne({ poNumber: new RegExp(po.poNumber, 'i') });
+        const payment = await Payment.findOne({ poNumber: new RegExp(po.poNumber, 'i') });
 
         let overallStatus = '🟢 SETTLED';
         let overallBadge = 'SETTLED';
@@ -1047,8 +1053,42 @@ const fallbackIntentParser = (message, chatHistory = []) => {
     };
   }
 
+  // Specific Invoice / Lifecycle Trace Lookup (e.g. "Trace INV-8802", "Why is INV-8802 on hold?")
+  if (msg.includes('inv-')) {
+    const invMatch = message.match(/INV-\d+/i);
+    const invNumber = invMatch ? invMatch[0].toUpperCase() : null;
+    if (invNumber) {
+      return {
+        intent: 'trace_po_lifecycle',
+        tool: 'tracePoLifecycle',
+        params: { poNumber: invNumber },
+        replyText: `Auditing cross-module lifecycle and 3-way match status for Invoice ${invNumber}...`
+      };
+    }
+  }
+
+  // Mismatched Invoices Intent ("show mismatched invoices")
+  if (msg.includes('mismatched') || msg.includes('mismatch')) {
+    return {
+      intent: 'get_mismatched_invoices',
+      tool: 'getMismatchedInvoices',
+      params: {},
+      replyText: 'Auditing 3-Way Match invoice discrepancies and on-hold records...'
+    };
+  }
+
+  // Blocking Receiving Intent ("what is blocking receiving?")
+  if (msg.includes('blocking') || (msg.includes('receiving') && msg.includes('what'))) {
+    return {
+      intent: 'get_receiving_log',
+      tool: 'getReceivingLog',
+      params: {},
+      replyText: 'Auditing goods receiving log and operational bottlenecks...'
+    };
+  }
+
   // Dock Status & Waiting Trucks Intent ("which docks are occupied", "available docks", "trucks waiting for dock")
-  if (msg.includes('waiting') && (msg.includes('dock') || msg.includes('truck'))) {
+  if (msg.includes('waiting') || (msg.includes('truck') && msg.includes('dock'))) {
     return {
       intent: 'get_waiting_trucks',
       tool: 'getWaitingTrucks',

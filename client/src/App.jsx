@@ -33,7 +33,7 @@ function RoleHome() {
 function AuthenticatedLayout() {
   const { currentRole } = useAuth();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
-  const canUseAi = [ROLES.ADMIN, ROLES.PROCUREMENT].includes(currentRole);
+  const canUseAi = [ROLES.ADMIN, ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE].includes(currentRole);
 
   return (
     <div className="cogniyard-app flex min-h-screen bg-zinc-50 text-left text-zinc-900 antialiased dark:bg-black dark:text-zinc-100">

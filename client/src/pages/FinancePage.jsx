@@ -11,6 +11,7 @@ import {
   Lock,
   RefreshCw,
   Scale,
+  Sparkles,
   Trash2,
   X
 } from 'lucide-react';
@@ -24,7 +25,7 @@ const statusStyle = status => {
 };
 
 export default function FinancePage() {
-  const { showNotification } = useAuth();
+  const { showNotification, setIsAiOpen } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
@@ -108,7 +109,22 @@ export default function FinancePage() {
         <span className="mx-auto w-12 h-12 rounded-2xl bg-violet-500/10 text-violet-600 flex items-center justify-center"><Scale className="w-6 h-6" /></span>
         <h1 className="text-2xl font-extrabold mt-3">Finance: Invoice Match & Payment</h1>
         <p className="text-sm text-zinc-500 mt-1">Only the supplier invoice linked to the correct PO is fetched and matched.</p>
-        <button onClick={loadFinance} className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-semibold"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <button
+            onClick={() => setIsAiOpen(true)}
+            className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-purple-500 group-hover:rotate-12 transition-transform" />
+            <span>Ask Copilot</span>
+          </button>
+          <button
+            onClick={loadFinance}
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Data</span>
+          </button>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800">
           {[
             ['Supplier invoices', metrics.incoming, FileText],
