@@ -153,14 +153,14 @@ export default function Dashboard() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{dashboard.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               type="button"
               onClick={() => setIsAiOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Ask Copilot
-            </button>
+            </button> */}
 
             <button
               onClick={() => loadDashboard(true)}

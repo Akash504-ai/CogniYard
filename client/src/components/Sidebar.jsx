@@ -32,8 +32,8 @@ const coreItems = [
 const optionalItems = [
   { path: '/control-tower', label: 'Control Tower', icon: Sparkles, roles: [ROLES.ADMIN] },
   { path: '/exceptions', label: 'Exceptions', icon: ShieldAlert, roles: [ROLES.ADMIN] },
-  { path: '/inventory-planning', label: 'Inventory Planning', icon: Calculator, roles: [ROLES.ADMIN] },
-  { path: '/vision', label: 'Smart CCTV Demo', icon: Camera, roles: [ROLES.ADMIN] }
+  // { path: '/inventory-planning', label: 'Inventory Planning', icon: Calculator, roles: [ROLES.ADMIN] },
+  // { path: '/logistics', label: 'Smart CCTV Demo', icon: Camera, roles: [ROLES.ADMIN] }
 ];
 
 function SimpleLink({ item, onNavigate }) {
