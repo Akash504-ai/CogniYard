@@ -119,17 +119,22 @@ export default function WarehouseGateVision({ trucks = [], docks = [], onUpdated
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (constraintErr) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
       setCameraActive(true);
       showNotification('Live gate camera started. Object detection is running continuously.', 'success');
     } catch (error) {
-      showNotification('Camera permission was denied. Allow camera access in the browser address bar and try again.', 'error');
+      showNotification('Camera permission was denied. Please allow camera access in your browser address bar and try again.', 'error');
     }
   };
 

@@ -1,176 +1,124 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@layer base {
+  :root {
+    /* WARM INDUSTRIAL OPERATIONS WORKBOOK PALETTE */
+    --paper-bg: #F5F1E9;             /* Master page workbook background */
+    --sheet-primary: #FCFAF4;        /* Primary operations paper sheet */
+    --sheet-secondary: #F4EFE6;      /* Secondary paper panel */
+    --sheet-hover: #F0EADF;          /* Subtle sheet hover */
+    --note-bg: #FCF2CD;              /* Warm yellow sticky note */
+    --note-border: #EEDBA5;          /* Sticky note border */
+    --paper-border: #E3DDD1;         /* Ultra-fine document panel border */
+    --paper-border-dark: #D4CABE;    /* Slightly darker paper rule line */
+    --ink-dark: #1C201E;             /* Deep charcoal ink */
+    --ink-secondary: #4A524E;        /* Secondary paragraph ink */
+    --ink-muted: #68716D;            /* Metadata / sublabel ink */
+    --ink-faint: #8E9793;            /* Grid line / faint ink */
+    
+    /* DARK OPERATIONS RAIL (LEFT NAVIGATION) */
+    --rail-bg: #101514;              /* True dark operations console */
+    --rail-surface: #151D1B;         /* Dark console panel */
+    --rail-border: #1E2825;          /* Dark rail divider */
+    --rail-text: #9EA8A4;            /* Muted console item text */
+    --rail-text-bright: #FFFFFF;     /* Selected / active title text */
+    --rail-active-bg: #14281E;       /* Restrained active green tint */
+    --rail-active-border: #22C55E;   /* Clean active green bar */
 
-:root {
-  color-scheme: light;
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    /* RESTRAINED OPERATIONAL ACCENTS */
+    --op-green-primary: #15803D;     /* Forest operations green */
+    --op-green-accent: #22C55E;      /* Bright status indicator */
+    --op-green-tint: #DCFCE7;        /* Soft green badge fill */
+    --op-blue: #2563EB;              /* Docked status blue */
+    --op-blue-tint: #DBEAFE;         /* Docked badge fill */
+    --op-amber: #D97706;             /* Gate / Warning amber */
+    --op-amber-tint: #FEF3C7;        /* Amber badge fill */
+    --op-purple: #7C3AED;            /* QC Hold purple */
+    --op-purple-tint: #EDE9FE;       /* Purple badge fill */
+    --op-red: #DC2626;               /* Critical / Dwell exception red */
+    --op-red-tint: #FEE2E2;          /* Red badge fill */
+
+    /* TYPOGRAPHY */
+    --font-sans: 'Plus Jakarta Sans', 'Inter', 'IBM Plex Sans', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    --font-handwriting: 'Caveat', 'Patrick Hand', 'Architects Daughter', cursive;
+  }
+
+  /* Dark mode overrides (retaining high readability while preserving dark rail) */
+  .dark {
+    --paper-bg: #161D1B;
+    --sheet-primary: #1B2422;
+    --sheet-secondary: #222D2B;
+    --sheet-hover: #263330;
+    --note-bg: #292E22;
+    --note-border: #3F4735;
+    --paper-border: #2B3835;
+    --paper-border-dark: #374642;
+    --ink-dark: #F5F7F6;
+    --ink-secondary: #C8D1CE;
+    --ink-muted: #8E9C97;
+    --ink-faint: #566460;
+  }
+
+  body {
+    background-color: var(--paper-bg);
+    color: var(--ink-dark);
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+  }
 }
 
-html.dark {
-  color-scheme: dark;
+/* Subtle Engineering Graph Paper Grid Pattern */
+.bg-grid-paper {
+  background-image: 
+    linear-gradient(to right, rgba(160, 145, 125, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(160, 145, 125, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-html,
-body,
-#root {
-  min-width: 320px;
-  min-height: 100%;
-  margin: 0;
+.dark .bg-grid-paper {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
-html {
-  background: #fafafa;
-  color: #18181b;
+/* Handwriting Heading Utility */
+.font-handwriting {
+  font-family: var(--font-handwriting);
 }
 
-html.dark {
-  background: #09090b;
-  color: #f4f4f5;
+/* Document & Paper Edge Shadows */
+.paper-sheet {
+  background-color: var(--sheet-primary);
+  border: 1px solid var(--paper-border);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(35, 30, 25, 0.04), 0 1px 2px rgba(35, 30, 25, 0.02);
 }
 
-body {
-  min-height: 100vh;
-  background: transparent;
-  color: inherit;
-  text-align: left;
+/* Warm Sticky Note */
+.paper-note {
+  background-color: var(--note-bg);
+  border: 1px solid var(--note-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(50, 40, 20, 0.06);
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-button:not(:disabled),
-[role="button"]:not([aria-disabled="true"]) {
-  cursor: pointer;
-}
-
-button:disabled,
-input:disabled,
-textarea:disabled,
-select:disabled {
-  cursor: not-allowed;
-}
-
-::selection {
-  background: rgba(147, 51, 234, 0.18);
-}
-
-.cogniyard-app :where(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid #9333ea;
-  outline-offset: 2px;
-}
-
-.cogniyard-app table {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Live OCR targeting guides. Keep the cue precise and functional rather than decorative. */
-.gate-ocr-guide {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  border: 2px solid #a855f7;
-  border-radius: 0.5rem;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-}
-
-.gate-ocr-guide.is-plate {
-  top: 56%;
-  height: 30%;
-}
-
-.gate-ocr-guide.is-driver {
-  top: 16%;
-  height: 68%;
-}
-
-.gate-ocr-guide span {
-  position: absolute;
-  top: -1.55rem;
-  left: 0;
-  width: max-content;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 0.2rem 0.45rem;
-  border-radius: 0.375rem;
-  background: #7e22ce;
-  color: #fff;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-/* Leaflet map surfaces follow the same restrained product styling. */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  border-radius: 0.5rem;
-  z-index: 10;
-  background: #f8fafc !important;
-}
-
-html.dark .leaflet-container {
-  background: #09090b !important;
-}
-
-.leaflet-popup-content-wrapper {
-  background-color: #fff !important;
-  color: #18181b !important;
-  border: 1px solid #e4e4e7 !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 8px 24px rgba(24, 24, 27, 0.12) !important;
-}
-
-html.dark .leaflet-popup-content-wrapper {
-  background-color: #18181b !important;
-  color: #f4f4f5 !important;
-  border-color: #3f3f46 !important;
-}
-
-.leaflet-popup-tip {
-  background-color: #fff !important;
-}
-
-html.dark .leaflet-popup-tip {
-  background-color: #18181b !important;
-}
-
+/* Custom Operations Scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 999px;
+  background: var(--paper-border-dark);
+  border-radius: 3px;
 }
-
-html.dark ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-muted);
 }

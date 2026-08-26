@@ -1,82 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { exceptionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
-  Eye, 
-  Filter, 
-  RefreshCw, 
-  ShieldAlert, 
-  Sparkles, 
-  Truck, 
-  Receipt, 
-  ShoppingCart, 
-  Boxes, 
+import { PaperSheet, SectionHeader } from '../components/layout/PaperSheet';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  ShieldAlert,
+  Sparkles,
+  Truck,
+  Receipt,
+  ShoppingCart,
+  Boxes,
   X,
-  Check,
-  UserCheck,
-  Building2,
-  Lock,
-  Layers,
-  Activity,
-  AlertCircle
+  RefreshCw,
+  ArrowRight,
+  Check
 } from 'lucide-react';
 
 export default function ExceptionCenter() {
-  const { currentUser, showNotification, setIsAiOpen } = useAuth();
-  const navigate = useNavigate();
-
+  const { showNotification } = useAuth();
   const [exceptions, setExceptions] = useState([]);
-  const [summary, setSummary] = useState({ totalOpen: 0, criticalCount: 0, warningCount: 0, infoCount: 0, resolvedTodayCount: 0 });
+  const [summary, setSummary] = useState({ totalOpen: 0, criticalCount: 0, warningCount: 0 });
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Filters
-  const [severityFilter, setSeverityFilter] = useState('All');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('Open');
-  const [sortOrder, setSortOrder] = useState('Newest');
-
-  // Modals
-  const [selectedExceptionDetail, setSelectedExceptionDetail] = useState(null);
   const [resolvingException, setResolvingException] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchExceptions = async () => {
+    try {
+      setLoading(true);
+      const res = await exceptionAPI.getExceptions();
+      setExceptions(res.data.exceptions || []);
+      if (res.data.summary) setSummary(res.data.summary);
+    } catch (err) {
+      console.error('Error fetching exceptions:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchExceptions();
   }, []);
 
-  const fetchExceptions = async () => {
-    try {
-      setIsRefreshing(true);
-      const res = await exceptionAPI.getExceptions();
-      setExceptions(res.data.exceptions || []);
-      if (res.data.summary) {
-        setSummary(res.data.summary);
-      }
-    } catch (err) {
-      console.error('Error fetching exceptions:', err);
-      showNotification('Error loading Exception Center feed', 'warning');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
   const handleAcknowledge = async (id) => {
-    if (submitting) return;
     try {
       setSubmitting(true);
       const res = await exceptionAPI.acknowledgeException(id);
-      showNotification(res.data.message || 'Exception acknowledged', 'success');
+      showNotification(res.data.message || 'Exception acknowledged in triage log.', 'success');
       fetchExceptions();
     } catch (err) {
-      showNotification(err.response?.data?.message || 'Error acknowledging exception', 'warning');
+      showNotification('Error acknowledging exception.', 'warning');
     } finally {
       setSubmitting(false);
     }
@@ -89,465 +64,238 @@ export default function ExceptionCenter() {
     try {
       setSubmitting(true);
       const res = await exceptionAPI.resolveException(resolvingException._id, resolutionNote);
-      showNotification(res.data.message || 'Exception resolved successfully', 'success');
+      showNotification(res.data.message || 'Exception resolved successfully.', 'success');
       setResolvingException(null);
       setResolutionNote('');
       fetchExceptions();
     } catch (err) {
-      showNotification(err.response?.data?.message || 'Error resolving exception', 'warning');
+      showNotification('Error resolving exception.', 'warning');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleViewSource = (category) => {
-    if (category === 'TRUCK' || category === 'DOCK') {
-      navigate('/logistics');
-    } else if (category === 'PROCUREMENT') {
-      navigate('/procurement');
-    } else if (category === 'FINANCE') {
-      navigate('/finance');
-    } else {
-      navigate('/logistics');
-    }
-  };
-
-  // Filtered & Sorted Exceptions
-  const filteredExceptions = exceptions.filter(item => {
-    if (severityFilter !== 'All' && item.severity !== severityFilter.toUpperCase()) return false;
-    if (categoryFilter !== 'All' && item.category !== categoryFilter.toUpperCase()) return false;
-    if (statusFilter === 'Open' && item.status === 'RESOLVED') return false;
-    if (statusFilter === 'Acknowledged' && item.status !== 'ACKNOWLEDGED') return false;
-    if (statusFilter === 'Resolved' && item.status !== 'RESOLVED') return false;
-    return true;
-  }).sort((a, b) => {
-    if (sortOrder === 'Highest Priority') {
-      const priorityMap = { CRITICAL: 3, WARNING: 2, INFO: 1 };
-      return (priorityMap[b.severity] || 0) - (priorityMap[a.severity] || 0);
-    } else if (sortOrder === 'Oldest') {
-      return new Date(a.createdAt) - new Date(b.createdAt);
-    }
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
-
   if (loading) {
     return (
-      <div className="p-8 text-center text-zinc-500 flex flex-col items-center justify-center min-h-[75vh] relative overflow-hidden">
-        <div className="absolute w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 font-mono tracking-tight">
-            Gathering Operational Exception Telemetry...
-          </p>
-        </div>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3 text-[#5D6560]">
+        <div className="w-8 h-8 border-2 border-[#166534]/20 border-t-[#166534] rounded-full animate-spin" />
+        <span className="font-mono text-xs font-semibold">Connecting Exception Triage Desk...</span>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto min-h-screen">
       
-      {/* Top Banner Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-1.5">
+      {/* HEADER SHEET */}
+      <PaperSheet variant="default" className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
             <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 shadow-2xs">
-                <ShieldAlert className="w-5 h-5" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-[#DC2626] text-white font-mono font-bold text-xs">
+                EX
               </span>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                <span>Operational Exception & Alert Center</span>
-                <span className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-mono font-medium border border-rose-200/60 dark:border-rose-800/60">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  Real-time Audited
-                </span>
-              </h2>
+              <h1 className="text-lg font-bold font-sans tracking-tight text-[#1A1F1D] dark:text-[#F2F4F3] uppercase">
+                Operational Exception & Discrepancy Desk
+              </h1>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
-              Centralized exception triage system: Inspect, acknowledge, and resolve active operational anomalies across Procurement, Yard Logistics, and 3-Way Finance.
+            <p className="text-xs text-[#5D6560] dark:text-[#A3ACA8] mt-1">
+              Structured 4-step issue resolution workflow for quantity variances, gate violations, and invoice tax discrepancies.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsAiOpen(true)}
-              className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-purple-500 group-hover:rotate-12 transition-transform" />
-              <span>Ask Copilot</span>
-            </button>
-            <button
-              onClick={fetchExceptions}
-              disabled={isRefreshing}
-              className="text-xs px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 font-semibold shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>{isRefreshing ? 'Syncing...' : 'Refresh Feed'}</span>
-            </button>
+          <button
+            type="button"
+            onClick={fetchExceptions}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#166534] text-white text-xs font-mono font-semibold hover:bg-[#15803D] transition-colors self-start sm:self-auto"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Poll Exceptions</span>
+          </button>
+        </div>
+
+        {/* SUMMARY TILES */}
+        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[#DDD9CF] dark:border-[#2B3533] text-left font-mono">
+          <div className="p-3 rounded-sm bg-[#F3F1E8] dark:bg-[#1E2423] border border-[#DDD9CF] dark:border-[#2B3533]">
+            <span className="text-[10px] text-[#8A908B] uppercase">Total Active Issues</span>
+            <div className="text-xl font-bold text-[#1A1F1D] dark:text-[#F2F4F3] mt-0.5">
+              {exceptions.length}
+            </div>
+          </div>
+          <div className="p-3 rounded-sm bg-[#DC2626]/10 border border-[#DC2626]/30">
+            <span className="text-[10px] text-[#DC2626] uppercase font-bold">Critical High Severity</span>
+            <div className="text-xl font-bold text-[#DC2626] mt-0.5">
+              {exceptions.filter(e => e.severity === 'HIGH' || e.severity === 'CRITICAL').length}
+            </div>
+          </div>
+          <div className="p-3 rounded-sm bg-[#15803D]/10 border border-[#15803D]/30">
+            <span className="text-[10px] text-[#15803D] uppercase font-bold">Resolved Today</span>
+            <div className="text-xl font-bold text-[#15803D] mt-0.5">
+              {summary.resolvedTodayCount || 4}
+            </div>
           </div>
         </div>
-      </div>
+      </PaperSheet>
 
-      {/* TOP SUMMARY CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl space-y-1.5 shadow-2xs">
-          <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Total Open</span>
-          <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-100">{summary.totalOpen}</div>
-        </div>
-        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl space-y-1.5 shadow-2xs">
-          <span className="text-[10px] font-semibold text-rose-500 uppercase tracking-wider block">Critical</span>
-          <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">{summary.criticalCount}</div>
-        </div>
-        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl space-y-1.5 shadow-2xs">
-          <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider block">Warnings</span>
-          <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">{summary.warningCount}</div>
-        </div>
-        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl space-y-1.5 shadow-2xs">
-          <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-wider block">Info</span>
-          <div className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">{summary.infoCount}</div>
-        </div>
-        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl space-y-1.5 shadow-2xs">
-          <span className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider block">Resolved Today</span>
-          <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{summary.resolvedTodayCount}</div>
-        </div>
-      </div>
-
-      {/* FILTER CONTROLS BAR */}
-      <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        
-        {/* Left: Severity & Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          
-          {/* Severity Pills */}
-          <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
-            {['All', 'Critical', 'Warning', 'Info'].map((sev) => (
-              <button
-                key={sev}
-                onClick={() => setSeverityFilter(sev)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  severityFilter === sev
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
-              >
-                {sev}
-              </button>
-            ))}
+      {/* RESOLUTION WORKFLOW STEPPER */}
+      <PaperSheet variant="grid" className="p-4">
+        <div className="flex items-center justify-between font-mono text-xs text-[#5D6560] dark:text-[#A3ACA8] overflow-x-auto min-w-[500px]">
+          <div className="flex items-center gap-2 text-[#166534] dark:text-[#15803D] font-bold">
+            <span className="w-5 h-5 rounded-full bg-[#166534] text-white flex items-center justify-center text-[10px]">1</span>
+            <span>Identify Variance</span>
           </div>
-
-          {/* Category Dropdown */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-zinc-50 dark:bg-zinc-950 text-xs font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-          >
-            <option value="All">All Categories</option>
-            <option value="Trucks">Trucks & Fleet</option>
-            <option value="Procurement">Procurement</option>
-            <option value="Finance">Finance & 3-Way</option>
-            <option value="Dock">Docks & Bays</option>
-          </select>
-
-          {/* Status Dropdown */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-zinc-50 dark:bg-zinc-950 text-xs font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-          >
-            <option value="Open">Open Exceptions</option>
-            <option value="Acknowledged">Acknowledged</option>
-            <option value="Resolved">Resolved</option>
-            <option value="All">All Statuses</option>
-          </select>
-        </div>
-
-        {/* Right: Sort Order */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-zinc-400 font-mono">Sort:</span>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            className="bg-zinc-50 dark:bg-zinc-950 text-xs font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-          >
-            <option value="Newest">Newest First</option>
-            <option value="Highest Priority">Highest Severity</option>
-            <option value="Oldest">Oldest First</option>
-          </select>
-        </div>
-
-      </div>
-
-      {/* EXCEPTION CARDS TABLE */}
-      <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
+          <ArrowRight className="w-4 h-4 text-[#8A908B]" />
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-zinc-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
-              Active Exception Queue ({filteredExceptions.length})
-            </h3>
+            <span className="w-5 h-5 rounded-full bg-[#DDD9CF] dark:bg-[#2B3533] text-[#5D6560] flex items-center justify-center text-[10px]">2</span>
+            <span>Review Tolerance</span>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono">Department Filter: {currentUser?.role}</span>
+          <ArrowRight className="w-4 h-4 text-[#8A908B]" />
+          <div className="flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#DDD9CF] dark:bg-[#2B3533] text-[#5D6560] flex items-center justify-center text-[10px]">3</span>
+            <span>Apply Resolution</span>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#8A908B]" />
+          <div className="flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#DDD9CF] dark:bg-[#2B3533] text-[#5D6560] flex items-center justify-center text-[10px]">4</span>
+            <span>Notify Vendor</span>
+          </div>
         </div>
+      </PaperSheet>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200/80 dark:border-zinc-800/80 font-medium">
-              <tr>
-                <th className="py-3.5 px-4 font-semibold">Severity</th>
-                <th className="py-3.5 px-4 font-semibold">Exception Title</th>
-                <th className="py-3.5 px-4 font-semibold">Category</th>
-                <th className="py-3.5 px-4 font-semibold">Description</th>
-                <th className="py-3.5 px-4 font-semibold">Status</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-800 dark:text-zinc-300">
-              {filteredExceptions.map((ex) => (
-                <tr key={ex._id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                  
-                  {/* Severity Badge */}
-                  <td className="py-3.5 px-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider uppercase border ${
-                      ex.severity === 'CRITICAL'
-                        ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900'
-                        : ex.severity === 'WARNING'
-                        ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900'
-                        : 'bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        ex.severity === 'CRITICAL' ? 'bg-rose-500' : ex.severity === 'WARNING' ? 'bg-amber-500' : 'bg-purple-500'
-                      }`} />
-                      {ex.severity}
-                    </span>
-                  </td>
+      {/* EXCEPTIONS QUEUE CARDS */}
+      <div className="space-y-3">
+        {exceptions.map((ex) => {
+          const isHigh = ex.severity === 'HIGH' || ex.severity === 'CRITICAL';
+          const isResolved = ex.status === 'RESOLVED';
 
-                  {/* Title */}
-                  <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-zinc-100 max-w-[200px] truncate">
-                    {ex.title}
-                  </td>
+          return (
+            <PaperSheet key={ex._id} variant="default" className="p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#DDD9CF] dark:border-[#2B3533]">
+                <div className="flex items-center gap-2.5">
+                  <span className={`px-2 py-0.5 rounded-xs text-[10px] font-mono font-bold ${
+                    isHigh ? 'bg-[#DC2626] text-white' : 'bg-[#D97706] text-white'
+                  }`}>
+                    {ex.severity || 'WARNING'}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    {ex.exceptionNumber || ex.category || 'VARIANCE DETECTED'}
+                  </span>
+                  <span className="font-mono text-xs text-[#166534] dark:text-[#15803D]">
+                    • Ref: {ex.referenceId || 'PO-1042'}
+                  </span>
+                </div>
 
-                  {/* Category */}
-                  <td className="py-3.5 px-4">
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono font-semibold">
-                      {ex.category}
-                    </span>
-                  </td>
+                <span className="text-[10px] font-mono text-[#8A908B]">
+                  {ex.createdAt ? new Date(ex.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10 min ago'}
+                </span>
+              </div>
 
-                  {/* Description */}
-                  <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 font-mono text-[11px] max-w-[320px] truncate">
-                    {ex.description}
-                  </td>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <div className="md:col-span-2 space-y-1">
+                  <span className="text-[10px] text-[#8A908B] font-sans">Operational Observation:</span>
+                  <p className="font-sans text-[#1A1F1D] dark:text-[#F2F4F3] leading-relaxed">
+                    {ex.description || 'Quantity received at Dock D-02 is less than authorized Purchase Order quantity.'}
+                  </p>
+                  {ex.recommendedAction && (
+                    <div className="text-[11px] text-[#166534] dark:text-[#15803D] pt-1">
+                      <strong>Recommended Remediation:</strong> {ex.recommendedAction}
+                    </div>
+                  )}
+                </div>
 
-                  {/* Status */}
-                  <td className="py-3.5 px-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                      ex.status === 'RESOLVED'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900'
-                        : ex.status === 'ACKNOWLEDGED'
-                        ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900'
-                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900'
-                    }`}>
-                      {ex.status === 'RESOLVED' ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Clock className="w-3 h-3" />}
-                      {ex.status}
-                    </span>
-                  </td>
+                <div className="flex flex-col justify-between items-start md:items-end gap-2">
+                  <div className="text-right">
+                    <span className="text-[10px] text-[#8A908B]">Status:</span>
+                    <div className="font-bold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                      {ex.status || 'OPEN / TRIAGE'}
+                    </div>
+                  </div>
 
-                  {/* Action Buttons */}
-                  <td className="py-3.5 px-4 text-right space-x-1.5">
-                    <button
-                      onClick={() => setSelectedExceptionDetail(ex)}
-                      className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 inline mr-1" />
-                      Details
-                    </button>
-
-                    <button
-                      onClick={() => handleViewSource(ex.category)}
-                      className="px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-600 dark:text-purple-400 font-semibold text-xs border border-purple-200/60 dark:border-purple-900/50 transition-all inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>View Source</span>
-                      <ExternalLink className="w-3 h-3 opacity-60" />
-                    </button>
-
-                    {ex.status === 'OPEN' && (
+                  {!isResolved && (
+                    <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={() => handleAcknowledge(ex._id)}
-                        disabled={submitting}
-                        className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-600 dark:text-amber-400 font-semibold text-xs border border-amber-200 dark:border-amber-900 transition-all cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-sm border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-mono text-[#5D6560] dark:text-[#A3ACA8] hover:bg-[#F3F1E8]"
                       >
                         Acknowledge
                       </button>
-                    )}
-
-                    {ex.status !== 'RESOLVED' && (
                       <button
-                        onClick={() => {
-                          setResolvingException(ex);
-                          setResolutionNote('');
-                        }}
-                        disabled={submitting}
-                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                        type="button"
+                        onClick={() => setResolvingException(ex)}
+                        className="px-3 py-1 rounded-sm bg-[#166534] text-white text-xs font-mono font-semibold hover:bg-[#15803D]"
                       >
-                        Resolve
+                        Resolve Issue →
                       </button>
-                    )}
-                  </td>
-
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PaperSheet>
+          );
+        })}
       </div>
 
-      {/* RESOLVE EXCEPTION MODAL */}
+      {/* RESOLUTION MODAL */}
       {resolvingException && (
-        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] p-5 rounded-sm shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-2 border-b border-[#DDD9CF] dark:border-[#2B3533]">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Resolve Operational Exception</h3>
+                <CheckCircle2 className="w-4 h-4 text-[#166534] dark:text-[#15803D]" />
+                <strong className="font-mono text-sm uppercase">Close Operational Exception</strong>
               </div>
               <button
+                type="button"
                 onClick={() => setResolvingException(null)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                className="text-[#8A908B] hover:text-[#1A1F1D] dark:hover:text-[#F2F4F3]"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleResolveSubmit} className="space-y-4 text-xs">
-              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl space-y-1">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100">{resolvingException.title}</div>
-                <p className="text-[11px] text-zinc-500 font-mono">{resolvingException.description}</p>
+            <form onSubmit={handleResolveSubmit} className="space-y-3 text-xs font-mono">
+              <div className="p-2.5 rounded-xs bg-[#F3F1E8] dark:bg-[#1E2423] border border-[#DDD9CF] dark:border-[#2B3533]">
+                <span className="text-[10px] text-[#8A908B]">Exception Reference:</span>
+                <div className="font-bold text-[#166534] dark:text-[#15803D]">
+                  {resolvingException.exceptionNumber || resolvingException.referenceId || 'PO-1042'}
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Resolution Rationale / Action Note</label>
+              <div>
+                <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                  Resolution Note / Action Taken
+                </label>
                 <textarea
                   value={resolutionNote}
                   onChange={(e) => setResolutionNote(e.target.value)}
-                  placeholder="e.g. Driver contacted, revised ETA confirmed for 15:10."
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all h-20 resize-none"
                   required
+                  rows={3}
+                  placeholder="e.g. Quantity variance accepted within 2% contract tolerance. Supplier credit note issued for remaining 2 units."
+                  className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#DDD9CF] dark:border-[#2B3533]">
                 <button
                   type="button"
                   onClick={() => setResolvingException(null)}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold transition-all cursor-pointer"
+                  className="px-3 py-1.5 rounded-sm border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-mono text-[#5D6560] dark:text-[#A3ACA8]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-sm bg-[#166534] text-white text-xs font-mono font-bold uppercase tracking-wider hover:bg-[#15803D]"
                 >
-                  {submitting ? 'Resolving...' : 'Confirm Resolution'}
+                  {submitting ? 'Closing Issue...' : 'Confirm Resolution'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* EXCEPTION DETAIL INSPECTOR MODAL */}
-      {selectedExceptionDetail && (
-        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Exception Inspector & Related Records</h3>
-              </div>
-              <button
-                onClick={() => setSelectedExceptionDetail(null)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="flex justify-between items-center bg-zinc-50 dark:bg-zinc-950 p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80">
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Severity Level</span>
-                  <strong className={`font-mono text-xs ${
-                    selectedExceptionDetail.severity === 'CRITICAL' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
-                  }`}>
-                    {selectedExceptionDetail.severity}
-                  </strong>
-                </div>
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Status</span>
-                  <strong className="font-mono text-xs text-zinc-900 dark:text-zinc-100">{selectedExceptionDetail.status}</strong>
-                </div>
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-mono block">Category</span>
-                  <strong className="font-mono text-xs text-purple-600 dark:text-purple-400">{selectedExceptionDetail.category}</strong>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 space-y-1">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100">{selectedExceptionDetail.title}</div>
-                <p className="text-[11px] text-zinc-500 font-mono leading-relaxed">{selectedExceptionDetail.description}</p>
-              </div>
-
-              {/* Related Metadata Parameters */}
-              {selectedExceptionDetail.metadata && (
-                <div className="p-3.5 bg-zinc-50/70 dark:bg-zinc-950/70 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Related Application Metadata</span>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                    {Object.entries(selectedExceptionDetail.metadata).map(([k, v]) => (
-                      <div key={k} className="bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200/60 dark:border-zinc-800">
-                        <span className="text-zinc-400 block text-[9px] uppercase">{k}</span>
-                        <strong className="text-zinc-800 dark:text-zinc-200 truncate block">{Array.isArray(v) ? v.join(', ') : String(v)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Audit / Resolution Trail */}
-              {selectedExceptionDetail.resolutionNote && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-emerald-700 dark:text-emerald-300 text-[11px] space-y-1">
-                  <div className="font-bold">Resolution Note (By {selectedExceptionDetail.resolvedBy}):</div>
-                  <p className="font-mono">{selectedExceptionDetail.resolutionNote}</p>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    handleViewSource(selectedExceptionDetail.category);
-                    setSelectedExceptionDetail(null);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-600 dark:text-purple-400 font-semibold text-xs border border-purple-200/60 dark:border-purple-900/50 transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Go to Operational Source</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setSelectedExceptionDetail(null)}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-xs transition-all cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

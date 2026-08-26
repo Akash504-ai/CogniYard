@@ -34,7 +34,7 @@ export default function LogisticsPage({ mode = 'verification' }) {
 
   // Simulation Controls & Telemetry State
   const isSimulation = mode === "simulation";
-  const [activeView, setActiveView] = useState("twin"); // 'map' or 'twin'
+  const [activeView, setActiveView] = useState(mode === "simulation" ? "map" : "twin");
   const [simRunning, setSimRunning] = useState(false);
   const [simSpeed, setSimSpeed] = useState(1);
   const [yardCapacity, setYardCapacity] = useState({ occupied: 4, max: 10 });

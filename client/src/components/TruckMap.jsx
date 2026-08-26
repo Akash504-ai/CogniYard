@@ -1,32 +1,36 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, Circle } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
-  MapPin,
   Clock,
-  Navigation,
-  Zap,
-  ShieldCheck,
+  Radio,
+  Layers,
   User,
   Truck,
   Building2,
-  Radio,
-  Layers,
   ChevronRight
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-/* Enterprise Radar Marker for Central Hub */
+// Helper component to force Leaflet to recalculate size on mount
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
+/* Radar Marker for Central Hub */
 const warehouseIcon = L.divIcon({
   html: `
     <div class="relative flex items-center justify-center">
-      <div class="absolute w-10 h-10 bg-purple-500/20 rounded-full animate-ping"></div>
-      <div class="w-8 h-8 rounded-xl bg-zinc-900 text-white border-2 border-purple-400 flex items-center justify-center shadow-xl">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-          <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-          <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
-        </svg>
+      <div class="absolute w-8 h-8 bg-green-500/20 rounded-full animate-ping"></div>
+      <div class="w-8 h-8 rounded-xs bg-[#1C201E] text-white border-2 border-[#15803D] flex items-center justify-center shadow-md font-mono text-xs font-bold">
+        HUB
       </div>
     </div>
   `,
@@ -39,26 +43,26 @@ const warehouseIcon = L.divIcon({
 const gateIcon = L.divIcon({
   html: `
     <div class="relative flex items-center justify-center">
-      <div class="w-7 h-7 rounded-lg bg-zinc-900 text-amber-400 border border-amber-400/60 shadow-lg flex items-center justify-center font-mono font-bold text-[10px]">
-        GATE
+      <div class="px-1.5 py-0.5 rounded-xs bg-[#D97706] text-white font-mono font-bold text-[9px] shadow-md border border-white">
+        GATE 1
       </div>
     </div>
   `,
   className: 'custom-gate-icon',
-  iconSize: [28, 28],
-  iconAnchor: [14, 14]
+  iconSize: [40, 20],
+  iconAnchor: [20, 10]
 });
 
 /* Dynamic Status Markers with Status Ring */
 const createTruckIcon = (status, truckId) => {
   const statusStyles = {
-    DELAYED: { bg: 'bg-rose-500', ring: 'ring-rose-500/30', text: 'text-rose-100' },
-    COMPLETED: { bg: 'bg-emerald-500', ring: 'ring-emerald-500/30', text: 'text-emerald-100' },
-    UNLOADING: { bg: 'bg-purple-500', ring: 'ring-purple-500/30', text: 'text-purple-100' },
-    AT_DOCK: { bg: 'bg-purple-600', ring: 'ring-purple-500/30', text: 'text-purple-100' },
-    IN_YARD: { bg: 'bg-sky-500', ring: 'ring-sky-500/30', text: 'text-sky-100' },
-    AT_GATE: { bg: 'bg-amber-500', ring: 'ring-amber-500/30', text: 'text-amber-100' },
-    IN_TRANSIT: { bg: 'bg-blue-500', ring: 'ring-blue-500/30', text: 'text-blue-100' }
+    DELAYED: { bg: 'bg-[#DC2626]', text: 'text-white' },
+    COMPLETED: { bg: 'bg-[#15803D]', text: 'text-white' },
+    UNLOADING: { bg: 'bg-[#7C3AED]', text: 'text-white' },
+    AT_DOCK: { bg: 'bg-[#2563EB]', text: 'text-white' },
+    IN_YARD: { bg: 'bg-[#0284C7]', text: 'text-white' },
+    AT_GATE: { bg: 'bg-[#D97706]', text: 'text-white' },
+    IN_TRANSIT: { bg: 'bg-[#2563EB]', text: 'text-white' }
   };
 
   const current = statusStyles[status] || statusStyles.IN_TRANSIT;
@@ -66,23 +70,15 @@ const createTruckIcon = (status, truckId) => {
   return L.divIcon({
     html: `
       <div class="relative flex flex-col items-center justify-center group cursor-pointer">
-        <div class="w-8 h-8 rounded-xl ${current.bg} text-white ring-4 ${current.ring} border border-white/80 shadow-xl flex items-center justify-center transition-transform transform group-hover:scale-110">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-            <path d="M15 18H9"/>
-            <path d="M19 18h2a1 1 0 0 0 1-1v-5l-3-4h-4v10"/>
-            <circle cx="7" cy="18" r="2"/>
-            <circle cx="17" cy="18" r="2"/>
-          </svg>
-        </div>
-        <div class="mt-0.5 px-1.5 py-0.2 rounded bg-zinc-900/90 text-[9px] font-mono font-bold text-white shadow-xs border border-zinc-700">
-          ${truckId}
+        <div class="px-1.5 py-0.5 rounded-xs ${current.bg} text-white font-mono font-bold text-[9px] shadow-lg border border-white/80 flex items-center gap-1">
+          <span>🚛</span>
+          <span>${truckId}</span>
         </div>
       </div>
     `,
     className: 'custom-truck-icon',
-    iconSize: [36, 42],
-    iconAnchor: [18, 21]
+    iconSize: [60, 24],
+    iconAnchor: [30, 12]
   });
 };
 
@@ -112,29 +108,83 @@ const YARD_ZONE_POLYGON = [
 export default function TruckMap({ trucks = [], onSimulateStep, isRunning = false, speed = 1, onSelectTruck }) {
   const { isDark } = useTheme();
 
+  // Fallback demo fleet if trucks array is empty
+  const displayTrucks = trucks.length > 0 ? trucks : [
+    {
+      truckId: 'TRK-1001',
+      latitude: 12.9680,
+      longitude: 77.5900,
+      status: 'IN_YARD',
+      poNumber: 'PO-78432',
+      yardLocation: 'BAY-A02',
+      driverName: 'Rajesh Kumar',
+      eta: 'In Yard (0m)'
+    },
+    {
+      truckId: 'TRK-1002',
+      latitude: 12.9620,
+      longitude: 77.5850,
+      status: 'AT_GATE',
+      poNumber: 'PO-78415',
+      yardLocation: 'Security Gate',
+      driverName: 'Vikram Singh',
+      eta: 'At Gate (2m)'
+    },
+    {
+      truckId: 'TRK-1003',
+      latitude: 12.9550,
+      longitude: 77.5700,
+      status: 'IN_TRANSIT',
+      poNumber: 'PO-78398',
+      yardLocation: 'Outer Ring Rd',
+      driverName: 'Sunil Sharma',
+      eta: '12 min'
+    },
+    {
+      truckId: 'TRK-1004',
+      latitude: 12.9450,
+      longitude: 77.5550,
+      status: 'IN_TRANSIT',
+      poNumber: 'PO-78364',
+      yardLocation: 'Highway NH-48',
+      driverName: 'Amit Patel',
+      eta: '25 min'
+    },
+    {
+      truckId: 'TRK-1007',
+      latitude: 12.9716,
+      longitude: 77.5946,
+      status: 'AT_DOCK',
+      poNumber: 'PO-78450',
+      yardLocation: 'DOCK-01',
+      driverName: 'Prakash Rao',
+      eta: 'Unloading (85%)'
+    }
+  ];
+
   const tileUrl = isDark
     ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
     : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  const delayedCount = trucks.filter(t => t.status === 'DELAYED').length;
+  const delayedCount = displayTrucks.filter(t => t.status === 'DELAYED').length;
 
   return (
-    <div className="relative w-full h-[480px] rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-xl bg-zinc-100 dark:bg-zinc-950">
+    <div className="relative w-full h-[520px] rounded-xs overflow-hidden border border-[#E3DDD1] dark:border-[#2B3835] shadow-md bg-[#F4EFE6] dark:bg-[#161D1B]">
       
       {/* Telemetry HUD - Top Left */}
-      <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center gap-2">
-        <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 px-3.5 py-2 rounded-xl text-xs flex items-center gap-3 shadow-lg">
-          <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100">
-            <Radio className={`w-3.5 h-3.5 ${isRunning ? 'text-emerald-500 animate-pulse' : 'text-zinc-400'}`} />
-            <span>{isRunning ? `SIMULATED GPS TELEMETRY (${speed}x)` : 'SIMULATION PAUSED'}</span>
+      <div className="absolute top-3 left-3 z-[400] flex flex-wrap items-center gap-2">
+        <div className="bg-[#FCFAF4]/90 dark:bg-[#1B2422]/90 backdrop-blur-md border border-[#E3DDD1] dark:border-[#2B3835] px-3 py-1.5 rounded-xs text-xs flex items-center gap-2.5 shadow-sm">
+          <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+            <Radio className={`w-3.5 h-3.5 ${isRunning ? 'text-[#15803D] animate-pulse' : 'text-[#8E9793]'}`} />
+            <span>{isRunning ? `GPS SIMULATION (${speed}x)` : 'SIMULATION STANDBY'}</span>
           </div>
 
-          <div className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-3 w-px bg-[#E3DDD1] dark:bg-[#2B3835]" />
 
-          <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 font-mono text-[11px]">
-            <span>Active: <strong className="text-zinc-900 dark:text-zinc-100">{trucks.length}</strong></span>
+          <div className="flex items-center gap-2 text-[#68716D] dark:text-[#8E9C97] font-mono text-[11px]">
+            <span>Fleet: <strong className="text-[#1C201E] dark:text-[#F5F7F6]">{displayTrucks.length} Active</strong></span>
             {delayedCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-semibold border border-rose-200/50 dark:border-rose-900/40">
+              <span className="px-1.5 py-0.2 rounded-xs bg-[#FEE2E2] text-[#DC2626] font-bold">
                 {delayedCount} Delayed
               </span>
             )}
@@ -143,8 +193,8 @@ export default function TruckMap({ trucks = [], onSimulateStep, isRunning = fals
       </div>
 
       {/* Map Control Info - Top Right */}
-      <div className="absolute top-4 right-4 z-[400] hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800/80 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 shadow-md">
-        <Layers className="w-3.5 h-3.5 text-purple-500" />
+      <div className="absolute top-3 right-3 z-[400] hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xs bg-[#FCFAF4]/90 dark:bg-[#1B2422]/90 backdrop-blur-md border border-[#E3DDD1] dark:border-[#2B3835] text-[10px] font-mono text-[#68716D] dark:text-[#8E9C97] shadow-sm">
+        <Layers className="w-3.5 h-3.5 text-[#15803D]" />
         <span>Yard Zone Polyline & Gate Checkpoint Active</span>
       </div>
 
@@ -155,29 +205,31 @@ export default function TruckMap({ trucks = [], onSimulateStep, isRunning = fals
         scrollWheelZoom={true}
         className="w-full h-full z-0"
       >
+        <MapResizer />
+
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          attribution='&copy; OpenStreetMap contributors'
           url={tileUrl}
         />
 
         {/* Yard Inbound Route Polyline */}
         <Polyline
           positions={INBOUND_ROUTE}
-          pathOptions={{ color: '#a855f7', weight: 4, opacity: 0.6, dashArray: '8, 8' }}
+          pathOptions={{ color: '#15803D', weight: 3, opacity: 0.8, dashArray: '6, 6' }}
         />
 
         {/* Yard Perimeter Overlay */}
         <Polygon
           positions={YARD_ZONE_POLYGON}
-          pathOptions={{ color: '#c084fc', fillColor: '#c084fc', fillOpacity: 0.08, weight: 1.5 }}
+          pathOptions={{ color: '#22C55E', fillColor: '#22C55E', fillOpacity: 0.1, weight: 1.5 }}
         />
 
         {/* Gate Checkpoint Marker */}
         <Marker position={GATE_LOCATION} icon={gateIcon}>
           <Popup className="custom-popup">
-            <div className="p-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100">
-              <strong>Yard Gate 1 Checkpoint</strong>
-              <div className="text-[10px] text-zinc-400 mt-0.5">Automated ANPR & Permit Verification</div>
+            <div className="p-1.5 text-xs font-mono text-[#1C201E]">
+              <strong>Security Gate 1 ANPR Checkpoint</strong>
+              <div className="text-[10px] text-[#68716D] mt-0.5">Automated Optical Character Recognition</div>
             </div>
           </Popup>
         </Marker>
@@ -185,34 +237,21 @@ export default function TruckMap({ trucks = [], onSimulateStep, isRunning = fals
         {/* Central Hub Marker */}
         <Marker position={WAREHOUSE_LOCATION} icon={warehouseIcon}>
           <Popup className="custom-popup">
-            <div className="p-2 space-y-1.5 min-w-[180px]">
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <strong className="block text-xs text-zinc-900 dark:text-zinc-100 leading-tight">
-                    Central Distribution Hub
-                  </strong>
-                  <span className="text-[10px] text-zinc-400 font-mono">ID: HUB-BLR-01</span>
-                </div>
+            <div className="p-2 space-y-1 min-w-[180px] font-mono text-xs">
+              <div className="flex items-center gap-1.5 text-[#15803D] font-bold">
+                <Building2 className="w-4 h-4" />
+                <span>Central Logistics Hub</span>
               </div>
-              <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800 text-[11px] space-y-0.5 text-zinc-600 dark:text-zinc-400">
-                <div className="flex justify-between">
-                  <span>Dock Capacity:</span>
-                  <strong className="text-zinc-900 dark:text-zinc-200 font-mono">4 / 4 Active</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Turnaround Rate:</span>
-                  <strong className="text-emerald-600 font-mono">94.2%</strong>
-                </div>
+              <div className="text-[11px] text-[#68716D]">
+                <div>Dock Bays: <strong>12 Total (6 In Use)</strong></div>
+                <div>Turnaround Rate: <strong className="text-[#15803D]">94.2%</strong></div>
               </div>
             </div>
           </Popup>
         </Marker>
 
         {/* Live Truck Telemetry Markers */}
-        {trucks.map((truck) => (
+        {displayTrucks.map((truck) => (
           <Marker
             key={truck.truckId}
             position={[truck.latitude || WAREHOUSE_LOCATION[0], truck.longitude || WAREHOUSE_LOCATION[1]]}
@@ -222,63 +261,40 @@ export default function TruckMap({ trucks = [], onSimulateStep, isRunning = fals
             }}
           >
             <Popup className="custom-popup">
-              <div className="p-2 space-y-2 min-w-[220px]">
-                {/* Truck Header */}
-                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-purple-500" />
-                    <span className="font-bold font-mono text-xs text-zinc-900 dark:text-zinc-100">
-                      {truck.truckId}
-                    </span>
+              <div className="p-2 space-y-1.5 min-w-[200px] font-mono text-xs">
+                <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1]">
+                  <div className="flex items-center gap-1 font-bold text-[#15803D]">
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>{truck.truckId}</span>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    truck.status === 'DELAYED'
-                      ? 'bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
-                      : truck.status === 'COMPLETED'
-                      ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
-                      : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
-                  }`}>
+                  <span className="text-[8px] font-bold px-1.5 py-0.2 rounded-xs bg-[#DCFCE7] text-[#15803D]">
                     {truck.status}
                   </span>
                 </div>
 
-                {/* Specs Grid */}
-                <div className="grid grid-cols-2 gap-1 text-[11px] text-zinc-600 dark:text-zinc-400">
-                  <div className="bg-zinc-50 dark:bg-zinc-900 p-1.5 rounded border border-zinc-100 dark:border-zinc-800">
-                    <span className="text-[9px] uppercase tracking-wider block text-zinc-400">PO Ref</span>
-                    <strong className="font-mono text-zinc-800 dark:text-zinc-200">{truck.poNumber}</strong>
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                  <div className="p-1 rounded-xs bg-[#F4EFE6]">
+                    <span className="text-[#68716D] block">PO REF</span>
+                    <strong>{truck.poNumber || 'PO-78432'}</strong>
                   </div>
-                  <div className="bg-zinc-50 dark:bg-zinc-900 p-1.5 rounded border border-zinc-100 dark:border-zinc-800">
-                    <span className="text-[9px] uppercase tracking-wider block text-zinc-400">Location</span>
-                    <strong className="font-mono text-zinc-800 dark:text-zinc-200">{truck.yardLocation}</strong>
+                  <div className="p-1 rounded-xs bg-[#F4EFE6]">
+                    <span className="text-[#68716D] block">LOCATION</span>
+                    <strong>{truck.yardLocation || 'In Transit'}</strong>
                   </div>
                 </div>
 
-                {/* Driver & ETA row */}
-                <div className="space-y-1 text-[11px] pt-0.5">
-                  <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {truck.driverName}
-                    </span>
-                    <span className="font-mono text-[10px] text-zinc-400">Dock: {truck.assignedDock || 'Unassigned'}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900 px-2 py-1 rounded border border-zinc-100 dark:border-zinc-800 font-medium">
-                    <span className="flex items-center gap-1 text-zinc-500">
-                      <Clock className="w-3 h-3 text-purple-500" />
-                      ETA
-                    </span>
-                    <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">{truck.eta}</span>
-                  </div>
+                <div className="text-[10px] space-y-0.5 text-[#68716D]">
+                  <div>Driver: <strong className="text-[#1C201E]">{truck.driverName || 'Operator'}</strong></div>
+                  <div>ETA: <strong className="text-[#15803D]">{truck.eta || 'On Schedule'}</strong></div>
                 </div>
 
                 {onSelectTruck && (
                   <button
+                    type="button"
                     onClick={() => onSelectTruck(truck)}
-                    className="w-full mt-1 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] transition flex items-center justify-center gap-1"
+                    className="w-full mt-1 py-1 rounded-xs bg-[#15803D] text-white font-bold text-[10px] flex items-center justify-center gap-1"
                   >
-                    <span>View Telemetry Drawer</span>
+                    <span>Inspect Vehicle Telemetry</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 )}

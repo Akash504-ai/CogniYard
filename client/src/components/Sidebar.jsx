@@ -1,134 +1,317 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { useAuth, ROLES } from '../context/AuthContext';
-import { RELEASE_LABEL } from '../config/release';
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth, ROLES, ROLE_LABELS } from '../context/AuthContext';
 import {
-  Bot,
-  Boxes,
-  Calculator,
-  Camera,
+  LayoutDashboard,
   ClipboardList,
+  Truck,
+  Route,
   CreditCard,
   FileUp,
-  LayoutDashboard,
-  Route,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
-  Truck,
-  X
+  ShieldAlert,
+  Settings,
+  Bot,
+  ChevronDown,
+  ChevronLeft,
+  LogOut,
+  Boxes
 } from 'lucide-react';
 
-const coreItems = [
-  { path: '/', label: 'Home Dashboard', icon: LayoutDashboard, roles: [ROLES.PROCUREMENT, ROLES.WAREHOUSE, ROLES.FINANCE, ROLES.ADMIN] },
-  { path: '/admin', label: 'Add Suppliers & Users', icon: ShieldCheck, roles: [ROLES.ADMIN] },
-  { path: '/procurement', label: 'Create Purchase Order', icon: ClipboardList, roles: [ROLES.PROCUREMENT, ROLES.ADMIN] },
-  { path: '/logistics', label: 'Receive Goods & GRN', icon: Truck, roles: [ROLES.WAREHOUSE, ROLES.ADMIN] },
-  { path: '/yard-simulation', label: 'Intelligent Truck Simulation', icon: Route, roles: [ROLES.WAREHOUSE, ROLES.ADMIN] },
-  { path: '/supplier', label: 'Upload Invoice', icon: FileUp, roles: [ROLES.SUPPLIER] },
-  { path: '/finance', label: 'Match & Pay Invoice', icon: CreditCard, roles: [ROLES.FINANCE, ROLES.ADMIN] }
-];
+export default function Sidebar({ isOpen, onClose }) {
+  const { currentUser, currentRole, logout, setIsAiOpen } = useAuth();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-const optionalItems = [
-  { path: '/control-tower', label: 'Control Tower', icon: Sparkles, roles: [ROLES.ADMIN] },
-  { path: '/exceptions', label: 'Exceptions', icon: ShieldAlert, roles: [ROLES.ADMIN] },
-  // { path: '/inventory-planning', label: 'Inventory Planning', icon: Calculator, roles: [ROLES.ADMIN] },
-  // { path: '/logistics', label: 'Smart CCTV Demo', icon: Camera, roles: [ROLES.ADMIN] }
-];
+  // Define strictly role-scoped navigation sections
+  const getRoleNavSections = () => {
+    switch (currentRole) {
+      case ROLES.PROCUREMENT:
+        return [
+          {
+            title: 'WORKSPACE',
+            items: [
+              { to: '/', label: 'Home Dashboard', icon: LayoutDashboard },
+              { to: '/procurement', label: 'Create Purchase Order', icon: ClipboardList }
+            ]
+          },
+          {
+            title: 'INTELLIGENCE',
+            items: [
+              { action: 'ai', label: 'Ask AI for Help', icon: Sparkles }
+            ]
+          }
+        ];
 
-function SimpleLink({ item, onNavigate }) {
-  const Icon = item.icon;
-  return (
-    <NavLink
-      to={item.path}
-      end={item.path === '/'}
-      onClick={onNavigate}
-      className={({ isActive }) => `group flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950 ${
-        isActive
-          ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300'
-          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
-      }`}
-    >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="min-w-0 truncate">{item.label}</span>
-    </NavLink>
-  );
-}
+      case ROLES.WAREHOUSE:
+        return [
+          {
+            title: 'WORKSPACE',
+            items: [
+              { to: '/', label: 'Home Dashboard', icon: LayoutDashboard },
+              { to: '/logistics', label: 'Receive Goods & GRN', icon: Truck },
+              { to: '/yard-simulation', label: 'Intelligent Truck Simulation', icon: Route }
+            ]
+          },
+          {
+            title: 'INTELLIGENCE',
+            items: [
+              { action: 'ai', label: 'Ask AI', icon: Sparkles }
+            ]
+          }
+        ];
 
-export default function Sidebar({ mobileOpen = false, onClose = () => {} }) {
-  const { currentUser, setIsAiOpen } = useAuth();
-  const role = currentUser?.role;
-  const visibleCore = coreItems.filter(item => item.roles.includes(role));
-  const visibleOptional = optionalItems.filter(item => item.roles.includes(role));
-  const canUseAi = [ROLES.ADMIN, ROLES.PROCUREMENT].includes(role);
+      case ROLES.FINANCE:
+        return [
+          {
+            title: 'WORKSPACE',
+            items: [
+              { to: '/', label: 'Home Dashboard', icon: LayoutDashboard },
+              { to: '/finance', label: 'Match & Pay Invoice', icon: CreditCard }
+            ]
+          },
+          {
+            title: 'INTELLIGENCE',
+            items: [
+              { action: 'ai', label: 'Ask AI for Help', icon: Sparkles }
+            ]
+          }
+        ];
+
+      case ROLES.SUPPLIER:
+        return [
+          {
+            title: 'WORKSPACE',
+            items: [
+              { to: '/supplier', label: 'Supplier Invoice Portal', icon: FileUp }
+            ]
+          }
+        ];
+
+      case ROLES.ADMIN:
+      default:
+        return [
+          {
+            title: 'WORKSPACE',
+            items: [
+              { to: '/', label: 'Home Dashboard', icon: LayoutDashboard },
+              { to: '/admin', label: 'Add Suppliers & Users', icon: ShieldCheck },
+              { to: '/procurement', label: 'Create Purchase Order', icon: ClipboardList },
+              { to: '/logistics', label: 'Receive Goods & GRN', icon: Truck },
+              { to: '/yard-simulation', label: 'Intelligent Truck Simulation', icon: Route },
+              { to: '/finance', label: 'Match & Pay Invoice', icon: CreditCard }
+            ]
+          },
+          {
+            title: 'INTELLIGENCE',
+            items: [
+              { action: 'ai', label: 'Ask AI for Help', icon: Sparkles },
+              { to: '/control-tower', label: 'Control Tower', icon: Boxes },
+              { to: '/exceptions', label: 'Exceptions', icon: ShieldAlert }
+            ]
+          },
+          {
+            title: 'SYSTEM',
+            items: [
+              { to: '/admin', label: 'Administration', icon: Settings }
+            ]
+          }
+        ];
+    }
+  };
+
+  const navSections = getRoleNavSections();
 
   return (
     <>
-      {mobileOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
-          aria-label="Close navigation"
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
           onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-zinc-200 bg-white text-left transition-transform duration-200 dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-0 lg:z-30 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        aria-label="Primary navigation"
+        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col justify-between bg-[#101514] text-[#9EA8A4] transition-all duration-200 border-r border-[#1E2825] select-none ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${collapsed ? 'w-16' : 'w-64'}`}
       >
-        <div className="flex min-h-16 items-center gap-3 border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white">
-            <Boxes className="h-4.5 w-4.5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-sm font-semibold tracking-tight text-zinc-950 dark:text-zinc-100">CogniYard</h1>
-            <p className="truncate text-[11px] text-zinc-500">Supply Chain Workspace</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:hover:bg-zinc-900 dark:hover:text-zinc-100 lg:hidden"
-            aria-label="Close navigation"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        {/* LOGO & BRAND HEADER */}
+        <div className="p-4 border-b border-[#1E2825] flex items-center justify-between">
+          <NavLink to={currentRole === ROLES.SUPPLIER ? '/supplier' : '/'} className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-sm bg-[#14281E] border border-[#22C55E]/40 flex items-center justify-center text-[#22C55E] shadow-sm">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </div>
+
+            {!collapsed && (
+              <div>
+                <span className="font-bold text-sm text-white tracking-tight font-sans block">
+                  CogniYard
+                </span>
+                <span className="text-[9px] text-[#68716D] uppercase tracking-wider block font-mono">
+                  AI-Enabled SCM Platform
+                </span>
+              </div>
+            )}
+          </NavLink>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Workspace</p>
-          <div className="space-y-1">
-            {visibleCore.map(item => <SimpleLink key={item.path} item={item} onNavigate={onClose} />)}
+        {/* ROLE-SCOPED NAVIGATION SECTIONS */}
+        <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4 font-sans text-xs">
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-1">
+              {!collapsed && (
+                <div className="px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[#5A6561]">
+                  {section.title}
+                </div>
+              )}
+
+              {section.items.map((item, idx) => {
+                const Icon = item.icon;
+
+                // Handle AI modal action trigger
+                if (item.action === 'ai') {
+                  return (
+                    <button
+                      key={`action-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setIsAiOpen(true);
+                        if (window.innerWidth < 1024) onClose?.();
+                      }}
+                      className="w-full flex items-center gap-3 px-2.5 py-2 rounded-sm text-[#9EA8A4] hover:text-white hover:bg-[#151D1B] transition-colors group text-left"
+                    >
+                      <Icon className="w-4 h-4 shrink-0 text-[#22C55E] group-hover:text-white" />
+                      {!collapsed && (
+                        <span className="font-medium truncate text-white">
+                          {item.label}
+                        </span>
+                      )}
+                    </button>
+                  );
+                }
+
+                const isActive = item.to === '/'
+                  ? location.pathname === '/' || location.pathname === '/dashboard'
+                  : location.pathname.startsWith(item.to);
+
+                return (
+                  <NavLink
+                    key={item.label}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={() => {
+                      if (window.innerWidth < 1024) onClose?.();
+                    }}
+                    className={`flex items-center gap-3 px-2.5 py-2 rounded-sm transition-colors group ${
+                      isActive
+                        ? 'bg-[#14281E] text-white border border-[#22C55E]/60 shadow-xs font-semibold'
+                        : 'text-[#9EA8A4] hover:text-white hover:bg-[#151D1B]'
+                    }`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive
+                          ? 'text-[#22C55E]'
+                          : 'text-[#68716D] group-hover:text-white'
+                      }`}
+                    />
+
+                    {!collapsed && (
+                      <span className="truncate">
+                        {item.label}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* USER PROFILE & LOGOUT FOOTER */}
+        <div className="p-2.5 border-t border-[#1E2825] space-y-2">
+          {/* User Card */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-full flex items-center justify-between p-1.5 rounded-sm hover:bg-[#151D1B] transition-colors text-left"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-sm bg-[#142E20] border border-[#22C55E]/40 text-[#22C55E] flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                  {currentUser?.name?.slice(0, 2).toUpperCase() || 'AS'}
+                </div>
+
+                {!collapsed && (
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-white truncate">
+                      {currentUser?.name || 'Authorized User'}
+                    </div>
+                    <div className="text-[10px] text-[#68716D] truncate">
+                      {ROLE_LABELS?.[currentRole] || currentRole}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!collapsed && (
+                <ChevronDown className="w-3.5 h-3.5 text-[#68716D]" />
+              )}
+            </button>
+
+            {/* Logout Dropdown */}
+            {showUserMenu && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 p-1 rounded-sm bg-[#151D1B] border border-[#1E2825] shadow-xl text-xs font-mono">
+                {currentRole !== ROLES.SUPPLIER && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAiOpen(true);
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xs text-[#9EA8A4] hover:text-white hover:bg-[#1E2825]"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
+                    <span>Launch AI Copilot</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xs text-[#DC2626] hover:bg-[#1E2825]"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {canUseAi && (
-            <div className="my-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAiOpen(true);
-                  onClose();
-                }}
-                className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
-              >
-                <Bot className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" aria-hidden="true" />
-                <span>Ask AI for help</span>
-              </button>
+          {/* Operational Status Indicator */}
+          {!collapsed && (
+            <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] font-mono text-[#22C55E]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              <span>System Operational</span>
             </div>
           )}
 
-          {visibleOptional.length > 0 && (
-            <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Administration</p>
-              <div className="space-y-1">
-                {visibleOptional.map(item => <SimpleLink key={item.path} item={item} onNavigate={onClose} />)}
-              </div>
-            </div>
-          )}
-        </nav>
-
-        <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">{RELEASE_LABEL}</p>
+          {/* Collapse Toggle */}
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-full hidden lg:flex items-center gap-2 px-2 py-1 text-[11px] font-mono text-[#5A6561] hover:text-[#9EA8A4] transition-colors"
+          >
+            <ChevronLeft className={`w-3.5 h-3.5 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+            {!collapsed && <span>Collapse</span>}
+          </button>
         </div>
       </aside>
     </>
