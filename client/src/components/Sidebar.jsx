@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth, ROLES, ROLE_LABELS } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,11 +17,14 @@ import {
   ChevronDown,
   ChevronLeft,
   LogOut,
-  Boxes
+  Boxes,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { currentUser, currentRole, logout, setIsAiOpen } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -283,6 +287,17 @@ export default function Sidebar({ isOpen, onClose }) {
                     <span>Launch AI Copilot</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleTheme();
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xs text-[#9EA8A4] hover:text-white hover:bg-[#1E2825]"
+                >
+                  {isDark ? <Sun className="w-3.5 h-3.5 text-[#F59E0B]" /> : <Moon className="w-3.5 h-3.5 text-[#9EA8A4]" />}
+                  <span>{isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={logout}

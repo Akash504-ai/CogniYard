@@ -119,150 +119,102 @@ export default function ThreeWayMatchDiff({
 
       {/* Variance Alert Banner if Mismatch exists */}
       {mismatchCount > 0 && (
-        <div className="p-3 rounded-xs bg-[#FEF2F2] dark:bg-[#381A1A] border border-[#DC2626]/40 text-[#DC2626] flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <div className="space-y-0.5 text-xs">
-            <strong className="font-bold block">Discrepancy Detected During 3-Way Cross-Check</strong>
-            <p className="text-[11px] opacity-90">
-              The physical intake quantity at the warehouse receiving dock (GRN) does not match the invoiced quantity. Billed for 100 units, but only 98 units were verified and accepted at the dock (-2 units shortfall / transit damage).
-            </p>
+        <div className="p-3 rounded-xs bg-[#FEF2F2] dark:bg-[#2A1515] border border-[#F87171]/40 text-[#B91C1C] dark:text-[#FCA5A5] space-y-1 font-mono text-xs">
+          <div className="flex items-center gap-1.5 font-bold">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-[#DC2626]" />
+            <span>CRITICAL RECONCILIATION SHORTFALL DETECTED</span>
           </div>
+          <p className="text-[11px] font-sans">
+            Billed quantity exceeds warehouse physically accepted inventory. A shortfall debit note or hold is recommended before disbursement.
+          </p>
         </div>
       )}
 
-      {/* Field-by-Field 3-Way Comparison Table */}
-      <div className="overflow-x-auto rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422]">
-        <table className="w-full text-left text-xs font-mono">
+      {/* 5-Column Field-by-Field 3-Way Match Verification Grid */}
+      <div className="overflow-x-auto border border-[#E3DDD1] dark:border-[#2B3835] rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422]">
+        <table className="w-full text-left font-mono text-xs">
           <thead>
             <tr className="border-b border-[#E3DDD1] dark:border-[#2B3835] bg-[#F4EFE6] dark:bg-[#222D2B] text-[10px] uppercase text-[#68716D] dark:text-[#8E9C97]">
-              <th className="p-2.5 font-semibold">Audit Field / Line Item</th>
-              <th className="p-2.5 font-semibold text-center">1. PO Ordered</th>
-              <th className="p-2.5 font-semibold text-center">2. GRN Physical Intake</th>
-              <th className="p-2.5 font-semibold text-center">3. Supplier Invoice</th>
-              <th className="p-2.5 font-semibold text-right">Variance Audit Result</th>
+              <th className="py-2.5 px-3">Field / Metric</th>
+              <th className="py-2.5 px-3">PO Ordered</th>
+              <th className="py-2.5 px-3">GRN Physical Intake</th>
+              <th className="py-2.5 px-3">Supplier Invoice</th>
+              <th className="py-2.5 px-3 text-right">Audit Result</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E3DDD1]/60">
-            {comparisons.map((row, idx) => {
+          <tbody className="divide-y divide-[#E3DDD1]/70 dark:divide-[#2B3835]/70">
+            {comparisons.map((row, index) => {
               const isMatch = row.result === 'MATCH';
-
               return (
-                <tr key={idx} className={`transition-colors ${
-                  !isMatch ? 'bg-[#FFF5F5] dark:bg-[#2D1A1A] hover:bg-[#FEE2E2]/60' : 'hover:bg-[#F4EFE6]/50'
-                }`}>
-                  <td className="p-2.5 font-sans font-medium text-[#1C201E] dark:text-[#F5F7F6]">
+                <tr 
+                  key={index}
+                  className={`hover:bg-[#F4EFE6]/50 dark:hover:bg-[#222D2B]/50 transition-colors ${
+                    !isMatch ? 'bg-[#FEF2F2]/60 dark:bg-[#381616]/40' : ''
+                  }`}
+                >
+                  <td className="py-2.5 px-3 font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
                     <div>{row.field}</div>
                     {row.note && (
-                      <div className="text-[10px] text-[#DC2626] font-mono mt-0.5 flex items-center gap-1">
-                        <span>↳</span>
-                        <span>{row.note}</span>
-                      </div>
+                      <span className="text-[10px] text-[#DC2626] font-sans block mt-0.5">
+                        ↳ {row.note}
+                      </span>
                     )}
                   </td>
-                  <td className="p-2.5 text-center font-bold text-[#68716D]">
-                    {String(row.po ?? 'N/A')}
-                  </td>
-                  <td className="p-2.5 text-center font-bold text-[#15803D]">
-                    {String(row.grn ?? 'N/A')}
-                  </td>
-                  <td className="p-2.5 text-center font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                    {String(row.invoice ?? 'N/A')}
-                  </td>
-                  <td className="p-2.5 text-right">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[9px] font-bold ${
-                      isMatch
-                        ? 'bg-[#DCFCE7] text-[#15803D] border border-[#15803D]/30'
-                        : 'bg-[#FEE2E2] text-[#DC2626] border border-[#DC2626]/40'
+                  <td className="py-2.5 px-3 text-[#1C201E] dark:text-[#F5F7F6]">{row.po}</td>
+                  <td className="py-2.5 px-3 text-[#1C201E] dark:text-[#F5F7F6] font-medium">{row.grn}</td>
+                  <td className="py-2.5 px-3 text-[#1C201E] dark:text-[#F5F7F6] font-bold">{row.invoice}</td>
+                  <td className="py-2.5 px-3 text-right">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[9px] font-bold uppercase ${
+                      isMatch 
+                        ? 'bg-[#DCFCE7] text-[#15803D]' 
+                        : 'bg-[#FEE2E2] text-[#DC2626] border border-[#DC2626]/30'
                     }`}>
-                      {isMatch ? (
-                        <>
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>MATCH</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="w-3 h-3" />
-                          <span>PARTIAL MISMATCH</span>
-                        </>
-                      )}
+                      {isMatch ? <Check className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                      <span>{row.result}</span>
                     </span>
                   </td>
                 </tr>
               );
             })}
           </tbody>
-          <tfoot className="border-t border-[#E3DDD1] dark:border-[#2B3835] bg-[#F4EFE6] dark:bg-[#222D2B] font-bold text-xs">
-            <tr>
-              <td colSpan={3} className="p-2.5 font-sans text-[#68716D] dark:text-[#8E9C97]">
-                Reconciliation Score: <strong>{matchCount} of {totalCount} checks passed</strong> ({((matchCount / totalCount) * 100).toFixed(0)}%)
-              </td>
-              <td colSpan={2} className="p-2.5 text-right font-mono text-xs">
-                {mismatchCount > 0 ? (
-                  <span className="text-[#DC2626] font-bold">⚠ Tolerance Exception Flagged</span>
-                ) : (
-                  <span className="text-[#15803D] font-bold">✓ 100% Authorized for Payout</span>
-                )}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
-      {/* Action Decision Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-1.5 text-xs font-mono text-[#68716D] dark:text-[#8E9C97]">
-          <ShieldCheck className="w-4 h-4 text-[#15803D]" />
-          <span>Cross-Ledger Verification Status Logged</span>
+      {/* Reconciliation Summary Footer Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835] font-mono text-xs">
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="text-[#15803D] font-bold">
+            ✓ {matchCount}/{totalCount} Matches
+          </span>
+          {mismatchCount > 0 && (
+            <span className="text-[#DC2626] font-bold">
+              ⚠ {mismatchCount} Discrepancies
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {mismatchCount > 0 ? (
-            <>
-              {onHold && (
-                <button
-                  type="button"
-                  onClick={() => onHold(invoice)}
-                  className="px-3.5 py-1.5 rounded-xs bg-[#DC2626] text-white hover:bg-[#B91C1C] text-xs font-mono font-bold transition-colors shadow-2xs flex items-center gap-1"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  <span>Hold Payment & Issue Vendor Credit Request</span>
-                </button>
-              )}
-              {onApprove && (
-                <button
-                  type="button"
-                  onClick={() => onApprove(invoice)}
-                  className="px-3 py-1.5 rounded-xs border border-[#E3DDD1] text-[#68716D] hover:bg-[#F4EFE6] text-xs font-mono font-bold transition-colors"
-                >
-                  Override & Pay Billed Amount
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              {onHold && (
-                <button
-                  type="button"
-                  onClick={() => onHold(invoice)}
-                  className="px-3 py-1.5 rounded-xs border border-[#E3DDD1] text-[#68716D] hover:bg-[#F4EFE6] text-xs font-mono font-bold transition-colors"
-                >
-                  Put on AP Hold
-                </button>
-              )}
-              {onApprove && (
-                <button
-                  type="button"
-                  onClick={() => onApprove(invoice)}
-                  className="px-4 py-1.5 rounded-xs bg-[#15803D] text-white text-xs font-mono font-bold hover:bg-[#166534] transition-colors shadow-2xs flex items-center gap-1"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Authorize & Disburse Payment</span>
-                </button>
-              )}
-            </>
+        <div className="flex items-center gap-2">
+          {onHold && (
+            <button
+              type="button"
+              onClick={() => onHold(invoice)}
+              className="px-3 py-1.5 rounded-xs border border-[#DC2626] text-[#DC2626] hover:bg-[#FEE2E2] font-bold transition-colors"
+            >
+              Place on AP Hold
+            </button>
+          )}
+          {onApprove && (
+            <button
+              type="button"
+              onClick={() => onApprove(invoice)}
+              className="px-3 py-1.5 rounded-xs bg-[#15803D] text-white hover:bg-[#166534] font-bold transition-colors shadow-2xs"
+            >
+              Approve for Disbursement
+            </button>
           )}
         </div>
       </div>
+
     </div>
   );
 }

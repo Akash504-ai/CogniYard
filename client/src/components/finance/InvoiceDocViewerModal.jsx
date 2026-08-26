@@ -2,11 +2,7 @@ import React, { useRef } from 'react';
 import {
   X,
   Printer,
-  Download,
   FileText,
-  Building2,
-  CheckCircle2,
-  ExternalLink,
   ShieldCheck
 } from 'lucide-react';
 

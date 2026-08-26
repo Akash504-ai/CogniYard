@@ -85,9 +85,12 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-sm border border-[#DDD9CF] dark:border-[#2B3533] bg-[#FBFAF5] dark:bg-[#181D1C] text-[#5D6560] hover:bg-[#F3F1E8] dark:text-[#A3ACA8] dark:hover:bg-[#1E2423]"
+              className="p-2 rounded-sm border border-[#DDD9CF] dark:border-[#2B3533] bg-[#FBFAF5] dark:bg-[#181D1C] text-[#5D6560] hover:bg-[#F3F1E8] dark:text-[#A3ACA8] dark:hover:bg-[#1E2423] transition-colors flex items-center gap-1.5 text-xs font-mono"
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme"
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#4A524E]" />}
+              <span className="text-[10px] font-bold">{isDark ? 'LIGHT' : 'DARK'}</span>
             </button>
           </div>
 
