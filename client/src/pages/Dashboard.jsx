@@ -294,7 +294,7 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlySpendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E3DDD1" opacity={0.6} />
-                    <XAxis dataKey="month" stroke="#68716D" fontSize={11} tickLine={false} />
+                    <XAxis dataKey="month" stroke="#68716D" fontSize={11} tickLine={false} xAxisLabel="Month" />
                     <YAxis stroke="#68716D" fontSize={11} tickLine={false} />
                     <Tooltip
                       formatter={(val) => `₹${val} Lakhs`}

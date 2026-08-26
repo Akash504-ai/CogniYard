@@ -50,6 +50,9 @@ export default function FinancePage() {
     loadFinance();
   }, []);
 
+  // Helper to distinguish line-item attributes from aggregate totals in 3-way variance cross-checks
+  const isItemLevelComparisonField = field => !/Line Total|Tax Amount|Grand Total/i.test(field);
+
   // Default fallback invoices if DB has 0 uploaded invoices
   const displayInvoices = invoices.length > 0 ? invoices : [
     {

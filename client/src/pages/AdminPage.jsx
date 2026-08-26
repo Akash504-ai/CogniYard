@@ -346,45 +346,104 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={saveSupplier} className="space-y-3 text-xs font-mono">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
-                  Company / Supplier Name
-                </label>
-                <input
-                  type="text"
-                  value={supplierForm.name}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                  required
-                  placeholder="e.g. Acme Steel Pvt Ltd"
-                  className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Supplier Name
+                  </label>
+                  <input
+                    type="text"
+                    value={supplierForm.name}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                    required
+                    placeholder="e.g. Acme Steel"
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={supplierForm.companyName}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, companyName: e.target.value })}
+                    required
+                    placeholder="e.g. Acme Steel & Components Pvt Ltd"
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Business Email
+                  </label>
+                  <input
+                    type="email"
+                    value={supplierForm.email}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                    required
+                    placeholder="contact@acmesteel.com"
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={supplierForm.phone}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                    placeholder="+91 98765 43210"
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-mono text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
-                  Contact Email
-                </label>
-                <input
-                  type="email"
-                  value={supplierForm.email}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                  required
-                  placeholder="vendor@company.com"
-                  className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
-                  Phone / Dispatch Number
+                  Address
                 </label>
                 <input
                   type="text"
-                  value={supplierForm.phone}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-mono text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  value={supplierForm.address}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                  placeholder="Plot 42, Heavy Industrial Area, Phase II, Pune"
+                  className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3835] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#DDD9CF] dark:border-[#2B3533]">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Supplier Login Email
+                  </label>
+                  <input
+                    type="email"
+                    value={supplierForm.portalEmail}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, portalEmail: e.target.value })}
+                    placeholder="portal@acmesteel.com"
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-sans text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#1A1F1D] dark:text-[#F2F4F3]">
+                    Supplier Login Password
+                  </label>
+                  <input
+                    type="password"
+                    value={supplierForm.portalPassword}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, portalPassword: e.target.value })}
+                    placeholder={editingSupplier ? '•••••••• (leave blank to keep unchanged)' : 'password123'}
+                    className="w-full px-2.5 py-1.5 mt-1 rounded-sm bg-[#FBFAF5] dark:bg-[#181D1C] border border-[#DDD9CF] dark:border-[#2B3533] text-xs font-mono text-[#1A1F1D] dark:text-[#F2F4F3] focus:border-[#166534] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#DDD9CF] dark:border-[#2B3533]">

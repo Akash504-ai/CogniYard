@@ -66,25 +66,14 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
         }
 
         if (!confirmed) {
-          const preview = {
-            success: true,
-            params: {
-              item: String(params.item || '').trim(),
-              sku: params.sku || '',
-              quantity: Number(params.quantity),
-              estimatedPrice: Number(params.estimatedPrice),
-              priority: params.priority || 'MEDIUM',
-              reason: params.reason || ''
-            },
-            details: `Procurement request prepared for ${params.quantity} × ${params.item} at ₹${Number(params.estimatedPrice).toLocaleString('en-IN')} per unit.`
-          };
-          if (!preview.success) return preview;
+          const preview = await procurementIntelligence.buildProcurementPreview(params);
+          if (!preview || !preview.success) return preview;
           return {
             ...preview,
             requiresConfirmation: true,
             actionType: 'APPROVE_PROCUREMENT_RECOMMENDATION',
             params: preview.params,
-            confirmationPrompt: 'Approve Procurement Recommendation'
+            confirmationPrompt: preview.confirmationPrompt || 'Approve Procurement Recommendation'
           };
         }
 
