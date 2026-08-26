@@ -95,8 +95,17 @@ function parseProcurementRequest(message) {
 
   let usedItemPhrase = false;
   const itemPhrasePatterns = [
-    /\b(?:need|require|buy|order|procure|purchase)\s+(?:of\s+|for\s+)?(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\.|$)/i,
-    /\b(?:create|raise|generate)\s+(?:a\s+)?(?:pr|requisition)\s+(?:for|of)?\s*(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\.|$)/i
+    // "I need to order 10 Mobile"
+    /\b(?:i\s+)?(?:need|require|want)\s+to\s+(?:buy|order|procure|purchase)\s+(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\s+(?:at|for)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d+)?|\s+per\s+(?:unit|piece|item)|\.|$)/i,
+
+    // "I need 10 Mobile"
+    /\b(?:i\s+)?(?:need|require|want)\s+(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\s+(?:at|for)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d+)?|\s+per\s+(?:unit|piece|item)|\.|$)/i,
+
+    // "Create a PR for 20 Mobiles"
+    /\b(?:create|raise|generate)\s+(?:a\s+)?(?:pr|purchase\s+requisition|requisition)\s+(?:for|of)?\s*(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\s+(?:at|for)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d+)?|\s+per\s+(?:unit|piece|item)|\.|$)/i,
+
+    // "Order 20 Mobiles"
+    /\b(?:order|buy|procure|purchase)\s+(?:[\d,]+(?:\.\d+)?\s*)?(?:units?|pieces?|pcs?|items?|pairs?)?\s*(.+?)(?:\s+for\s+(?:our|the|a|an)\b|\s+(?:at|for)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d+)?|\s+per\s+(?:unit|piece|item)|\.|$)/i
   ];
   for (const pattern of itemPhrasePatterns) {
     const match = pattern.exec(withoutPrice);
@@ -110,7 +119,7 @@ function parseProcurementRequest(message) {
   if (quantityMatch && !usedItemPhrase) item = `${item.slice(0, quantityMatch.index)} ${item.slice(quantityMatch.index + quantityMatch.token.length)}`;
   item = item
     .replace(/\b(?:please|kindly|i|we|our|want|would|like|to|a|an|create|make|raise|generate|new|purchase|procurement|requisition|pr|order|buy|need|required?|requires?|procure|for|of)\b/gi, ' ')
-    .replace(/\b(?:quantity|units?|pieces?|pcs?|items?|pairs?|each|approved|approval|at|per\s+unit|unit\s+price|price|rate|cost|is|should\s+be)\b/gi, ' ')
+    .replace(/\b(?:quantity|units?|pieces?|pcs?|items?|pairs?|each|approved|approval|per\s+unit|unit\s+price|price|rate|cost|is|should\s+be)\b/gi, ' ')
     .replace(/[^a-z0-9&+./()\-\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .replace(/^[\s\-:,.]+|[\s\-:,.]+$/g, '')

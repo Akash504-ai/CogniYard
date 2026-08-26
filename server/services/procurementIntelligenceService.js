@@ -141,34 +141,45 @@ async function buildProcurementPreview(request) {
   }
 
   const resolved = await resolveProduct(request);
-  if (!resolved) {
-    return {
-      success: false,
-      notFound: true,
-      message: `I could not confidently match '${item}' to an existing Product/SKU record. Please use an existing SKU or add the product first.`
-    };
-  }
+
+  const product = resolved?.product || {
+    _id: null,
+    name: item,
+    sku: request.sku || `CUSTOM-${normalizeText(item).replace(/\s+/g, '-').toUpperCase()}`,
+    description: '',
+    category: 'GENERAL'
+  };
+
+  const resolutionReason = resolved
+    ? resolved.reason
+    : 'User-entered product name; no existing Product/SKU record was required.';
 
   const supplierIntelligence = await getSupplierIntelligence();
   if (!supplierIntelligence?.topSupplier) {
     return { success: false, message: 'No active suppliers are available for recommendation. Add or activate a supplier first.' };
   }
 
-  const product = resolved.product;
   const priority = request.priority || 'MEDIUM';
   const reason = request.reason || '';
   const estimatedTotalValue = Number((quantity * estimatedPrice).toFixed(2));
-  const planningValidation = await getPlanningValidation(product, quantity);
-  const topSupplier = supplierIntelligence.topSupplier;
+  const planningValidation = product._id
+    ? await getPlanningValidation(product, quantity)
+    : {
+      available: false,
+      message: 'Product planning data unavailable for a new user-entered product.',
+      recommendation: 'Proceed with the requested quantity after human review.'
+    };
+  const supplierId = topSupplier._id || topSupplier.id || null;
+
   const executionParams = {
     item: product.name,
-    productId: product._id.toString(),
+    productId: product._id ? product._id.toString() : null,
     sku: product.sku,
     quantity,
     estimatedPrice,
     priority,
     reason,
-    supplierId: topSupplier._id.toString(),
+    supplierId: supplierId ? supplierId.toString() : null,
     supplierName: topSupplier.name
   };
   const intelligenceId = buildIntelligenceId(executionParams);
@@ -186,7 +197,7 @@ async function buildProcurementPreview(request) {
         priority,
         estimatedTotalValue,
         reason: reason || 'Not provided',
-        resolution: resolved.reason
+        resolution: resolutionReason
       },
       supplierIntelligence: {
         topSupplier,
@@ -202,32 +213,79 @@ async function buildProcurementPreview(request) {
 }
 
 async function createPrFromRecommendation(params, user) {
-  const product = await Product.findById(params.productId);
-  if (!product) return { success: false, message: 'The selected product no longer exists. Please run the recommendation again.' };
+  let product = params.productId ? await Product.findById(params.productId) : null;
 
-  const supplier = await Supplier.findById(params.supplierId);
-  if (!supplier || supplier.status !== 'ACTIVE') {
-    return { success: false, message: 'The recommended supplier is no longer active. Please run the recommendation again.' };
+  if (!product) {
+    product = {
+      _id: null,
+      name: String(params.item || '').trim(),
+      sku: params.sku || `CUSTOM-${normalizeText(params.item).replace(/\s+/g, '-').toUpperCase()}`
+    };
+  }
+
+  if (!product.name) {
+    return { success: false, message: 'Product name is required.' };
+  }
+
+  // Use the supplier selected during preview.
+  // If the ID is missing, fall back to the supplier name.
+  let supplier = null;
+
+  if (params.supplierId) {
+    try {
+      supplier = await Supplier.findById(params.supplierId);
+    } catch (error) {
+      supplier = null;
+    }
+  }
+
+  if (!supplier && params.supplierName) {
+    supplier = await Supplier.findOne({
+      name: String(params.supplierName).trim()
+    });
+  }
+
+  // Final fallback: use the first active supplier.
+  if (!supplier) {
+    supplier = await Supplier.findOne({ status: 'ACTIVE' });
+  }
+
+  if (!supplier) {
+    return {
+      success: false,
+      message: 'No supplier is available for this procurement request.'
+    };
   }
 
   const quantity = Number(params.quantity);
   const estimatedPrice = Number(params.estimatedPrice);
-  if (!quantity || quantity <= 0 || !Number.isFinite(estimatedPrice) || estimatedPrice <= 0) {
-    return { success: false, message: 'The confirmed procurement recommendation has invalid quantity or price. Please run it again.' };
+
+  if (
+    !quantity ||
+    quantity <= 0 ||
+    !Number.isFinite(estimatedPrice) ||
+    estimatedPrice <= 0
+  ) {
+    return {
+      success: false,
+      message: 'The confirmed procurement recommendation has invalid quantity or price. Please run it again.'
+    };
   }
 
   const intelligenceId = params.intelligenceId || buildIntelligenceId({
-    productId: product._id.toString(),
+    productId: product._id ? product._id.toString() : null,
     supplierId: supplier._id.toString(),
     quantity,
     estimatedPrice,
     priority: params.priority || 'MEDIUM',
     reason: params.reason || ''
   });
+
   const existing = await PurchaseRequisition.findOne({
     aiGenerated: true,
     notes: new RegExp(`AI_INTEL_ID:${intelligenceId}`)
   });
+
   if (existing) {
     return {
       success: true,
@@ -240,18 +298,27 @@ async function createPrFromRecommendation(params, user) {
     };
   }
 
-  const planningValidation = await getPlanningValidation(product, quantity);
+  const planningValidation = product._id
+    ? await getPlanningValidation(product, quantity)
+    : {
+        available: false,
+        message: 'Product planning data unavailable for a new user-entered product.',
+        recommendation: 'Proceed with the requested quantity after human review.'
+      };
+
   const notes = [
     `AI_INTEL_ID:${intelligenceId}`,
     'Created from Copilot Procurement Intelligence recommendation.',
-    `Recommended supplier: ${supplier.name} (${supplier.code})`,
+    `Recommended supplier: ${supplier.name}${supplier.code ? ` (${supplier.code})` : ''}`,
     params.reason ? `Business reason: ${params.reason}` : '',
-    planningValidation.available ? `EOQ checked: ${planningValidation.eoq}` : 'EOQ validation unavailable'
+    planningValidation.available
+      ? `EOQ checked: ${planningValidation.eoq}`
+      : 'EOQ validation unavailable'
   ].filter(Boolean).join('\n');
 
   const requisition = await createRequisitionRecord({
     items: [{
-      product: product._id,
+      product: product._id || undefined,
       productName: product.name,
       quantity,
       estimatedUnitPrice: estimatedPrice

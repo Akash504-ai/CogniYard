@@ -66,7 +66,18 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
         }
 
         if (!confirmed) {
-          const preview = await procurementIntelligence.buildProcurementPreview(params);
+          const preview = {
+            success: true,
+            params: {
+              item: String(params.item || '').trim(),
+              sku: params.sku || '',
+              quantity: Number(params.quantity),
+              estimatedPrice: Number(params.estimatedPrice),
+              priority: params.priority || 'MEDIUM',
+              reason: params.reason || ''
+            },
+            details: `Procurement request prepared for ${params.quantity} × ${params.item} at ₹${Number(params.estimatedPrice).toLocaleString('en-IN')} per unit.`
+          };
           if (!preview.success) return preview;
           return {
             ...preview,
@@ -1010,7 +1021,18 @@ const fallbackIntentParser = (message, chatHistory = []) => {
   }
 
   // PR Creation Intent
-  if (msg.includes('need') || msg.includes('buy') || msg.includes('order') || msg.includes('requisition')) {
+  if (
+    parseProcurementRequest(message).isProcurementIntent ||
+    msg.includes('need') ||
+    msg.includes('buy') ||
+    msg.includes('order') ||
+    msg.includes('requisition') ||
+    msg.includes('create a pr') ||
+    msg.includes('create pr') ||
+    msg.includes('raise a pr') ||
+    msg.includes('raise pr') ||
+    msg.includes('purchase requisition')
+  ) {
     const request = parseProcurementRequest(message);
     if (!request.quantity) {
       return {
