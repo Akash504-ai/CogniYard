@@ -1,16 +1,20 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth, ROLES } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   Search,
   Calendar,
   Bell,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export default function Navbar({ onMenuClick, onOpenCommand }) {
   const { currentUser, currentRole } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
 
   const currentDateFormatted = new Intl.DateTimeFormat('en-US', {
@@ -177,6 +181,21 @@ export default function Navbar({ onMenuClick, onOpenCommand }) {
             12
           </span>
         </div>
+
+        {/* Dark / Light Mode Toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="p-1.5 rounded-full bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] text-[#68716D] dark:text-[#8E9C97] hover:text-[#15803D] dark:hover:text-[#22C55E] hover:border-[#15803D] dark:hover:border-[#22C55E] transition-colors shadow-2xs flex items-center justify-center"
+          title={isDark ? 'Switch to Light Operations Mode' : 'Switch to Dark Operations Mode'}
+          aria-label="Toggle Theme"
+        >
+          {isDark ? (
+            <Sun className="w-4 h-4 text-[#F59E0B]" />
+          ) : (
+            <Moon className="w-4 h-4 text-[#4A524E]" />
+          )}
+        </button>
 
         {/* User Initials Avatar */}
         <div className="w-7 h-7 rounded-full bg-[#1C201E] text-white flex items-center justify-center text-xs font-mono font-bold border border-white/20 shadow-xs">
