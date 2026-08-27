@@ -170,7 +170,7 @@ export default function Navbar({ onMenuClick, onOpenCommand }) {
         </div>
 
         {/* Notification Bell with Badge */}
-        <div className="relative">
+        {/* <div className="relative">
           <button
             type="button"
             className="p-1.5 rounded-full bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] text-[#68716D] hover:text-[#1C201E] transition-colors shadow-2xs"
@@ -180,7 +180,7 @@ export default function Navbar({ onMenuClick, onOpenCommand }) {
           <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-[#D97706] text-white text-[9px] font-mono font-bold">
             12
           </span>
-        </div>
+        </div> */}
 
         {/* Dark / Light Mode Toggle */}
         <button
@@ -198,9 +198,9 @@ export default function Navbar({ onMenuClick, onOpenCommand }) {
         </button>
 
         {/* User Initials Avatar */}
-        <div className="w-7 h-7 rounded-full bg-[#1C201E] text-white flex items-center justify-center text-xs font-mono font-bold border border-white/20 shadow-xs">
+        {/* <div className="w-7 h-7 rounded-full bg-[#1C201E] text-white flex items-center justify-center text-xs font-mono font-bold border border-white/20 shadow-xs">
           {currentUser?.name?.slice(0, 2).toUpperCase() || 'PM'}
-        </div>
+        </div> */}
       </div>
     </header>
   );
