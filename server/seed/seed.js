@@ -74,46 +74,63 @@ async function seedDatabase() {
     // SUPPLIERS
     // -------------------------------------------------------------
     const suppliers = await Supplier.create([
-    {
-      name: 'CogniYard Demo Supplier',
-      companyName: 'CogniYard Demo Supplier',
-      contactPerson: 'Demo Supplier User',
-      code: 'SUP-DEMO',
-      email: 'supplier@cogniyard.com',
-      phone: '+1-555-0100',
-      address: 'Demo Supplier Address',
-      taxId: 'GST-DEMO-1001',
-      paymentTerms: 'Net 30',
-      rating: 4.8,
-      leadTimeDays: 3,
-      otdScore: 95
-    },
-    {
-      name: 'Apex Industrial Safety Co.',
-      companyName: 'Apex Industrial Safety Co.',
-      contactPerson: 'Riya Mehta',
-      code: 'SUP-1001',
-      email: 'orders@apexindustrial.com',
-      phone: '+1-800-555-0199',
-      address: '45 Industrial Avenue, Bengaluru',
-      taxId: 'GST-29-AAPEX-1001',
-      paymentTerms: 'Net 30',
-      rating: 4.9,
-      leadTimeDays: 2,
-      otdScore: 98
-    },
-    {
-      name: 'Vanguard Logistics & Supply Ltd.',
-      companyName: 'Vanguard Logistics & Supply Ltd.',
-      contactPerson: 'Arjun Das',
-      code: 'SUP-1002',
-      email: 'sales@vanguardlogistics.com',
-      phone: '+1-800-555-0288',
-      rating: 4.4,
-      leadTimeDays: 4,
-      otdScore: 91
-    }
-  ]);
+      {
+        name: 'CogniYard Demo Supplier',
+        companyName: 'CogniYard Demo Supplier',
+        contactPerson: 'Demo Supplier User',
+        code: 'SUP-DEMO',
+        email: 'supplier@cogniyard.com',
+        phone: '+1-555-0100',
+        address: 'Demo Supplier Address',
+        taxId: 'GST-DEMO-1001',
+        paymentTerms: 'Net 30',
+
+        // Supplier performance
+        rating: 4.8,
+        leadTimeDays: 3,
+        otdScore: 95,
+        category: 'Industrial Safety',
+        // AI recommendation
+        aiSupplierScore: 90.4,
+        aiPreferred: true,
+        aiRank: 1
+      },
+      {
+        name: 'Apex Industrial Safety Co.',
+        companyName: 'Apex Industrial Safety Co.',
+        contactPerson: 'Riya Mehta',
+        code: 'SUP-1001',
+        email: 'orders@apexindustrial.com',
+        phone: '+1-800-555-0199',
+        address: '45 Industrial Avenue, Bengaluru',
+        taxId: 'GST-29-AAPEX-1001',
+        paymentTerms: 'Net 30',
+
+        rating: 4.8,
+        leadTimeDays: 2,
+        otdScore: 98,
+
+        aiSupplierScore: 88.7,
+        aiPreferred: false,
+        aiRank: 2
+      },
+      {
+        name: 'Vanguard Logistics & Supply Ltd.',
+        companyName: 'Vanguard Logistics & Supply Ltd.',
+        contactPerson: 'Arjun Das',
+        code: 'SUP-1002',
+        email: 'sales@vanguardlogistics.com',
+        phone: '+1-800-555-0288',
+
+        rating: 4.4,
+        leadTimeDays: 4,
+        otdScore: 91,
+
+        aiSupplierScore: 82.3,
+        aiPreferred: false,
+        aiRank: 3
+      }
+    ]);
     const supplierUser = await User.create({
       name: suppliers[0].contactPerson,
       email: 'supplier@cogniyard.com',

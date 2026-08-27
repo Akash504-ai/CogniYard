@@ -206,60 +206,70 @@ export default function ProcurementPage() {
   ];
 
   // Fallback demo Suppliers if backend returns 0
-  const displaySuppliers = suppliers.length > 0 ? suppliers : [
-    {
-      _id: 'sup-1',
-      name: 'Acme Steel Pvt Ltd',
-      code: 'SUP-001',
-      category: 'Raw Metals & Bearings',
-      rating: 4.9,
-      score: 96,
-      otdScore: 97,
-      leadTimeDays: 3,
-      status: 'ACTIVE',
-      email: 'orders@acmesteel.com',
-      recommendationReason: 'AI Preferred: Highest historical on-time delivery score (97%) and rapid 3-day lead time.'
-    },
-    {
-      _id: 'sup-2',
-      name: 'TechCorp Solutions',
-      code: 'SUP-002',
-      category: 'Industrial Electronics',
-      rating: 4.7,
-      score: 91,
-      otdScore: 94,
-      leadTimeDays: 5,
-      status: 'ACTIVE',
-      email: 'procurement@techcorp.com',
-      recommendationReason: 'Certified ISO-9001 supplier for high-speed industrial motor assemblies.'
-    },
-    {
-      _id: 'sup-3',
-      name: 'Apex Fasteners Ltd',
-      code: 'SUP-003',
-      category: 'Valves & Hydraulic Fittings',
-      rating: 4.6,
-      score: 88,
-      otdScore: 92,
-      leadTimeDays: 4,
-      status: 'ACTIVE',
-      email: 'sales@apexfasteners.com',
-      recommendationReason: 'Consistent price stability with sub-1% defect rate across 40 batches.'
-    },
-    {
-      _id: 'sup-4',
-      name: 'Alpha Logistics Tech',
-      code: 'SUP-004',
-      category: 'Packaging & Warehouse Consumables',
-      rating: 4.5,
-      score: 85,
-      otdScore: 90,
-      leadTimeDays: 2,
-      status: 'ACTIVE',
-      email: 'contact@alphatech.com',
-      recommendationReason: 'Rapid turnaround vendor for facility safety kits and consumable supplies.'
-    }
-  ];
+  const displaySuppliers = suppliers.length > 0
+    ? [...suppliers].sort((a, b) => {
+      if (a.code === 'SUP-DEMO') return -1;
+      if (b.code === 'SUP-DEMO') return 1;
+      return 0;
+    })
+    : [
+      {
+        _id: 'sup-demo',
+        name: 'CogniYard Demo Supplier',
+        code: 'SUP-DEMO',
+        category: 'Industrial Safety',
+        rating: 4.9,
+        score: 90.4,
+        otdScore: 95,
+        leadTimeDays: 3,
+        status: 'ACTIVE',
+        email: 'supplier@cogniyard.com',
+        recommendationReason:
+          'AI Preferred supplier based on delivery performance, quality, lead time and commercial signals.'
+      },
+      {
+        _id: 'sup-2',
+        name: 'TechCorp Solutions',
+        code: 'SUP-002',
+        category: 'Industrial Electronics',
+        rating: 4.7,
+        score: 91,
+        otdScore: 94,
+        leadTimeDays: 5,
+        status: 'ACTIVE',
+        email: 'procurement@techcorp.com',
+        recommendationReason:
+          'Certified ISO-9001 supplier for high-speed industrial motor assemblies.'
+      },
+      {
+        _id: 'sup-3',
+        name: 'Apex Fasteners Ltd',
+        code: 'SUP-003',
+        category: 'Valves & Hydraulic Fittings',
+        rating: 4.6,
+        score: 88,
+        otdScore: 92,
+        leadTimeDays: 4,
+        status: 'ACTIVE',
+        email: 'sales@apexfasteners.com',
+        recommendationReason:
+          'Consistent price stability with sub-1% defect rate across 40 batches.'
+      },
+      {
+        _id: 'sup-4',
+        name: 'Alpha Logistics Tech',
+        code: 'SUP-004',
+        category: 'Packaging & Warehouse Consumables',
+        rating: 4.5,
+        score: 85,
+        otdScore: 90,
+        leadTimeDays: 2,
+        status: 'ACTIVE',
+        email: 'contact@alphatech.com',
+        recommendationReason:
+          'Rapid turnaround vendor for facility safety kits and consumable supplies.'
+      }
+    ];
 
   const totalCommittedSpend = displayPos.reduce((acc, po) => acc + (po.totalAmount || 0), 0);
   const pendingApprovalsCount = requisitions.filter(r => r.status === 'PENDING').length;
@@ -784,20 +794,18 @@ export default function ProcurementPage() {
 
                   <div>
                     <div className="flex items-center gap-2">
-
                       <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
                         Supplier Intelligence
                       </h3>
 
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F3FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#7C3AED] dark:bg-[#281E3B] dark:text-[#A78BFA]">
                         <Bot className="h-3 w-3" />
-                        AI Evaluated
+                        AI Preferred
                       </span>
-
                     </div>
 
                     <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
-                      Ranked supplier recommendations using delivery performance, quality, lead time and commercial signals
+                      CogniYard's preferred demo supplier based on supplier rating, delivery performance, lead time and commercial signals
                     </p>
                   </div>
 
@@ -837,16 +845,16 @@ export default function ProcurementPage() {
 
             {displaySuppliers.map((sup, idx) => {
 
-              const score = sup.score || 92;
-              const isTop = idx === 0;
+              const score = sup.score ?? sup.aiSupplierScore ?? 92;
+              const isTop = sup.code === 'SUP-DEMO';
 
               return (
                 <PaperSheet
                   key={sup._id}
                   variant="default"
                   className={`relative overflow-hidden p-0 border transition-all hover:-translate-y-0.5 hover:shadow-md ${isTop
-                      ? 'border-[#15803D]/50'
-                      : 'border-[#E3DDD1] dark:border-[#2B3835]'
+                    ? 'border-[#15803D]/50'
+                    : 'border-[#E3DDD1] dark:border-[#2B3835]'
                     }`}
                 >
 
@@ -1016,16 +1024,10 @@ export default function ProcurementPage() {
                       {sup.email}
                     </span>
 
-                    {isTop ? (
-                      <span className="inline-flex items-center gap-1 text-[8px] font-bold text-[#15803D]">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Recommended
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-bold text-[#8A938F]">
-                        Eligible
-                      </span>
-                    )}
+                    <span className="inline-flex items-center gap-1 text-[8px] font-bold text-[#15803D]">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Eligible
+                    </span>
 
                   </div>
 
