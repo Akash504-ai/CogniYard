@@ -1,109 +1,282 @@
 import React, { useId } from 'react';
 
 export default function BinderSpine({ collapsed }) {
-  // Unique ID prefix to avoid gradient ID collisions across SVG instances
-  const gradientId = useId();
-  const shadowGradientId = `${gradientId}-shadow`;
+  const id = useId();
 
-  const ringCount = 28;
+  const gradientId = `${id}-metal`;
+  const highlightId = `${id}-highlight`;
+  const shadowId = `${id}-shadow`;
+
+  const ringCount = 24;
   const rings = Array.from({ length: ringCount }, (_, i) => i);
 
   return (
-    <div 
-      className={`hidden lg:flex flex-col justify-around items-center w-6 min-w-[24px] h-screen fixed top-0 z-50 select-none pointer-events-none transition-all duration-200 ease-in-out ${
-        collapsed ? 'left-16' : 'left-64'
-      }`}
+    <div
+      className={`
+        hidden lg:flex
+        fixed top-0 z-50
+        flex-col items-center justify-around
+        h-screen w-[26px] min-w-[26px]
+        select-none pointer-events-none
+        transition-[left] duration-300 ease-out
+        ${collapsed ? 'left-16' : 'left-64'}
+      `}
       style={{
-        // Multi-layered depth shadow simulating a realistic spine groove
-        background: 'linear-gradient(90deg, #0C100F 0%, #121817 40%, #1A2220 75%, #0D1211 100%)',
+        background: `
+          linear-gradient(
+            90deg,
+            #080b0a 0%,
+            #101513 18%,
+            #1b211f 45%,
+            #151a18 68%,
+            #090c0b 100%
+          )
+        `,
         boxShadow: `
-          inset -4px 0 8px rgba(0, 0, 0, 0.6),
-          inset 2px 0 4px rgba(255, 255, 255, 0.03),
-          6px 0 14px rgba(0, 0, 0, 0.15)
-        `
+          inset 1px 0 0 rgba(255,255,255,0.035),
+          inset -2px 0 5px rgba(0,0,0,0.85),
+          5px 0 16px rgba(0,0,0,0.22)
+        `,
       }}
     >
-      {/* Micro-texture Spine Highlight (Simulates brushed metal/stitching edge) */}
-      <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/5" />
-
-      {/* Dashed Paper Perforation Crease Line */}
-      <div 
-        className="absolute right-0 top-0 bottom-0 w-[1px]"
+      {/* =========================================================
+          SPINE EDGE HIGHLIGHT
+      ========================================================== */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-px"
         style={{
-          background: 'linear-gradient(to bottom, transparent 0%, #C4BAB0 10%, #C4BAB0 90%, transparent 100%)',
-          opacity: 0.4
+          background:
+            'linear-gradient(to bottom, transparent, rgba(255,255,255,.08) 15%, rgba(255,255,255,.035) 85%, transparent)',
+        }}
+      />
+
+      {/* =========================================================
+          INNER SPINE GROOVE
+      ========================================================== */}
+      <div
+        className="absolute right-[3px] top-0 bottom-0 w-[2px]"
+        style={{
+          background:
+            'linear-gradient(to bottom, transparent, rgba(196,186,176,.28) 12%, rgba(196,186,176,.12) 50%, rgba(196,186,176,.28) 88%, transparent)',
+          boxShadow: '0 0 3px rgba(196,186,176,.08)',
+        }}
+      />
+
+      {/* =========================================================
+          SUBTLE CENTER SEAM
+      ========================================================== */}
+      <div
+        className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 opacity-20"
+        style={{
+          background:
+            'linear-gradient(to bottom, transparent, #7c857f 20%, #7c857f 80%, transparent)',
         }}
       />
 
       {rings.map((idx) => (
-        <div key={idx} className="relative flex items-center justify-center w-full h-7 my-[-2px] group">
-          
-          {/* Punched Hole: Left Dark Rail Side */}
-          <div 
-            className="absolute left-[2px] w-2.5 h-3.5 rounded-full bg-[#050706] border border-black/80"
+        <div
+          key={idx}
+          className="
+            relative
+            flex items-center justify-center
+            w-full h-8
+          "
+        >
+          {/* =====================================================
+              LEFT PUNCH HOLE
+          ====================================================== */}
+          <div
+            className="
+              absolute
+              left-[2px]
+              w-[9px] h-[15px]
+              rounded-full
+            "
             style={{
-              boxShadow: 'inset 1px 1px 3px rgba(0,0,0,0.9), 0 0 2px rgba(255,255,255,0.05)'
-            }}
-          />
-          
-          {/* Punched Hole: Right Paper Workspace Side */}
-          <div 
-            className="absolute right-[-5px] w-2.5 h-3.5 rounded-full bg-[#181310] border border-[#C4BAB0]/50"
-            style={{
-              boxShadow: 'inset 2px 1px 3px rgba(0,0,0,0.8), 1px 0 1px rgba(255,255,255,0.3)'
+              background:
+                'radial-gradient(ellipse at 65% 40%, #030504 0%, #070a09 45%, #111614 100%)',
+              boxShadow: `
+                inset 1px 1px 2px rgba(0,0,0,.95),
+                inset -1px -1px 1px rgba(255,255,255,.035)
+              `,
             }}
           />
 
-          {/* Realistic Cast Drop Shadow from Wire to Spine */}
-          <div className="absolute w-7 h-4 bg-black/40 blur-[2px] translate-y-[2px] translate-x-[1px] rounded-full pointer-events-none" />
+          {/* =====================================================
+              RIGHT PUNCH HOLE
+          ====================================================== */}
+          <div
+            className="
+              absolute
+              right-[-4px]
+              w-[10px] h-[15px]
+              rounded-full
+            "
+            style={{
+              background:
+                'radial-gradient(ellipse at 35% 40%, #28221d 0%, #15110e 55%, #090807 100%)',
+              border: '1px solid rgba(196,186,176,.38)',
+              boxShadow: `
+                inset 2px 1px 3px rgba(0,0,0,.9),
+                0 0 1px rgba(255,255,255,.15)
+              `,
+            }}
+          />
 
-          {/* Double-loop Metallic Wire Coil SVG */}
-          <svg 
-            className="relative z-10 w-8 h-5 overflow-visible filter drop-shadow-[0_3px_2px_rgba(0,0,0,0.65)]" 
-            viewBox="0 0 28 20" 
+          {/* =====================================================
+              RING CONTACT SHADOW
+          ====================================================== */}
+          <div
+            className="
+              absolute
+              w-[28px] h-[8px]
+              rounded-full
+              blur-[3px]
+              translate-x-[1px]
+              translate-y-[3px]
+            "
+            style={{
+              background: 'rgba(0,0,0,.55)',
+            }}
+          />
+
+          {/* =====================================================
+              METALLIC DOUBLE LOOP
+          ====================================================== */}
+          <svg
+            className="
+              relative z-10
+              w-8 h-6
+              overflow-visible
+              drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]
+            "
+            viewBox="0 0 32 24"
             fill="none"
+            aria-hidden="true"
           >
-            {/* Dark Undercoat Path for Enhanced Wire Thickness & Ambient Occlusion */}
-            <path
-              d="M 2 4 C 10 -2, 22 -2, 26 5 C 27 7, 26 9, 23 8 C 17 6, 8 7, 2 12"
-              stroke="#080A09"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 2 11 C 10 5, 22 5, 26 12 C 27 14, 26 16, 23 15 C 17 13, 8 14, 2 19"
-              stroke="#080A09"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-            />
-
-            {/* Top Wire Loop */}
-            <path
-              d="M 2 4 C 10 -2, 22 -2, 26 5 C 27 7, 26 9, 23 8 C 17 6, 8 7, 2 12"
-              stroke={`url(#${gradientId})`}
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-
-            {/* Bottom Wire Loop */}
-            <path
-              d="M 2 11 C 10 5, 22 5, 26 12 C 27 14, 26 16, 23 15 C 17 13, 8 14, 2 19"
-              stroke={`url(#${gradientId})`}
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-
-            {/* Metallic Wire Sheen Highlights */}
             <defs>
-              <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#374151" />
-                <stop offset="25%" stopColor="#9CA3AF" />
-                <stop offset="45%" stopColor="#FFFFFF" />
-                <stop offset="55%" stopColor="#E5E7EB" />
-                <stop offset="75%" stopColor="#6B7280" />
-                <stop offset="100%" stopColor="#1F2937" />
+              {/* Main metal */}
+              <linearGradient
+                id={gradientId}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="1"
+              >
+                <stop offset="0%" stopColor="#252b29" />
+                <stop offset="20%" stopColor="#69716e" />
+                <stop offset="38%" stopColor="#e2e5e4" />
+                <stop offset="48%" stopColor="#ffffff" />
+                <stop offset="58%" stopColor="#b6bcb9" />
+                <stop offset="78%" stopColor="#555d5a" />
+                <stop offset="100%" stopColor="#171b1a" />
+              </linearGradient>
+
+              {/* Sharp highlight */}
+              <linearGradient
+                id={highlightId}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="45%" stopColor="rgba(255,255,255,.85)" />
+                <stop offset="55%" stopColor="rgba(255,255,255,.95)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+
+              {/* Contact shadow */}
+              <linearGradient
+                id={shadowId}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <stop offset="0%" stopColor="#020303" />
+                <stop offset="100%" stopColor="#0c0f0e" />
               </linearGradient>
             </defs>
+
+            {/* ===================================================
+                DARK UNDERCOAT
+            ==================================================== */}
+            <path
+              d="
+                M 2 5
+                C 9 -1, 23 -1, 28 5
+                C 30 8, 28 10, 25 9
+                C 19 7, 9 8, 2 13
+              "
+              stroke={`url(#${shadowId})`}
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+
+            <path
+              d="
+                M 2 13
+                C 9 7, 23 7, 28 13
+                C 30 16, 28 18, 25 17
+                C 19 15, 9 16, 2 21
+              "
+              stroke={`url(#${shadowId})`}
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+
+            {/* ===================================================
+                MAIN METALLIC COILS
+            ==================================================== */}
+            <path
+              d="
+                M 2 5
+                C 9 -1, 23 -1, 28 5
+                C 30 8, 28 10, 25 9
+                C 19 7, 9 8, 2 13
+              "
+              stroke={`url(#${gradientId})`}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+
+            <path
+              d="
+                M 2 13
+                C 9 7, 23 7, 28 13
+                C 30 16, 28 18, 25 17
+                C 19 15, 9 16, 2 21
+              "
+              stroke={`url(#${gradientId})`}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+
+            {/* ===================================================
+                MICRO HIGHLIGHT
+            ==================================================== */}
+            <path
+              d="
+                M 5 4
+                C 12 0, 22 0, 26 5
+              "
+              stroke={`url(#${highlightId})`}
+              strokeWidth="0.7"
+              strokeLinecap="round"
+              opacity="0.8"
+            />
+
+            <path
+              d="
+                M 5 12
+                C 12 8, 22 8, 26 13
+              "
+              stroke={`url(#${highlightId})`}
+              strokeWidth="0.7"
+              strokeLinecap="round"
+              opacity="0.65"
+            />
           </svg>
         </div>
       ))}
