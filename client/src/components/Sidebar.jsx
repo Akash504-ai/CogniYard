@@ -21,11 +21,10 @@ import {
   Moon
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, collapsed, setCollapsed }) {
   const { currentUser, currentRole, logout, setIsAiOpen } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const getRoleNavSections = () => {
@@ -125,7 +124,6 @@ export default function Sidebar({ isOpen, onClose }) {
   };
 
   const navSections = getRoleNavSections();
-  const spiralRings = Array.from({ length: 22 });
 
   return (
     <>
@@ -142,16 +140,6 @@ export default function Sidebar({ isOpen, onClose }) {
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${collapsed ? 'w-16' : 'w-64'}`}
       >
-        {/* SPIRAL BINDING RINGS ON THE RIGHT EDGE */}
-        <div className="absolute top-3 bottom-3 -right-3 z-50 flex flex-col justify-between pointer-events-none">
-          {spiralRings.map((_, index) => (
-            <div
-              key={`ring-${index}`}
-              className="w-5 h-2 rounded-full bg-gradient-to-r from-[#505D58] via-[#8C9893] to-[#2B3834] shadow-[1px_1px_2px_rgba(0,0,0,0.5)] border border-[#1A2320]"
-            />
-          ))}
-        </div>
-
         {/* LOGO & BRAND HEADER */}
         <div className="p-4 border-b border-[#23302C] flex items-center justify-between bg-[#0F1413]">
           <NavLink to={currentRole === ROLES.SUPPLIER ? '/supplier' : '/'} className="flex items-center gap-3 group">
