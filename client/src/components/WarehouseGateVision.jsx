@@ -145,10 +145,13 @@ export default function WarehouseGateVision({ trucks = [], docks = [], onUpdated
       setBusyStage(stage);
       setScanStage(stage);
       setOcrProgress(0);
-      const capture = await recognizeTextFromVideo(videoRef.current, {
-        stage,
-        onProgress: setOcrProgress
-      });
+      const capture = await recognizeTextFromVideo(
+        videoRef.current,
+        {
+          stage,
+          onProgress: setOcrProgress
+        }
+      );
       setLastCapture({ ...capture, stage });
       if (!capture.text) throw new Error('No readable text was captured. Move closer, improve lighting and scan again.');
       const response = await logisticsAPI.verifyGateIdentity(selectedTruck.truckId, {
@@ -215,8 +218,19 @@ export default function WarehouseGateVision({ trucks = [], docks = [], onUpdated
               </div>
             )}
             {cameraActive && (
-              <div className={`gate-ocr-guide ${scanStage === 'DRIVER_ID' ? 'is-driver' : 'is-plate'}`}>
-                <span>{scanStage === 'DRIVER_ID' ? 'HOLD DRIVER ID SERIAL HERE' : 'POSITION NUMBER PLATE HERE'}</span>
+              <div
+                className={`gate-ocr-guide ${scanStage === 'DRIVER_ID'
+                  ? 'is-driver'
+                  : 'is-plate'
+                  }`}
+              >
+                <div className="gate-ocr-guide-frame">
+                  <span className="gate-ocr-guide-label">
+                    {scanStage === 'DRIVER_ID'
+                      ? 'PLACE DRIVER ID SERIAL INSIDE THIS BOX'
+                      : 'PLACE NUMBER PLATE INSIDE THIS BOX'}
+                  </span>
+                </div>
               </div>
             )}
             {cameraActive && detections.map(object => {

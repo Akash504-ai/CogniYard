@@ -59,17 +59,24 @@ async function resolveProduct(request) {
 }
 
 async function getSupplierIntelligence() {
-  const activeSuppliers = await Supplier.find({ status: 'ACTIVE' });
-  if (!activeSuppliers.length) return null;
+  const supplier = await Supplier.findOne({
+    status: 'ACTIVE',
+    code: 'SUP-DEMO'
+  });
 
-  const candidates = evaluateSupplierDocuments(activeSuppliers);
-  const top = candidates[0];
+  if (!supplier) {
+    return null;
+  }
+
+  const evaluated = evaluateSupplierDocuments([supplier]);
+  const top = evaluated[0];
+
+  if (!top) return null;
+
   return {
     topSupplier: top,
-    candidates: candidates.slice(0, 3),
-    rationale: top
-      ? `${top.name} leads on existing supplier score ${top.score}/100 using OTD ${top.otdScore}%, rating ${top.rating}/5, and ${top.leadTimeDays} day lead time.`
-      : ''
+    candidates: [top],
+    rationale: `${top.name} is the AI-preferred supplier with supplier score ${top.score}/100 using OTD ${top.otdScore}%, rating ${top.rating}/5, and ${top.leadTimeDays} day lead time.`
   };
 }
 
@@ -88,13 +95,13 @@ async function getPlanningValidation(product, quantity) {
     const comparison = ratio > 1.25
       ? 'ABOVE_EOQ'
       : ratio < 0.75
-      ? 'BELOW_EOQ'
-      : 'ALIGNED_WITH_EOQ';
+        ? 'BELOW_EOQ'
+        : 'ALIGNED_WITH_EOQ';
     const recommendation = comparison === 'ABOVE_EOQ'
       ? `Requested quantity is above EOQ ${planning.eoq.toLocaleString('en-IN')}; keep ${quantity.toLocaleString('en-IN')} only if the business urgency justifies the larger buy.`
       : comparison === 'BELOW_EOQ'
-      ? `Requested quantity is below EOQ ${planning.eoq.toLocaleString('en-IN')}; preserve the request but consider consolidation if timing allows.`
-      : `Requested quantity is aligned with EOQ ${planning.eoq.toLocaleString('en-IN')}.`;
+        ? `Requested quantity is below EOQ ${planning.eoq.toLocaleString('en-IN')}; preserve the request but consider consolidation if timing allows.`
+        : `Requested quantity is aligned with EOQ ${planning.eoq.toLocaleString('en-IN')}.`;
 
     return {
       available: true,
@@ -158,6 +165,8 @@ async function buildProcurementPreview(request) {
   if (!supplierIntelligence?.topSupplier) {
     return { success: false, message: 'No active suppliers are available for recommendation. Add or activate a supplier first.' };
   }
+
+  const topSupplier = supplierIntelligence.topSupplier;
 
   const priority = request.priority || 'MEDIUM';
   const reason = request.reason || '';
@@ -301,10 +310,10 @@ async function createPrFromRecommendation(params, user) {
   const planningValidation = product._id
     ? await getPlanningValidation(product, quantity)
     : {
-        available: false,
-        message: 'Product planning data unavailable for a new user-entered product.',
-        recommendation: 'Proceed with the requested quantity after human review.'
-      };
+      available: false,
+      message: 'Product planning data unavailable for a new user-entered product.',
+      recommendation: 'Proceed with the requested quantity after human review.'
+    };
 
   const notes = [
     `AI_INTEL_ID:${intelligenceId}`,

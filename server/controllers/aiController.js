@@ -589,7 +589,7 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
             acceptedQty: r.items.reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0),
             damagedQty: r.items.reduce((sum, item) => sum + Number(item.damagedQuantity || 0), 0)
           })),
-          details: receipts.length > 0 
+          details: receipts.length > 0
             ? `Recorded ${receipts.length} recent Goods Receipt(s). Total damaged units identified: ${totalDamaged}.`
             : 'No Goods Receipts recorded yet.'
         };
@@ -623,7 +623,7 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
           json: (data) => { if (data.success) resultProduct = data.product; }
         };
 
-        await inventoryPlanning.getPlanningProductById(mockReq, mockRes, () => {});
+        await inventoryPlanning.getPlanningProductById(mockReq, mockRes, () => { });
 
         if (!resultProduct) {
           return {
@@ -635,8 +635,8 @@ const executeTool = async (toolName, params, user, confirmed = false) => {
 
         const statusIcon = resultProduct.status === 'HEALTHY' ? '🟢'
           : resultProduct.status === 'MONITOR' ? '🟡'
-          : resultProduct.status === 'REORDER_RECOMMENDED' ? '🟠'
-          : '🔴';
+            : resultProduct.status === 'REORDER_RECOMMENDED' ? '🟠'
+              : '🔴';
 
         const detailFormatted = `### ${statusIcon} ${resultProduct.status.replace('_', ' ')} — ${resultProduct.productName} (${resultProduct.sku})
 
@@ -669,7 +669,7 @@ ${resultProduct.reasonText}`;
           json: (data) => { if (data.success) allProducts = data.products; }
         };
 
-        await inventoryPlanning.getPlanningProducts(mockReq, mockRes, () => {});
+        await inventoryPlanning.getPlanningProducts(mockReq, mockRes, () => { });
 
         const atRisk = allProducts.filter(p => p.status === 'URGENT_REORDER' || p.status === 'REORDER_RECOMMENDED' || p.status === 'MONITOR');
 
@@ -908,8 +908,17 @@ ${mismatchInvoices} 3-Way Match discrepancy invoice(s); ${paymentsOnHold} paymen
         return { success: false, message: `Unknown tool command: ${toolName}` };
     }
   } catch (err) {
-    console.error('Copilot tool execution failed:', { toolName, message: err.message });
-    return { success: false, message: 'The requested data action could not be completed. Please retry or contact an administrator.' };
+    console.error('Copilot tool execution failed:', {
+      toolName,
+      message: err.message,
+      stack: err.stack,
+      params
+    });
+
+    return {
+      success: false,
+      message: err.message || 'The requested data action could not be completed.'
+    };
   }
 };
 
@@ -994,6 +1003,23 @@ const fallbackIntentParser = (message, chatHistory = []) => {
       params: { prNumber },
       replyText: `Preparing Purchase Order conversion for approved recommendation ${prNumber}.`
     };
+  }
+
+  // Follow-up PO creation from the most recently created PR
+  if (
+    (msg.includes('create') && msg.includes('po')) ||
+    (msg.includes('approve') && msg.includes('recommendation') && msg.includes('po'))
+  ) {
+    const contextPr = extractEntityFromContext(chatHistory, /PR-\d+/i);
+
+    if (contextPr) {
+      return {
+        intent: 'convert_approved_recommendation_to_purchase_order',
+        tool: 'convertApprovedRecommendationToPurchaseOrder',
+        params: { prNumber: contextPr },
+        replyText: `Preparing Purchase Order conversion for approved recommendation ${contextPr}...`
+      };
+    }
   }
 
   // Follow-up context tracing ("has it been paid?", "why is it on hold?", "trace it")
