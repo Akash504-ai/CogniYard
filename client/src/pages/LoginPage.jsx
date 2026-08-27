@@ -249,12 +249,12 @@ export default function LoginPage() {
           <div className="space-y-3 text-center">
             <div className="relative flex items-center justify-center">
               <div className="border-t border-[#DDD9CF] dark:border-[#2B3533] w-full" />
-              <span className="bg-[#F7F5EF] dark:bg-[#111413] px-2 text-[10px] font-mono text-[#8A908B] uppercase">
+              {/* <span className="bg-[#F7F5EF] dark:bg-[#111413] px-2 text-[10px] font-mono text-[#8A908B] uppercase">
                 OR
-              </span>
+              </span> */}
             </div>
 
-            <div className="flex justify-center">
+            {/* <div className="flex justify-center">
               <GoogleLogin
                 onSuccess={googleLogin}
                 onError={() => setError('Google Sign-In failed.')}
@@ -262,7 +262,7 @@ export default function LoginPage() {
                 shape="rectangular"
                 size="medium"
               />
-            </div>
+            </div> */}
 
             <p className="text-xs text-[#5D6560] dark:text-[#A3ACA8] font-sans">
               Need new operator credentials?{' '}
