@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Receipt,
+  ReceiptText,
   Scale,
   CheckCircle2,
   AlertTriangle,
@@ -17,6 +18,8 @@ import {
   Sparkles,
   ShieldCheck,
   Building2,
+  GitBranch,
+  Search,
   X,
   Plus
 } from 'lucide-react';
@@ -222,7 +225,7 @@ export default function FinancePage() {
 
   return (
     <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
-      
+
       {/* 1. HEADER SHEET */}
       <PaperSheet variant="default" className="p-4 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -315,168 +318,700 @@ export default function FinancePage() {
       )}
 
       {/* 3. MAIN INVOICE RECONCILIATION TABLE */}
-      <PaperSheet variant="default" className="p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1] dark:border-[#2B3835]">
-          <div>
-            <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-              Supplier Invoices & 3-Way Match Verification Queue
-            </h3>
-            <p className="text-[10px] text-[#68716D] dark:text-[#8E9C97] font-mono">
-              Audit line items against physical goods receipt notes and authorized purchase orders
-            </p>
+      <PaperSheet
+        variant="default"
+        className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+      >
+        {/* HEADER */}
+        <div className="px-5 sm:px-6 pt-5 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+            <div className="flex items-start gap-3">
+
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EDE9FE] dark:bg-[#281E3B]">
+                <ReceiptText className="h-4 w-4 text-[#7C3AED]" />
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+
+                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                    AP Reconciliation Queue
+                  </h3>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F3FF] dark:bg-[#281E3B] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#7C3AED]">
+                    <GitBranch className="h-3 w-3" />
+                    3-Way Match
+                  </span>
+
+                </div>
+
+                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                  Validate supplier invoices against PO commitments and physical GRNs before payment.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="sm:text-right">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                Automation
+              </p>
+
+              <div className="mt-0.5 flex items-center gap-1.5 sm:justify-end">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+
+                <span className="text-[9px] font-mono font-bold text-[#15803D]">
+                  Match Engine Active
+                </span>
+              </div>
+            </div>
+
           </div>
-          <span className="text-xs font-mono text-[#15803D] font-bold">Autonomous Match Active</span>
         </div>
 
+
+        {/* QUEUE SUMMARY */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 border-y border-[#E3DDD1] bg-[#FAF8F3] dark:border-[#2B3835] dark:bg-[#17201D]">
+
+          <div className="px-5 py-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Queue
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+              {displayInvoices.length}
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Matched
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#15803D]">
+              {
+                displayInvoices.filter(
+                  inv =>
+                    inv.matchStatus === 'MATCHED' ||
+                    inv.matchStatus === 'MATCHED_100'
+                ).length
+              }
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Exceptions
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#DC2626]">
+              {
+                displayInvoices.filter(
+                  inv =>
+                    inv.matchStatus !== 'MATCHED' &&
+                    inv.matchStatus !== 'MATCHED_100'
+                ).length
+              }
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Payable
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#7C3AED]">
+              ₹
+              {displayInvoices
+                .reduce(
+                  (total, inv) =>
+                    total + Number(inv.totalAmount || inv.amount || 0),
+                  0
+                )
+                .toLocaleString('en-IN')}
+            </p>
+          </div>
+
+        </div>
+
+
+        {/* TABLE */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead>
-              <tr className="border-b border-[#E3DDD1] dark:border-[#2B3835] text-[10px] text-[#68716D]">
-                <th className="py-2.5 font-semibold">Invoice No</th>
-                <th className="py-2.5 font-semibold">PO Reference</th>
-                <th className="py-2.5 font-semibold">Supplier Vendor</th>
-                <th className="py-2.5 font-semibold text-right">Net Payable</th>
-                <th className="py-2.5 font-semibold">3-Way Match Status</th>
-                <th className="py-2.5 font-semibold">Attached Doc</th>
-                <th className="py-2.5 font-semibold text-right">Reconciliation Action</th>
+
+          <table className="w-full min-w-[1100px] text-left">
+
+            {/* TABLE HEADER */}
+            <thead className="bg-white dark:bg-[#18201D]">
+
+              <tr>
+
+                {[
+                  'Invoice',
+                  'PO Reference',
+                  'Supplier',
+                  'Net Payable',
+                  '3-Way Match',
+                  'Document',
+                  'Reconciliation'
+                ].map((heading) => (
+
+                  <th
+                    key={heading}
+                    className={`px-5 py-3 text-[8px] font-bold uppercase tracking-widest text-[#8A938F] ${heading === 'Net Payable' ||
+                        heading === 'Reconciliation'
+                        ? 'text-right'
+                        : ''
+                      }`}
+                  >
+                    {heading}
+                  </th>
+
+                ))}
+
               </tr>
+
             </thead>
-            <tbody className="divide-y divide-[#E3DDD1]/60">
+
+
+            {/* TABLE BODY */}
+            <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
               {displayInvoices.map((inv) => {
-                const isMatched = inv.matchStatus === 'MATCHED' || inv.matchStatus === 'MATCHED_100';
-                const supName = inv.supplierName || inv.supplier?.name || 'Acme Steel Pvt Ltd';
+
+                const isMatched =
+                  inv.matchStatus === 'MATCHED' ||
+                  inv.matchStatus === 'MATCHED_100';
+
+                const supName =
+                  inv.supplierName ||
+                  inv.supplier?.name ||
+                  'Acme Steel Pvt Ltd';
+
+                const amount =
+                  Number(inv.totalAmount || inv.amount || 138768);
 
                 return (
-                  <tr key={inv._id || inv.invoiceNumber} className="hover:bg-[#F4EFE6]/50 transition-colors">
-                    <td className="py-3 font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                      {inv.invoiceNumber}
+
+                  <tr
+                    key={inv._id || inv.invoiceNumber}
+                    className="group transition-colors hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                  >
+
+                    {/* INVOICE */}
+                    <td className="px-5 py-4">
+
+                      <div className="flex items-center gap-2.5">
+
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F4EFE6] dark:bg-[#26312D]">
+                          <FileText className="h-3.5 w-3.5 text-[#68716D] dark:text-[#AAB4AF]" />
+                        </div>
+
+                        <div>
+
+                          <p className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                            {inv.invoiceNumber}
+                          </p>
+
+                          <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                            Supplier Invoice
+                          </p>
+
+                        </div>
+
+                      </div>
+
                     </td>
-                    <td className="py-3 font-bold text-[#15803D]">
-                      {inv.poNumber || 'PO-78432'}
-                    </td>
-                    <td className="py-3 font-sans font-medium text-[#1C201E] dark:text-[#F5F7F6]">
-                      {supName}
-                    </td>
-                    <td className="py-3 text-right font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                      ₹{Number(inv.totalAmount || inv.amount || 138768).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-xs text-[8px] font-bold uppercase ${
-                        isMatched
-                          ? 'bg-[#DCFCE7] text-[#15803D]'
-                          : 'bg-[#FEE2E2] text-[#DC2626]'
-                      }`}>
-                        {inv.matchStatus || 'PENDING'}
+
+
+                    {/* PO */}
+                    <td className="px-5 py-4">
+
+                      <span className="inline-flex rounded-md bg-[#F0FDF4] dark:bg-[#12291F] px-2 py-1 text-[9px] font-bold font-mono text-[#15803D] dark:text-[#4ADE80]">
+                        {inv.poNumber || 'PO-78432'}
                       </span>
+
                     </td>
-                    <td className="py-3">
+
+
+                    {/* SUPPLIER */}
+                    <td className="px-5 py-4">
+
+                      <div>
+
+                        <p className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                          {supName}
+                        </p>
+
+                        <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                          Verified supplier
+                        </p>
+
+                      </div>
+
+                    </td>
+
+
+                    {/* AMOUNT */}
+                    <td className="px-5 py-4 text-right">
+
+                      <p className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                        ₹
+                        {amount.toLocaleString('en-IN', {
+                          minimumFractionDigits: 2
+                        })}
+                      </p>
+
+                      <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                        Net payable
+                      </p>
+
+                    </td>
+
+
+                    {/* MATCH STATUS */}
+                    <td className="px-5 py-4">
+
+                      <div className="flex flex-col items-start gap-1">
+
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${isMatched
+                              ? 'border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]'
+                              : 'border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]'
+                            }`}
+                        >
+
+                          {isMatched ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3" />
+                          )}
+
+                          {isMatched
+                            ? 'Matched · 100%'
+                            : inv.matchStatus || 'Pending'}
+
+                        </span>
+
+                        <span className="text-[7px] font-mono text-[#8A938F]">
+                          {isMatched
+                            ? 'PO · GRN · Invoice aligned'
+                            : 'Variance requires review'}
+                        </span>
+
+                      </div>
+
+                    </td>
+
+
+                    {/* DOCUMENT */}
+                    <td className="px-5 py-4">
+
                       <button
                         type="button"
                         onClick={() => setViewingDocInvoice(inv)}
-                        className="text-[#15803D] hover:underline flex items-center gap-1 text-[11px] font-bold"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[#E3DDD1] bg-[#FCFAF4] px-2.5 py-1.5 text-[8px] font-bold font-mono text-[#68716D] transition-colors hover:border-[#CFC7B8] hover:bg-[#F4EFE6] dark:border-[#2B3835] dark:bg-[#1B2422] dark:text-[#AAB4AF]"
                       >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>View PDF</span>
+                        <FileText className="h-3 w-3" />
+                        View PDF
                       </button>
+
                     </td>
-                    <td className="py-3 text-right space-x-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAuditInvoice(inv)}
-                        className="px-2.5 py-1 rounded-xs border border-[#15803D] text-[#15803D] hover:bg-[#DCFCE7] text-xs font-mono font-bold transition-colors"
-                      >
-                        Inspect Diff
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => runMatch(inv)}
-                        disabled={busy}
-                        className="px-2.5 py-1 rounded-xs bg-[#15803D] text-white text-xs font-mono font-bold hover:bg-[#166534] disabled:opacity-50 transition-colors"
-                      >
-                        Run Match
-                      </button>
+
+
+                    {/* ACTIONS */}
+                    <td className="px-5 py-4">
+
+                      <div className="flex items-center justify-end gap-1.5">
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAuditInvoice(inv)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDD6FE] bg-[#F5F3FF] px-2.5 py-2 text-[8px] font-bold font-mono text-[#7C3AED] transition-colors hover:bg-[#EDE9FE] dark:border-[#49366A] dark:bg-[#281E3B] dark:text-[#A78BFA]"
+                        >
+                          <Search className="h-3 w-3" />
+                          Inspect Diff
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => runMatch(inv)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#15803D] px-2.5 py-2 text-[8px] font-bold font-mono text-white transition-colors hover:bg-[#166534] disabled:opacity-50"
+                        >
+                          <GitBranch className="h-3 w-3" />
+                          {busy ? 'Matching…' : 'Run Match'}
+                        </button>
+
+                      </div>
+
                     </td>
+
                   </tr>
+
                 );
+
               })}
+
             </tbody>
+
           </table>
+
         </div>
+
+
+        {/* FOOTER */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+
+          <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+            Step 4 · Invoice Reconciliation & AP Settlement
+          </span>
+
+          <span className="text-[8px] font-mono text-[#8A938F]">
+            PO + GRN + Invoice · Automated variance detection
+          </span>
+
+        </div>
+
       </PaperSheet>
 
       {/* 4. PAYMENT DISBURSEMENT LEDGER */}
-      <PaperSheet variant="default" className="p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1] dark:border-[#2B3835]">
-          <div>
-            <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-              Payment Disbursement & Settlement Ledger
-            </h3>
-            <p className="text-[10px] text-[#68716D] dark:text-[#8E9C97] font-mono">
-              Authorized bank transfers, automated ACH payouts, and vendor payment vouchers
-            </p>
+      <PaperSheet
+        variant="default"
+        className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+      >
+        {/* Header */}
+        <div className="px-5 sm:px-6 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <div className="flex items-start gap-3">
+
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                <CreditCard className="h-4 w-4 text-[#2563EB]" />
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+
+                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                    Payment Disbursement & Settlement Ledger
+                  </h3>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#2563EB]">
+                    <ShieldCheck className="h-3 w-3" />
+                    Banking Gateway
+                  </span>
+
+                </div>
+
+                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                  Authorized bank transfers, automated ACH payouts, and vendor payment vouchers.
+                </p>
+              </div>
+
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 self-start sm:self-auto text-[8px] font-mono uppercase tracking-wider text-[#15803D] font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              Gateway Connected
+            </span>
+
           </div>
-          <span className="text-xs font-mono text-[#2563EB] font-bold">Banking Gateway Connected</span>
         </div>
 
+        {/* Queue Summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+          <div className="px-5 py-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Settlement Queue
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+              {displayPayments.length}
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Settled
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#15803D]">
+              {
+                displayPayments.filter(
+                  pay => pay.status === 'COMPLETED'
+                ).length
+              }
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Pending
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#2563EB]">
+              {
+                displayPayments.filter(
+                  pay => pay.status !== 'COMPLETED'
+                ).length
+              }
+            </p>
+          </div>
+
+          <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+              Total Value
+            </p>
+
+            <p className="mt-1 text-lg font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+              ₹
+              {displayPayments
+                .reduce(
+                  (total, pay) => total + Number(pay.amount || 0),
+                  0
+                )
+                .toLocaleString('en-IN')}
+            </p>
+          </div>
+
+        </div>
+
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead>
-              <tr className="border-b border-[#E3DDD1] dark:border-[#2B3835] text-[10px] text-[#68716D]">
-                <th className="py-2.5 font-semibold">Payment Voucher ID</th>
-                <th className="py-2.5 font-semibold">Invoice Ref</th>
-                <th className="py-2.5 font-semibold">Payee Vendor</th>
-                <th className="py-2.5 font-semibold text-right">Settlement Amount</th>
-                <th className="py-2.5 font-semibold">Payment Method</th>
-                <th className="py-2.5 font-semibold">Disbursement State</th>
-                <th className="py-2.5 font-semibold text-right">Action</th>
+
+          <table className="w-full min-w-[1050px] text-left">
+
+            <thead className="bg-[#FAF8F3] dark:bg-[#17201D]">
+
+              <tr>
+
+                {[
+                  'Payment Voucher',
+                  'Invoice Reference',
+                  'Payee Vendor',
+                  'Settlement Amount',
+                  'Payment Method',
+                  'Disbursement State',
+                  'Action'
+                ].map((heading) => (
+
+                  <th
+                    key={heading}
+                    className={`px-5 py-3 text-[8px] font-bold uppercase tracking-widest text-[#8A938F] ${heading === 'Settlement Amount' ||
+                        heading === 'Action'
+                        ? 'text-right'
+                        : ''
+                      }`}
+                  >
+                    {heading}
+                  </th>
+
+                ))}
+
               </tr>
+
             </thead>
-            <tbody className="divide-y divide-[#E3DDD1]/60">
-              {displayPayments.map((pay) => (
-                <tr key={pay._id || pay.paymentReference} className="hover:bg-[#F4EFE6]/50 transition-colors">
-                  <td className="py-3 font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                    {pay.paymentReference}
-                  </td>
-                  <td className="py-3 font-bold text-[#15803D]">
-                    {pay.invoiceNumber}
-                  </td>
-                  <td className="py-3 font-sans font-medium text-[#1C201E] dark:text-[#F5F7F6]">
-                    {pay.vendorName}
-                  </td>
-                  <td className="py-3 text-right font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                    ₹{Number(pay.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 text-[#68716D]">
-                    {pay.paymentMethod}
-                  </td>
-                  <td className="py-3">
-                    <span className={`px-2 py-0.5 rounded-xs text-[8px] font-bold uppercase ${
-                      pay.status === 'COMPLETED'
-                        ? 'bg-[#DCFCE7] text-[#15803D]'
-                        : 'bg-[#DBEAFE] text-[#2563EB]'
-                    }`}>
-                      {pay.status}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right">
-                    {pay.status !== 'COMPLETED' ? (
-                      <button
-                        type="button"
-                        onClick={() => updatePayment(pay._id, 'COMPLETED')}
-                        disabled={busy}
-                        className="px-3 py-1 rounded-xs bg-[#15803D] text-white text-xs font-mono font-bold hover:bg-[#166534] transition-colors"
-                      >
-                        Disburse Funds
-                      </button>
-                    ) : (
-                      <span className="text-[10px] font-bold text-[#15803D]">✓ Settled</span>
-                    )}
+
+            <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+              {displayPayments.length === 0 ? (
+
+                <tr>
+                  <td colSpan="7" className="px-5 py-12 text-center">
+
+                    <CreditCard className="mx-auto h-6 w-6 text-[#9AA29E]" />
+
+                    <p className="mt-2 text-[10px] font-semibold text-[#59625E] dark:text-[#AAB4AF]">
+                      No payment settlements found
+                    </p>
+
+                    <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                      The payment ledger is currently clear.
+                    </p>
+
                   </td>
                 </tr>
-              ))}
+
+              ) : (
+
+                displayPayments.map((pay) => {
+
+                  const isCompleted = pay.status === 'COMPLETED';
+
+                  return (
+                    <tr
+                      key={pay._id || pay.paymentReference}
+                      className="group hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824] transition-colors"
+                    >
+
+                      {/* Payment Voucher */}
+                      <td className="px-5 py-4">
+
+                        <div className="flex items-center gap-2">
+
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F4EFE6] dark:bg-[#26312D]">
+                            <Receipt className="h-3.5 w-3.5 text-[#68716D]" />
+                          </div>
+
+                          <div>
+
+                            <p className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                              {pay.paymentReference}
+                            </p>
+
+                            <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                              Payment Voucher
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </td>
+
+                      {/* Invoice */}
+                      <td className="px-5 py-4">
+
+                        <span className="inline-flex rounded-md bg-[#F0FDF4] px-2 py-1 text-[9px] font-bold font-mono text-[#15803D]">
+                          {pay.invoiceNumber}
+                        </span>
+
+                      </td>
+
+                      {/* Vendor */}
+                      <td className="px-5 py-4">
+
+                        <div>
+
+                          <p className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                            {pay.vendorName}
+                          </p>
+
+                          <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                            Authorized Payee
+                          </p>
+
+                        </div>
+
+                      </td>
+
+                      {/* Amount */}
+                      <td className="px-5 py-4 text-right">
+
+                        <span className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                          ₹
+                          {Number(pay.amount || 0).toLocaleString(
+                            'en-IN',
+                            { minimumFractionDigits: 2 }
+                          )}
+                        </span>
+
+                      </td>
+
+                      {/* Payment Method */}
+                      <td className="px-5 py-4">
+
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#E3DDD1] bg-[#F4EFE6] px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-[#59625E] dark:border-[#2B3835] dark:bg-[#222D2B] dark:text-[#AAB4AF]">
+                          <CreditCard className="h-3 w-3" />
+                          {pay.paymentMethod || 'BANK TRANSFER'}
+                        </span>
+
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-4">
+
+                        <div className="flex flex-col items-start gap-1">
+
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${isCompleted
+                                ? 'border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]'
+                                : 'border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]'
+                              }`}
+                          >
+
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : (
+                              <Clock className="h-3 w-3" />
+                            )}
+
+                            {isCompleted
+                              ? 'Settled'
+                              : pay.status || 'PROCESSING'}
+
+                          </span>
+
+                          <span className="text-[7px] font-mono text-[#8A938F]">
+                            {isCompleted
+                              ? 'Funds successfully transferred'
+                              : 'Awaiting bank disbursement'}
+                          </span>
+
+                        </div>
+
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-5 py-4">
+
+                        <div className="flex justify-end">
+
+                          {!isCompleted ? (
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updatePayment(pay._id, 'COMPLETED')
+                              }
+                              disabled={busy}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15803D] px-3 py-2 text-[8px] font-bold font-mono text-white hover:bg-[#166534] disabled:opacity-50 transition-colors"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Disburse Funds
+                            </button>
+
+                          ) : (
+
+                            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F0FDF4] px-3 py-2 text-[8px] font-bold font-mono text-[#15803D]">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Settled
+                            </span>
+
+                          )}
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+                  );
+
+                })
+
+              )}
+
             </tbody>
+
           </table>
+
         </div>
+
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+
+          <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+            Step 5 · Payment Disbursement & Settlement
+          </span>
+
+          <span className="text-[8px] font-mono text-[#8A938F]">
+            Banking Gateway · Vendor Settlement Ledger
+          </span>
+
+        </div>
+
       </PaperSheet>
 
       {/* DOCUMENT PDF VIEWER MODAL */}

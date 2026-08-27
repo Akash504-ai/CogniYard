@@ -33,6 +33,7 @@ import {
   Clock,
   ShoppingCart,
   Receipt,
+  ReceiptText,
   CheckCircle2,
   AlertTriangle,
   Building2,
@@ -44,7 +45,9 @@ import {
   Plus,
   ArrowRight,
   Scale,
-  X
+  X,
+  GitCompare,
+  Search
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -153,7 +156,7 @@ export default function Dashboard() {
 
     return (
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
-        
+
         {/* 1. TOP PROCUREMENT KPI STRIP */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-3 sm:p-4 rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-[0_1px_3px_rgba(35,30,25,0.04)] space-y-1">
@@ -211,7 +214,7 @@ export default function Dashboard() {
 
         {/* 2. CHARTS & GRAPHS SECTION: PIE-CHART & SPEND BAR GRAPH */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
+
           {/* Commodity Spend Distribution (Donut / Pie Chart) */}
           <div className="lg:col-span-5">
             <PaperSheet variant="default" className="p-4 sm:p-5 space-y-3 h-full">
@@ -270,125 +273,603 @@ export default function Dashboard() {
             </PaperSheet>
           </div>
 
-          {/* Monthly Procurement Spend vs Budget (Bar Chart) */}
+          {/* Monthly Procurement Spend vs Budget */}
           <div className="lg:col-span-7">
-            <PaperSheet variant="default" className="p-4 sm:p-5 space-y-3 h-full">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E3DDD1] dark:border-[#2B3835]">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-[#2563EB]" />
-                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-                    Monthly Spend vs Budget Allocation (₹ Lakhs)
-                  </h3>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-mono">
-                  <span className="flex items-center gap-1 text-[#15803D]">
-                    <span className="w-2.5 h-2.5 rounded-xs bg-[#15803D]" /> Spent
-                  </span>
-                  <span className="flex items-center gap-1 text-[#D4CABE]">
-                    <span className="w-2.5 h-2.5 rounded-xs bg-[#D4CABE]" /> Budget
-                  </span>
+            <PaperSheet
+              variant="default"
+              className="h-full overflow-hidden border border-[#E3DDD1] dark:border-[#2B3835]"
+            >
+              {/* Header */}
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                      <BarChart3 className="h-4 w-4 text-[#2563EB]" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                          Procurement Spend
+                        </h3>
+
+                        <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#15803D] dark:bg-[#12291F] dark:text-[#4ADE80]">
+                          FY 2026
+                        </span>
+                      </div>
+
+                      <p className="mt-0.5 text-[9px] font-mono text-[#8A938F]">
+                        Monthly committed spend against approved budget
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Current performance */}
+                  <div className="sm:text-right">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                      Current Month
+                    </p>
+
+                    <p className="mt-0.5 text-lg font-bold text-[#15803D]">
+                      ₹4.28L
+                    </p>
+
+                    <p className="text-[8px] font-mono text-[#68716D]">
+                      of ₹5.00L budget
+                    </p>
+                  </div>
+
                 </div>
               </div>
 
-              <div className="h-56 w-full pt-2">
+
+              {/* Legend */}
+              <div className="flex items-center gap-5 border-y border-[#E3DDD1] bg-[#FAF8F3] px-5 py-2.5 dark:border-[#2B3835] dark:bg-[#17201D]">
+
+                <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#59625E] dark:text-[#AAB4AF]">
+                  <span className="h-2 w-2 rounded-sm bg-[#15803D]" />
+                  Actual Spend
+                </span>
+
+                <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#59625E] dark:text-[#AAB4AF]">
+                  <span className="h-2 w-2 rounded-sm bg-[#D4CABE]" />
+                  Approved Budget
+                </span>
+
+                <span className="ml-auto hidden sm:block text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                  ₹ Lakhs
+                </span>
+
+              </div>
+
+
+              {/* Chart */}
+              <div className="h-[250px] w-full px-3 pt-4">
+
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlySpendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E3DDD1" opacity={0.6} />
-                    <XAxis dataKey="month" stroke="#68716D" fontSize={11} tickLine={false} xAxisLabel="Month" />
-                    <YAxis stroke="#68716D" fontSize={11} tickLine={false} />
-                    <Tooltip
-                      formatter={(val) => `₹${val} Lakhs`}
-                      contentStyle={{
-                        backgroundColor: '#FCFAF4',
-                        borderColor: '#E3DDD1',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                  <BarChart
+                    data={monthlySpendData}
+                    margin={{
+                      top: 12,
+                      right: 16,
+                      left: 0,
+                      bottom: 4
+                    }}
+                    barGap={5}
+                  >
+
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="#E3DDD1"
+                      strokeDasharray="3 4"
+                      opacity={0.7}
+                    />
+
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: '#68716D',
+                        fontSize: 10,
                         fontFamily: 'monospace'
                       }}
+                      dy={8}
                     />
-                    <Bar dataKey="Budget" fill="#D4CABE" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="Spent" fill="#15803D" radius={[2, 2, 0, 0]} />
+
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: '#68716D',
+                        fontSize: 9,
+                        fontFamily: 'monospace'
+                      }}
+                      tickFormatter={(value) => `₹${value}L`}
+                      width={42}
+                    />
+
+                    <Tooltip
+                      cursor={{ fill: '#F4EFE6', opacity: 0.5 }}
+                      formatter={(value, name) => [
+                        `₹${Number(value).toFixed(2)}L`,
+                        name === 'Spent' ? 'Actual Spend' : 'Approved Budget'
+                      ]}
+                      labelFormatter={(label) => `Month: ${label}`}
+                      contentStyle={{
+                        backgroundColor: '#FCFAF4',
+                        border: '1px solid #E3DDD1',
+                        borderRadius: '6px',
+                        fontSize: '10px',
+                        fontFamily: 'monospace',
+                        boxShadow: '0 4px 12px rgba(35,30,25,0.08)'
+                      }}
+                    />
+
+                    {/* Budget */}
+                    <Bar
+                      dataKey="Budget"
+                      name="Budget"
+                      fill="#D4CABE"
+                      radius={[4, 4, 0, 0]}
+                      barSize={18}
+                    />
+
+                    {/* Actual */}
+                    <Bar
+                      dataKey="Spent"
+                      name="Spent"
+                      fill="#15803D"
+                      radius={[4, 4, 0, 0]}
+                      barSize={18}
+                    />
+
                   </BarChart>
                 </ResponsiveContainer>
+
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-[#E3DDD1] dark:border-[#2B3835] text-[11px] font-mono text-[#68716D] dark:text-[#8E9C97]">
-                <span>Variance: <strong>-14.4% Under Budget</strong></span>
-                <span className="text-[#15803D] font-bold">Optimal Capital Efficiency</span>
+
+              {/* Bottom analytics */}
+              <div className="grid grid-cols-3 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    YTD Spend
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    ₹18.88L
+                  </p>
+                </div>
+
+                <div className="border-x border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Budget Utilized
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#2563EB]">
+                    86.2%
+                  </p>
+                </div>
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Current Variance
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#15803D]">
+                    -14.4%
+                  </p>
+                </div>
+
               </div>
+
+
+              {/* Insight */}
+              {/* <div className="mx-5 mb-5 mt-3 flex items-center gap-2 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2.5 dark:border-[#245C3F] dark:bg-[#12291F]">
+
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#15803D] dark:text-[#4ADE80]" />
+
+                <div>
+                  <p className="text-[9px] font-bold text-[#15803D] dark:text-[#4ADE80]">
+                    Capital efficiency is on target
+                  </p>
+
+                  <p className="mt-0.5 text-[8px] text-[#68716D] dark:text-[#9BA6A1]">
+                    Current procurement commitments remain below the approved monthly allocation.
+                  </p>
+                </div>
+
+              </div> */}
+
             </PaperSheet>
           </div>
         </div>
 
-        {/* 3. PURCHASE ORDERS & SUPPLIER SCORECARD SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 space-y-4">
-            <PaperSheet variant="default" className="p-4 sm:p-6 space-y-3">
-              <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1] dark:border-[#2B3835]">
-                <div>
-                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-                    Dispatched Purchase Orders Pipeline
-                  </h3>
-                  <p className="text-[10px] text-[#68716D] dark:text-[#8E9C97] font-mono">
-                    Real-time status synchronised across Warehouse and Supplier networks
+        {/* 3. PURCHASE ORDER PIPELINE + SUPPLIER SCORECARD */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* PO PIPELINE */}
+          <div className="lg:col-span-8">
+            <PaperSheet
+              variant="default"
+              className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+            >
+
+              {/* ───────── HEADER ───────── */}
+              <div className="px-5 sm:px-6 pt-5 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#DCFCE7] dark:bg-[#163824]">
+                        <Truck className="h-4 w-4 text-[#15803D] dark:text-[#4ADE80]" />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                            Purchase Order Pipeline
+                          </h3>
+
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#15803D] dark:bg-[#12291F] dark:text-[#4ADE80]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+                            Live
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="mt-2 ml-[42px] text-[10px] font-mono text-[#68716D] dark:text-[#8E9C97]">
+                      Real-time fulfillment visibility across supplier and warehouse networks
+                    </p>
+                  </div>
+
+                  <NavLink
+                    to="/procurement"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#15803D] px-3.5 py-2 text-[10px] font-bold text-white transition-all hover:bg-[#166534] hover:-translate-y-0.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Create PO
+                  </NavLink>
+
+                </div>
+              </div>
+
+
+              {/* ───────── MINI SUMMARY ───────── */}
+              <div className="grid grid-cols-3 border-y border-[#E3DDD1] bg-[#FAF8F3] dark:border-[#2B3835] dark:bg-[#17201D]">
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Total Orders
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    {displayPos.length}
                   </p>
                 </div>
+
+                <div className="border-x border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    In Fulfillment
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-[#2563EB]">
+                    {
+                      displayPos.filter(
+                        po =>
+                          po.status !== 'COMPLETED' &&
+                          po.status !== 'RECEIVED'
+                      ).length
+                    }
+                  </p>
+                </div>
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Received
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-[#15803D]">
+                    {
+                      displayPos.filter(
+                        po =>
+                          po.status === 'COMPLETED' ||
+                          po.status === 'RECEIVED'
+                      ).length
+                    }
+                  </p>
+                </div>
+
+              </div>
+
+
+              {/* ───────── COLUMN LABELS ───────── */}
+              <div className="hidden md:grid grid-cols-[1.2fr_1.45fr_1.8fr_0.9fr_1.15fr] gap-4 px-5 py-2.5 border-b border-[#E3DDD1] dark:border-[#2B3835] bg-white dark:bg-[#18201D]">
+
+                <span className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Purchase Order
+                </span>
+
+                <span className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Supplier
+                </span>
+
+                <span className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Shipment
+                </span>
+
+                <span className="text-right text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Value
+                </span>
+
+                <span className="text-right text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  State
+                </span>
+
+              </div>
+
+
+              {/* ───────── PO ROWS ───────── */}
+              <div className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                {displayPos.map((po) => {
+
+                  const supName =
+                    po.supplierName ||
+                    po.supplier?.name ||
+                    'Authorized Supplier';
+
+                  const itemDesc =
+                    po.items
+                      ?.map(
+                        i =>
+                          `${i.quantity} × ${i.productName || 'Industrial Parts'
+                          }`
+                      )
+                      .join(', ') ||
+                    '500 units';
+
+                  const isCompleted =
+                    po.status === 'COMPLETED' ||
+                    po.status === 'RECEIVED';
+
+                  const isWaiting =
+                    po.status === 'AT_GATE' ||
+                    po.status === 'WAITING_FOR_DOCK';
+
+                  const statusLabel =
+                    po.status || 'IN_TRANSIT';
+
+                  let statusClass =
+                    'bg-[#DBEAFE] text-[#2563EB] border-[#BFDBFE]';
+
+                  let StatusIcon = Truck;
+
+                  if (isCompleted) {
+                    statusClass =
+                      'bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]';
+
+                    StatusIcon = CheckCircle2;
+                  }
+
+                  if (isWaiting) {
+                    statusClass =
+                      'bg-[#FEF3C7] text-[#D97706] border-[#FDE68A]';
+
+                    StatusIcon = Clock;
+                  }
+
+                  return (
+                    <div
+                      key={po._id || po.poNumber}
+                      className="group px-5 py-4 transition-all hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                    >
+
+                      {/* DESKTOP */}
+                      <div className="hidden md:grid grid-cols-[1.2fr_1.45fr_1.8fr_0.9fr_1.15fr] gap-4 items-center">
+
+                        {/* PO */}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#F0FDF4] dark:bg-[#163824]">
+                              <FileText className="h-3.5 w-3.5 text-[#15803D]" />
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-[#15803D] dark:text-[#4ADE80]">
+                                {po.poNumber}
+                              </p>
+
+                              <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                                Purchase Order
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+
+                        {/* SUPPLIER */}
+                        <div className="min-w-0">
+
+                          <div className="flex items-center gap-2">
+
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E9E5DB] dark:bg-[#2B3835]">
+                              <Building2 className="h-3.5 w-3.5 text-[#68716D] dark:text-[#AAB4AF]" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-[10px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                                {supName}
+                              </p>
+
+                              <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                                Verified supplier
+                              </p>
+                            </div>
+
+                          </div>
+
+                        </div>
+
+
+                        {/* SHIPMENT */}
+                        <div className="min-w-0">
+
+                          <p
+                            title={itemDesc}
+                            className="truncate text-[10px] text-[#59625E] dark:text-[#AAB4AF]"
+                          >
+                            {itemDesc}
+                          </p>
+
+                          <div className="mt-1 flex items-center gap-1.5">
+
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#15803D]" />
+
+                            <span className="text-[7px] font-bold uppercase tracking-wider text-[#8A938F]">
+                              Shipment tracked
+                            </span>
+
+                          </div>
+
+                        </div>
+
+
+                        {/* VALUE */}
+                        <div className="text-right">
+                          <p className="text-[11px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                            ₹{(po.totalAmount || 0).toLocaleString('en-IN')}
+                          </p>
+
+                          <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                            PO Value
+                          </p>
+                        </div>
+
+
+                        {/* STATUS */}
+                        <div className="flex justify-end">
+
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[7px] font-bold uppercase tracking-wide ${statusClass}`}
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {statusLabel}
+                          </span>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* MOBILE */}
+                      <div className="md:hidden">
+
+                        <div className="flex items-start justify-between gap-3">
+
+                          <div className="flex items-center gap-2">
+
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F0FDF4] dark:bg-[#163824]">
+                              <FileText className="h-3.5 w-3.5 text-[#15803D]" />
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-[#15803D]">
+                                {po.poNumber}
+                              </p>
+
+                              <p className="text-[8px] text-[#8A938F]">
+                                {supName}
+                              </p>
+                            </div>
+
+                          </div>
+
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[7px] font-bold uppercase ${statusClass}`}
+                          >
+                            <StatusIcon className="h-2.5 w-2.5" />
+                            {statusLabel}
+                          </span>
+
+                        </div>
+
+                        <div className="mt-3 flex items-end justify-between gap-4">
+
+                          <div className="min-w-0">
+                            <p className="truncate text-[9px] text-[#68716D] dark:text-[#9BA6A1]">
+                              {itemDesc}
+                            </p>
+                          </div>
+
+                          <p className="shrink-0 text-[11px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                            ₹{(po.totalAmount || 0).toLocaleString('en-IN')}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  );
+                })}
+
+                {displayPos.length === 0 && (
+                  <div className="px-5 py-12 text-center">
+
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#F4EFE6] dark:bg-[#26312D]">
+                      <FileText className="h-4 w-4 text-[#8A938F]" />
+                    </div>
+
+                    <p className="mt-3 text-xs font-semibold text-[#59625E] dark:text-[#B8C1BD]">
+                      No purchase orders found
+                    </p>
+
+                    <p className="mt-1 text-[9px] text-[#8A938F]">
+                      Create a purchase order to begin tracking fulfillment.
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
+
+
+              {/* ───────── FOOTER ───────── */}
+              <div className="flex items-center justify-between border-t border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+
+                <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                  {displayPos.length} active purchase orders
+                </span>
+
                 <NavLink
                   to="/procurement"
-                  className="px-3 py-1.5 rounded-xs bg-[#15803D] text-white text-xs font-sans font-bold hover:bg-[#166534] transition-colors flex items-center gap-1"
+                  className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#15803D] transition-colors hover:text-[#166534]"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create PO</span>
+                  Procurement workspace
+                  <ArrowRight className="h-3 w-3" />
                 </NavLink>
+
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-[#E3DDD1] dark:border-[#2B3835] text-[10px] text-[#68716D]">
-                      <th className="py-2 font-semibold">PO Number</th>
-                      <th className="py-2 font-semibold">Supplier Vendor</th>
-                      <th className="py-2 font-semibold">Item SKU</th>
-                      <th className="py-2 font-semibold text-right">Value (₹)</th>
-                      <th className="py-2 font-semibold">Fulfillment State</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E3DDD1]/60">
-                    {displayPos.map((po) => {
-                      const supName = po.supplierName || po.supplier?.name || 'Authorized Supplier';
-                      const itemDesc = po.items?.map(i => `${i.quantity} × ${i.productName || 'Industrial Parts'}`).join(', ') || '500 units';
-                      
-                      let badge = 'bg-[#DBEAFE] text-[#2563EB]';
-                      if (po.status === 'COMPLETED' || po.status === 'RECEIVED') badge = 'bg-[#DCFCE7] text-[#15803D]';
-                      if (po.status === 'AT_GATE' || po.status === 'WAITING_FOR_DOCK') badge = 'bg-[#FEF3C7] text-[#D97706]';
-
-                      return (
-                        <tr key={po._id || po.poNumber} className="hover:bg-[#F4EFE6]/50 transition-colors">
-                          <td className="py-2.5 font-bold text-[#15803D]">{po.poNumber}</td>
-                          <td className="py-2.5 font-sans font-medium text-[#1C201E] dark:text-[#F5F7F6]">{supName}</td>
-                          <td className="py-2.5 font-sans text-[#68716D] dark:text-[#8E9C97]">{itemDesc}</td>
-                          <td className="py-2.5 text-right font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                            ₹{(po.totalAmount || 0).toLocaleString('en-IN')}
-                          </td>
-                          <td className="py-2.5">
-                            <span className={`px-2 py-0.5 rounded-xs text-[8px] font-bold uppercase ${badge}`}>
-                              {po.status || 'IN_TRANSIT'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
             </PaperSheet>
           </div>
 
-          <div className="lg:col-span-4 space-y-4">
-            <PaperSheet variant="default" className="p-4 sm:p-5 space-y-3">
+
+          {/* ───────── SUPPLIER SCORECARD ───────── */}
+          <div className="lg:col-span-4">
+            <PaperSheet
+              variant="default"
+              className="h-full p-4 sm:p-5 border border-[#E3DDD1] dark:border-[#2B3835]"
+            >
               <SupplierScorecard />
             </PaperSheet>
           </div>
+
         </div>
       </div>
     );
@@ -514,7 +995,7 @@ export default function Dashboard() {
 
     return (
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
-        
+
         {/* 1. FINANCE KPI STRIP */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-3 sm:p-4 rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-[0_1px_3px_rgba(35,30,25,0.04)] space-y-1">
@@ -564,7 +1045,7 @@ export default function Dashboard() {
 
         {/* 2. RECHARTS SECTION: 3-WAY MATCH PIE CHART & WEEKLY CASHFLOW BAR GRAPH */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
+
           {/* Match Distribution Donut / Pie Chart */}
           <div className="lg:col-span-5">
             <PaperSheet variant="default" className="p-4 sm:p-5 space-y-3 h-full">
@@ -625,44 +1106,198 @@ export default function Dashboard() {
 
           {/* Weekly Cashflow vs Disbursements Bar Chart */}
           <div className="lg:col-span-7">
-            <PaperSheet variant="default" className="p-4 sm:p-5 space-y-3 h-full">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E3DDD1] dark:border-[#2B3835]">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-[#2563EB]" />
-                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-                    Weekly Invoiced Amount vs Settled Payouts
-                  </h3>
+            <PaperSheet
+              variant="default"
+              className="h-full overflow-hidden border border-[#E3DDD1] dark:border-[#2B3835]"
+            >
+              {/* Header */}
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                      <BarChart3 className="h-4 w-4 text-[#2563EB]" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                          AP Cashflow
+                        </h3>
+
+                        <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#2563EB] dark:bg-[#182942] dark:text-[#60A5FA]">
+                          5 Week View
+                        </span>
+                      </div>
+
+                      <p className="mt-0.5 text-[9px] font-mono text-[#8A938F]">
+                        Vendor invoices compared with settled disbursements
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="sm:text-right">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                      Settlement Rate
+                    </p>
+
+                    <p className="mt-0.5 text-lg font-bold text-[#15803D]">
+                      94.2%
+                    </p>
+
+                    <p className="text-[8px] font-mono text-[#68716D] dark:text-[#8E9C97]">
+                      within 3 days
+                    </p>
+                  </div>
+
                 </div>
-                <span className="text-[10px] font-mono text-[#2563EB] font-bold">₹ in Indian Rupees</span>
               </div>
 
-              <div className="h-56 w-full">
+              {/* Legend */}
+              <div className="flex items-center gap-5 border-y border-[#E3DDD1] bg-[#FAF8F3] px-5 py-2.5 dark:border-[#2B3835] dark:bg-[#17201D]">
+
+                <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#59625E] dark:text-[#AAB4AF]">
+                  <span className="h-2 w-2 rounded-sm bg-[#7C3AED]" />
+                  Vendor Billed
+                </span>
+
+                <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#59625E] dark:text-[#AAB4AF]">
+                  <span className="h-2 w-2 rounded-sm bg-[#15803D]" />
+                  Settled
+                </span>
+
+                <span className="ml-auto hidden sm:block text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                  ₹ INR
+                </span>
+
+              </div>
+
+              {/* Chart */}
+              <div className="h-[250px] w-full px-3 pt-4">
+
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyFinanceCashflow} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E3DDD1" opacity={0.6} />
-                    <XAxis dataKey="week" stroke="#68716D" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#68716D" fontSize={10} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(val) => `₹${Number(val).toLocaleString('en-IN')}`}
-                      contentStyle={{
-                        backgroundColor: '#FCFAF4',
-                        borderColor: '#E3DDD1',
-                        borderRadius: '4px',
-                        fontSize: '11px',
+                  <BarChart
+                    data={weeklyFinanceCashflow}
+                    margin={{
+                      top: 12,
+                      right: 16,
+                      left: 0,
+                      bottom: 4
+                    }}
+                    barGap={5}
+                  >
+
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="#E3DDD1"
+                      strokeDasharray="3 4"
+                      opacity={0.7}
+                    />
+
+                    <XAxis
+                      dataKey="week"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: '#68716D',
+                        fontSize: 10,
                         fontFamily: 'monospace'
                       }}
+                      dy={8}
                     />
-                    <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'sans-serif' }} />
-                    <Bar dataKey="billed" name="Billed by Vendors" fill="#7C3AED" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="settled" name="Settled Disbursements" fill="#15803D" radius={[3, 3, 0, 0]} />
+
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: '#68716D',
+                        fontSize: 9,
+                        fontFamily: 'monospace'
+                      }}
+                      tickFormatter={(value) =>
+                        `₹${(value / 1000).toFixed(0)}k`
+                      }
+                      width={42}
+                    />
+
+                    <Tooltip
+                      cursor={{
+                        fill: '#F4EFE6',
+                        opacity: 0.5
+                      }}
+                      formatter={(value, name) => [
+                        `₹${Number(value).toLocaleString('en-IN')}`,
+                        name === 'billed'
+                          ? 'Vendor Billed'
+                          : 'Settled Disbursement'
+                      ]}
+                      labelFormatter={(label) => `Period: ${label}`}
+                      contentStyle={{
+                        backgroundColor: '#FCFAF4',
+                        border: '1px solid #E3DDD1',
+                        borderRadius: '6px',
+                        fontSize: '10px',
+                        fontFamily: 'monospace',
+                        boxShadow: '0 4px 12px rgba(35,30,25,0.08)'
+                      }}
+                    />
+
+                    <Bar
+                      dataKey="billed"
+                      name="billed"
+                      fill="#7C3AED"
+                      radius={[4, 4, 0, 0]}
+                      barSize={20}
+                    />
+
+                    <Bar
+                      dataKey="settled"
+                      name="settled"
+                      fill="#15803D"
+                      radius={[4, 4, 0, 0]}
+                      barSize={20}
+                    />
+
                   </BarChart>
                 </ResponsiveContainer>
+
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-[#E3DDD1] dark:border-[#2B3835] text-[11px] font-mono text-[#68716D]">
-                <span>AP Settlement Velocity: <strong>94.2% within 3 days</strong></span>
-                <span className="text-[#15803D] font-bold">Zero Early-Payment Penalty</span>
-              </div>
+              {/* Bottom analytics
+              <div className="grid grid-cols-3 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Total Billed
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    ₹12.19L
+                  </p>
+                </div>
+
+                <div className="border-x border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Total Settled
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#15803D]">
+                    ₹10.84L
+                  </p>
+                </div>
+
+                <div className="px-5 py-3">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                    Outstanding
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-[#D97706]">
+                    ₹1.35L
+                  </p>
+                </div>
+
+              </div> */}
+
             </PaperSheet>
           </div>
 
@@ -694,72 +1329,327 @@ export default function Dashboard() {
         )}
 
         {/* 4. MAIN FINANCE RECONCILIATION TABLE */}
-        <PaperSheet variant="default" className="p-4 sm:p-6 space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1]">
-            <div>
-              <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
-                Invoice Matching & AP Settlement Queue
-              </h3>
-              <p className="text-[10px] text-[#68716D] dark:text-[#8E9C97] font-mono">
-                Click <strong>Inspect Diff</strong> to audit 3-way line item variances
+        <PaperSheet
+          variant="default"
+          className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+        >
+          {/* Header */}
+          <div className="px-5 sm:px-6 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+              <div className="flex items-start gap-3">
+
+                {/* Finance / Audit Icon */}
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                  <ReceiptText className="h-4 w-4 text-[#2563EB]" />
+                </div>
+
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+
+                    <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                      Invoice Matching & AP Settlement Queue
+                    </h3>
+
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#2563EB]">
+                      <GitCompare className="h-3 w-3" />
+                      3-Way Match
+                    </span>
+
+                  </div>
+
+                  <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                    Audit invoice, purchase order and goods receipt variances before payment.
+                  </p>
+                </div>
+
+              </div>
+
+              <NavLink
+                to="/finance"
+                className="inline-flex items-center justify-center gap-1.5 self-start sm:self-auto rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-[9px] font-bold font-mono text-[#2563EB] hover:bg-[#DBEAFE] transition-colors"
+              >
+                Open Match Studio
+                <span>→</span>
+              </NavLink>
+
+            </div>
+          </div>
+
+          {/* Queue Summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+            <div className="px-5 py-3">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                Queue
+              </p>
+
+              <p className="mt-1 text-lg font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                {financeQueueInvoices.length}
               </p>
             </div>
-            <NavLink to="/finance" className="text-xs font-sans text-[#2563EB] hover:underline font-bold">
-              Open 3-Way Match Studio →
-            </NavLink>
+
+            <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                Matched
+              </p>
+
+              <p className="mt-1 text-lg font-bold font-mono text-[#15803D]">
+                {
+                  financeQueueInvoices.filter(
+                    (inv) => inv.matchStatus === "MATCHED"
+                  ).length
+                }
+              </p>
+            </div>
+
+            <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                Exceptions
+              </p>
+
+              <p className="mt-1 text-lg font-bold font-mono text-[#DC2626]">
+                {
+                  financeQueueInvoices.filter(
+                    (inv) => inv.matchStatus !== "MATCHED"
+                  ).length
+                }
+              </p>
+            </div>
+
+            <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                Payable
+              </p>
+
+              <p className="mt-1 text-lg font-bold font-mono text-[#2563EB]">
+                ₹
+                {financeQueueInvoices
+                  .reduce(
+                    (total, inv) => total + Number(inv.amount || 0),
+                    0
+                  )
+                  .toLocaleString("en-IN")}
+              </p>
+            </div>
+
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
-                <tr className="border-b border-[#E3DDD1] text-[10px] text-[#68716D]">
-                  <th className="py-2.5 font-semibold">Invoice No</th>
-                  <th className="py-2.5 font-semibold">PO Reference</th>
-                  <th className="py-2.5 font-semibold">Vendor</th>
-                  <th className="py-2.5 font-semibold text-right">Net Payable</th>
-                  <th className="py-2.5 font-semibold">3-Way Match Status</th>
-                  <th className="py-2.5 font-semibold text-right">Reconciliation Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E3DDD1]/60">
-                {financeQueueInvoices.map((inv) => {
-                  const isMatch = inv.matchStatus === 'MATCHED';
 
-                  return (
-                    <tr key={inv._id} className="hover:bg-[#F4EFE6]/50 transition-colors">
-                      <td className="py-3 font-bold text-[#1C201E] dark:text-[#F5F7F6]">{inv.invoiceNumber}</td>
-                      <td className="py-3 font-bold text-[#15803D]">{inv.poNumber}</td>
-                      <td className="py-3 font-sans font-medium">{inv.supplierName}</td>
-                      <td className="py-3 text-right font-bold">₹{inv.amount.toLocaleString('en-IN')}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded-xs text-[8px] font-bold uppercase ${
-                          isMatch ? 'bg-[#DCFCE7] text-[#15803D]' : 'bg-[#FEE2E2] text-[#DC2626]'
-                        }`}>
-                          {isMatch ? 'MATCHED (100%)' : 'MISMATCH (QTY -2)'}
-                        </span>
-                      </td>
-                      <td className="py-3 text-right space-x-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFinanceAuditInvoice(inv)}
-                          className="px-2.5 py-1 rounded-xs border border-[#15803D] text-[#15803D] hover:bg-[#DCFCE7] text-xs font-mono font-bold transition-colors"
-                        >
-                          Inspect Diff
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => showNotification(`Payment of ₹${inv.amount.toLocaleString('en-IN')} disbursed to ${inv.supplierName}.`, 'success')}
-                          className="px-2.5 py-1 rounded-xs bg-[#15803D] text-white text-xs font-mono font-bold hover:bg-[#166534] transition-colors"
-                        >
-                          Disburse ₹
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+            <table className="w-full min-w-[1050px] text-left">
+
+              <thead className="bg-[#FAF8F3] dark:bg-[#17201D]">
+
+                <tr>
+                  {[
+                    "Invoice",
+                    "PO Reference",
+                    "Vendor",
+                    "Net Payable",
+                    "3-Way Match",
+                    "Reconciliation",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className={`px-5 py-3 text-[8px] font-bold uppercase tracking-widest text-[#8A938F] ${heading === "Net Payable" ||
+                        heading === "Reconciliation"
+                        ? "text-right"
+                        : ""
+                        }`}
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+
+              </thead>
+
+              <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                {financeQueueInvoices.length === 0 ? (
+
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="px-5 py-12 text-center"
+                    >
+                      <ReceiptText className="mx-auto h-6 w-6 text-[#9AA29E]" />
+
+                      <p className="mt-2 text-[10px] font-semibold text-[#59625E] dark:text-[#AAB4AF]">
+                        No invoices pending reconciliation
+                      </p>
+
+                      <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                        The AP settlement queue is currently clear.
+                      </p>
+                    </td>
+                  </tr>
+
+                ) : (
+
+                  financeQueueInvoices.map((inv) => {
+
+                    const isMatch = inv.matchStatus === "MATCHED";
+
+                    return (
+                      <tr
+                        key={inv._id}
+                        className="group hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824] transition-colors"
+                      >
+
+                        {/* Invoice */}
+                        <td className="px-5 py-4">
+
+                          <div className="flex items-center gap-2">
+
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F4EFE6] dark:bg-[#26312D]">
+                              <FileText className="h-3.5 w-3.5 text-[#68716D]" />
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                                {inv.invoiceNumber}
+                              </p>
+
+                              <p className="mt-0.5 text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                                Supplier Invoice
+                              </p>
+                            </div>
+
+                          </div>
+
+                        </td>
+
+                        {/* PO */}
+                        <td className="px-5 py-4">
+
+                          <span className="inline-flex rounded-md bg-[#F0FDF4] px-2 py-1 text-[9px] font-bold font-mono text-[#15803D]">
+                            {inv.poNumber}
+                          </span>
+
+                        </td>
+
+                        {/* Vendor */}
+                        <td className="px-5 py-4">
+
+                          <div>
+                            <p className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                              {inv.supplierName}
+                            </p>
+
+                            <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                              Accounts Payable
+                            </p>
+                          </div>
+
+                        </td>
+
+                        {/* Amount */}
+                        <td className="px-5 py-4 text-right">
+
+                          <span className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                            ₹{Number(inv.amount || 0).toLocaleString("en-IN")}
+                          </span>
+
+                        </td>
+
+                        {/* Match Status */}
+                        <td className="px-5 py-4">
+
+                          <div className="flex flex-col items-start gap-1">
+
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${isMatch
+                                ? "border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]"
+                                : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                                }`}
+                            >
+
+                              {isMatch ? (
+                                <CheckCircle2 className="h-3 w-3" />
+                              ) : (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+
+                              {isMatch
+                                ? "Matched · 100%"
+                                : "Mismatch · Qty -2"}
+
+                            </span>
+
+                            <span className="text-[7px] font-mono text-[#8A938F]">
+                              {isMatch
+                                ? "PO / GRN / Invoice aligned"
+                                : "Variance requires review"}
+                            </span>
+
+                          </div>
+
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-4">
+
+                          <div className="flex justify-end items-center gap-1.5">
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedFinanceAuditInvoice(inv)
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-2 text-[8px] font-bold font-mono text-[#2563EB] hover:bg-[#DBEAFE] transition-colors"
+                            >
+                              <Search className="h-3 w-3" />
+                              Inspect Diff
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                showNotification(
+                                  `Payment of ₹${Number(
+                                    inv.amount || 0
+                                  ).toLocaleString("en-IN")} disbursed to ${inv.supplierName}.`,
+                                  "success"
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15803D] px-2.5 py-2 text-[8px] font-bold font-mono text-white hover:bg-[#166534] transition-colors"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Disburse
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+                    );
+                  })
+
+                )}
+
               </tbody>
+
             </table>
+
           </div>
+
+          {/* Footer */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
+
+            <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+              Step 4 · Invoice Reconciliation & AP Settlement
+            </span>
+
+            <span className="text-[8px] font-mono text-[#8A938F]">
+              3-way match · PO + GRN + Invoice
+            </span>
+
+          </div>
+
         </PaperSheet>
       </div>
     );
@@ -800,7 +1690,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
-      
+
       {/* 1. TOP HORIZONTAL KPI STRIP */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="p-3 sm:p-4 rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-[0_1px_3px_rgba(35,30,25,0.04)] space-y-1">
@@ -900,7 +1790,7 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-[#E3DDD1]/60">
                     {lpnsInYard.map((row) => (
-                      <tr 
+                      <tr
                         key={row.id}
                         onClick={() => setSelectedLpn(row)}
                         className="hover:bg-[#F4EFE6]/50 cursor-pointer transition-colors"

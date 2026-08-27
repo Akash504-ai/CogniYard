@@ -1,3 +1,4 @@
+import { PaperSheet } from "../components/layout/PaperSheet";
 import React, { useState, useEffect, useRef } from "react";
 import { logisticsAPI, procurementAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -18,7 +19,14 @@ import {
   RotateCcw,
   Building2,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  MapPin,
+  Route,
+  Activity,
+  CheckCircle2,
+  Clock,
+  Gauge,
+  Boxes,
 } from "lucide-react";
 
 export default function LogisticsPage({ mode = 'verification' }) {
@@ -85,7 +93,7 @@ export default function LogisticsPage({ mode = 'verification' }) {
       console.error("Error fetching logistics data:", err);
       setLoadError(
         err.response?.data?.message ||
-          "Yard operations could not be loaded. Check the API connection and try again.",
+        "Yard operations could not be loaded. Check the API connection and try again.",
       );
     } finally {
       if (showLoader) setLoading(false);
@@ -185,7 +193,7 @@ export default function LogisticsPage({ mode = 'verification' }) {
       const res = await logisticsAPI.simulateDelay(targetId);
       setDelayAlert(
         res.data.alertMessage ||
-          `Truck ${targetId} is delayed. Dock planning may require reassignment.`,
+        `Truck ${targetId} is delayed. Dock planning may require reassignment.`,
       );
       showNotification(
         `Simulated delay for Truck ${targetId} (Status: DELAYED)`,
@@ -425,1066 +433,2037 @@ export default function LogisticsPage({ mode = 'verification' }) {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl space-y-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-      <header className="border-b border-zinc-200 pb-5 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
-            <Truck className="h-4.5 w-4.5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100 sm:text-2xl">
-              {isSimulation
-                ? "Intelligent Truck Simulation"
-                : "Receive Goods & GRN"}
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              {isSimulation
-                ? "Monitor inbound truck movement, yard capacity, dock allocation and operational delays from one focused workspace."
-                : "Verify arriving trucks and drivers before yard entry, then complete receiving against the approved purchase order."}
-            </p>
-          </div>
-        </div>
+    <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
 
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setIsAiOpen(true)}
-            className="group flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 shadow-2xs transition-all active:scale-95 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-purple-500 group-hover:rotate-12 transition-transform" />
-            <span>Ask Copilot</span>
-          </button>
-          <button
-            onClick={() => fetchLogisticsData({ showLoader: true })}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-100 dark:text-zinc-950 shadow-sm transition-all active:scale-95 cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh Data</span>
-          </button>
-        </div>
-      </header>
+      {/* =========================================================
+        TOP HEADER + KPI STRIP
+    ========================================================= */}
 
-      {!isSimulation && (
-        <>
-          <WarehouseGateVision
-            trucks={trucks}
-            docks={docks}
-            onUpdated={fetchLogisticsData}
-          />
+      <PaperSheet
+        variant="default"
+        className="p-4 sm:p-6 space-y-4"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                  Ready for receiving
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Create the GRN only after both gate identity checks pass.
-                </p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+
+              <div className="p-1.5 rounded-xs bg-[#EDE9FE] dark:bg-[#281E3B] text-[#7C3AED]">
+                <Truck className="w-4 h-4" />
               </div>
-              <span className="text-xs text-zinc-500">
-                {
-                  trucks.filter(
-                    (truck) =>
-                      truck.status !== "COMPLETED" && truckHasPassedGate(truck),
-                  ).length
-                }{" "}
-                verified
-              </span>
+
+              <h2 className="font-handwriting text-2xl sm:text-3xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                {isSimulation
+                  ? "Intelligent Yard Simulation"
+                  : "Receiving & Yard Operations"}
+              </h2>
+
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs">
-                <thead className="bg-zinc-50 text-[11px] font-medium text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
+            <p className="text-xs text-[#68716D] dark:text-[#8E9C97] font-sans">
+              {isSimulation
+                ? "Monitor inbound truck movement, yard capacity, dock allocation and operational delays."
+                : "Verify inbound vehicles, assign docks and complete goods receiving against approved purchase orders."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+
+            <button
+              type="button"
+              onClick={() => setIsAiOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] text-xs font-sans text-[#1C201E] dark:text-[#F5F7F6] hover:border-[#7C3AED] transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#7C3AED]" />
+              <span>Ask Copilot</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fetchLogisticsData({ showLoader: true })}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xs bg-[#15803D] text-white text-xs font-sans font-bold hover:bg-[#166534] transition-colors shadow-2xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh Data</span>
+            </button>
+
+          </div>
+        </div>
+
+        {/* KPI STRIP */}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
+          <div className="p-3 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835]">
+            <span className="text-[10px] font-mono text-[#68716D] uppercase">
+              Active Inbound
+            </span>
+
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-base font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                {
+                  trucks.filter(
+                    (truck) => truck.status !== "COMPLETED"
+                  ).length
+                }
+              </span>
+
+              <Truck className="w-4 h-4 text-[#15803D]" />
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835]">
+            <span className="text-[10px] font-mono text-[#68716D] uppercase">
+              Yard Occupancy
+            </span>
+
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-base font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
+                {yardCapacity.occupied}/{yardCapacity.max}
+              </span>
+
+              <span className="text-[10px] font-mono text-[#68716D]">
+                {Math.round(
+                  (yardCapacity.occupied /
+                    Math.max(yardCapacity.max, 1)) *
+                  100
+                )}%
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835]">
+            <span className="text-[10px] font-mono text-[#68716D] uppercase">
+              Available Docks
+            </span>
+
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-base font-bold font-mono text-[#15803D]">
+                {availableDocksCount}
+                <span className="text-xs text-[#8A938F]">
+                  /{docks.length}
+                </span>
+              </span>
+
+              <MapPin className="w-4 h-4 text-[#15803D]" />
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835]">
+            <span className="text-[10px] font-mono text-[#D97706] uppercase">
+              Delayed Trucks
+            </span>
+
+            <div className="mt-1 flex items-center justify-between">
+              <span
+                className={`text-base font-bold font-mono ${delayedTrucksCount > 0
+                  ? "text-[#DC2626]"
+                  : "text-[#15803D]"
+                  }`}
+              >
+                {delayedTrucksCount}
+              </span>
+
+              <AlertTriangle
+                className={`w-4 h-4 ${delayedTrucksCount > 0
+                  ? "text-[#DC2626]"
+                  : "text-[#15803D]"
+                  }`}
+              />
+            </div>
+          </div>
+
+        </div>
+      </PaperSheet>
+
+
+      {/* =========================================================
+        MODE NAVIGATION
+    ========================================================= */}
+
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] w-fit">
+
+        <button
+          type="button"
+          onClick={() => {
+            if (isSimulation) {
+              setActiveView("twin");
+            }
+          }}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xs bg-[#15803D] text-white shadow-xs text-xs font-mono font-semibold"
+        >
+          <Truck className="w-3.5 h-3.5" />
+
+          <span>
+            {isSimulation
+              ? "Yard Simulation"
+              : "Goods Receiving"}
+          </span>
+        </button>
+
+        {isSimulation && (
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveView("map")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xs text-xs font-mono font-semibold transition-all ${activeView === "map"
+                ? "bg-[#2563EB] text-white shadow-xs"
+                : "text-[#68716D] hover:text-[#1C201E]"
+                }`}
+            >
+              <Route className="w-3.5 h-3.5" />
+              Map
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveView("twin")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xs text-xs font-mono font-semibold transition-all ${activeView === "twin"
+                ? "bg-[#7C3AED] text-white shadow-xs"
+                : "text-[#68716D] hover:text-[#1C201E]"
+                }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              Digital Twin
+            </button>
+          </>
+        )}
+
+      </div>
+
+
+      {/* =========================================================
+        RECEIVING MODE
+    ========================================================= */}
+
+      {!isSimulation && (
+        <div className="space-y-4">
+
+          {/* Gate Verification */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 pt-5 pb-4">
+
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                    <ShieldAlert className="h-4 w-4 text-[#2563EB]" />
+                  </div>
+
+                  <div>
+
+                    <div className="flex items-center gap-2">
+
+                      <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                        Warehouse Gate Verification
+                      </h3>
+
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#2563EB]">
+                        <Activity className="h-3 w-3" />
+                        AI Vision
+                      </span>
+
+                    </div>
+
+                    <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                      Verify vehicle number plate and driver identity before yard entry.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <span className="text-[9px] font-mono text-[#8A938F]">
+                  {
+                    trucks.filter(
+                      (truck) =>
+                        truck.status !== "COMPLETED" &&
+                        truckHasPassedGate(truck)
+                    ).length
+                  } verified
+                </span>
+
+              </div>
+
+            </div>
+
+            <div className="border-t border-[#E3DDD1] dark:border-[#2B3835]">
+              <WarehouseGateVision
+                trucks={trucks}
+                docks={docks}
+                onUpdated={fetchLogisticsData}
+              />
+            </div>
+
+          </PaperSheet>
+
+
+          {/* Receiving Queue */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 pt-5 pb-4">
+
+              <div className="flex items-center justify-between gap-4">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#DCFCE7] dark:bg-[#163824]">
+                    <PackageCheck className="h-4 w-4 text-[#15803D]" />
+                  </div>
+
+                  <div>
+
+                    <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                      Receiving Queue
+                    </h3>
+
+                    <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                      Complete goods receipt only after gate verification.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <span className="rounded-full bg-[#DCFCE7] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-[#15803D]">
+                  {
+                    trucks.filter(
+                      (truck) =>
+                        truck.status !== "COMPLETED" &&
+                        truckHasPassedGate(truck)
+                    ).length
+                  } Verified
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div className="border-t border-[#E3DDD1] dark:border-[#2B3835] overflow-x-auto">
+
+              <table className="w-full min-w-[800px] text-left">
+
+                <thead className="bg-[#FAF8F3] dark:bg-[#17201D]">
+
                   <tr>
-                    <th className="px-4 py-3">Truck</th>
-                    <th className="px-4 py-3">Purchase order</th>
-                    <th className="px-4 py-3">Gate status</th>
-                    <th className="px-4 py-3">Dock</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+
+                    {[
+                      "Truck",
+                      "Purchase Order",
+                      "Gate Status",
+                      "Dock",
+                      "Status",
+                      "Action",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        className="px-5 py-3 text-[8px] font-bold uppercase tracking-widest text-[#8A938F]"
+                      >
+                        {heading}
+                      </th>
+                    ))}
+
                   </tr>
+
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {trucks.filter((truck) => truck.status !== "COMPLETED")
-                    .length === 0 ? (
+
+                <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                  {trucks.filter(
+                    (truck) => truck.status !== "COMPLETED"
+                  ).length === 0 ? (
+
                     <tr>
+
                       <td
-                        colSpan="5"
-                        className="px-4 py-8 text-center text-zinc-500"
+                        colSpan="6"
+                        className="px-5 py-10 text-center text-[10px] font-mono text-[#8A938F]"
                       >
                         No inbound trucks are waiting for receiving.
                       </td>
+
                     </tr>
+
                   ) : (
+
                     trucks
-                      .filter((truck) => truck.status !== "COMPLETED")
+                      .filter(
+                        (truck) => truck.status !== "COMPLETED"
+                      )
                       .map((truck) => {
-                        const verified = truckHasPassedGate(truck);
+
+                        const verified =
+                          truckHasPassedGate(truck);
+
                         return (
                           <tr
                             key={truck._id || truck.truckId}
-                            className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30"
+                            className="group hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
                           >
-                            <td className="px-4 py-3 font-mono font-semibold text-zinc-950 dark:text-zinc-100">
-                              {truck.truckId}
+
+                            <td className="px-5 py-4">
+
+                              <div className="flex items-center gap-2">
+
+                                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F4EFE6] dark:bg-[#26312D]">
+                                  <Truck className="h-3.5 w-3.5 text-[#15803D]" />
+                                </div>
+
+                                <div>
+                                  <p className="text-[10px] font-bold text-[#15803D]">
+                                    {truck.truckId}
+                                  </p>
+
+                                  <p className="text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                                    Inbound vehicle
+                                  </p>
+                                </div>
+
+                              </div>
+
                             </td>
-                            <td className="px-4 py-3 font-mono text-zinc-700 dark:text-zinc-300">
-                              {truck.poNumber}
+
+
+                            <td className="px-5 py-4">
+
+                              <p className="text-[10px] font-mono font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                                {truck.poNumber}
+                              </p>
+
                             </td>
-                            <td className="px-4 py-3">
+
+
+                            <td className="px-5 py-4">
+
                               <span
-                                className={`inline-flex items-center gap-1.5 text-xs font-medium ${verified ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${verified
+                                  ? "border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]"
+                                  : "border-[#FDE68A] bg-[#FEF3C7] text-[#D97706]"
+                                  }`}
                               >
-                                <span
-                                  className={`h-1.5 w-1.5 rounded-full ${verified ? "bg-emerald-500" : "bg-amber-500"}`}
-                                  aria-hidden="true"
-                                />
+
+                                {verified ? (
+                                  <CheckCircle2 className="h-3 w-3" />
+                                ) : (
+                                  <Clock className="h-3 w-3" />
+                                )}
+
                                 {verified
                                   ? "Verified"
-                                  : "Verification required"}
+                                  : "Verification Required"}
+
                               </span>
+
                             </td>
-                            <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                              {truck.assignedDock || "Not assigned"}
+
+
+                            <td className="px-5 py-4">
+
+                              <span className="text-[9px] font-semibold text-[#59625E] dark:text-[#AAB4AF]">
+                                {truck.assignedDock || "Not assigned"}
+                              </span>
+
                             </td>
-                            <td className="px-4 py-3 text-right">
+
+
+                            <td className="px-5 py-4">
+
+                              <span className="text-[9px] font-bold uppercase text-[#68716D]">
+                                {truck.status}
+                              </span>
+
+                            </td>
+
+
+                            <td className="px-5 py-4 text-right">
+
                               <button
                                 type="button"
-                                onClick={() => openReceivingForTruck(truck)}
-                                disabled={submitting || !verified}
-                                className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-purple-600 px-3 text-xs font-medium text-white hover:bg-purple-700 disabled:bg-zinc-200 disabled:text-zinc-500 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-                                title={
-                                  verified
-                                    ? "Receive goods and create the GRN"
-                                    : "Complete number-plate and driver-ID verification first"
+                                onClick={() =>
+                                  openReceivingForTruck(truck)
                                 }
+                                disabled={
+                                  submitting || !verified
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15803D] px-3 py-2 text-[9px] font-bold text-white hover:bg-[#166534] disabled:bg-[#E7E2D7] disabled:text-[#9AA29E]"
                               >
-                                <PackageCheck
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                                Receive goods
+
+                                <PackageCheck className="h-3 w-3" />
+
+                                Receive Goods
+
                               </button>
+
                             </td>
+
                           </tr>
                         );
                       })
                   )}
+
                 </tbody>
+
               </table>
-            </div>
-          </section>
-        </>
-      )}
 
-      {isSimulation && (
-        <>
-          {/* Simulation controls */}
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col gap-4 border-b border-zinc-200 p-4 dark:border-zinc-800 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                    Simulation controls
-                  </h2>
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <span
-                      className={`h-2 w-2 rounded-full ${simRunning ? "bg-emerald-500" : "bg-zinc-400"}`}
-                      aria-hidden="true"
-                    />
-                    {simRunning ? `Running at ${simSpeed}x` : "Paused"}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-                  Change the yard view, simulation speed or operating state.
-                  Changes apply immediately.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <div
-                  className="inline-flex rounded-md border border-zinc-200 bg-zinc-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
-                  role="group"
-                  aria-label="Yard view"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveView("map")}
-                    aria-pressed={activeView === "map"}
-                    className={`inline-flex min-h-8 items-center gap-1.5 rounded px-2.5 text-xs font-medium transition-colors ${
-                      activeView === "map"
-                        ? "bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100"
-                        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                    }`}
-                  >
-                    <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-                    Map
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveView("twin")}
-                    aria-pressed={activeView === "twin"}
-                    className={`inline-flex min-h-8 items-center gap-1.5 rounded px-2.5 text-xs font-medium transition-colors ${
-                      activeView === "twin"
-                        ? "bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100"
-                        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                    }`}
-                  >
-                    <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Digital twin
-                  </button>
-                </div>
-
-                <div
-                  className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-zinc-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
-                  role="group"
-                  aria-label="Simulation speed"
-                >
-                  <span className="px-2 text-[11px] font-medium text-zinc-500">
-                    Speed
-                  </span>
-                  {[1, 2, 5, 10].map((speed) => (
-                    <button
-                      type="button"
-                      key={speed}
-                      onClick={() => handleSpeedChange(speed)}
-                      aria-pressed={simSpeed === speed}
-                      className={`min-h-8 min-w-8 rounded px-2 text-xs font-semibold tabular-nums transition-colors ${
-                        simSpeed === speed
-                          ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                          : "text-zinc-500 hover:bg-white hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                      }`}
-                    >
-                      {speed}x
-                    </button>
-                  ))}
-                </div>
-
-                {simRunning ? (
-                  <button
-                    type="button"
-                    onClick={handlePauseSimulation}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <Pause className="h-3.5 w-3.5" aria-hidden="true" />
-                    Pause
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleStartSimulation}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-purple-600 px-3 text-xs font-medium text-white transition-colors hover:bg-purple-700"
-                  >
-                    <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    Start simulation
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleResetSimulation}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                  aria-label="Reset simulation"
-                  title="Reset simulation"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSimulateDelay(trucks[0]?.truckId)}
-                  disabled={submitting || trucks.length === 0}
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-rose-200 bg-white px-3 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/70 dark:bg-zinc-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
-                >
-                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                  Simulate delay
-                </button>
-              </div>
             </div>
 
-            <dl className="grid grid-cols-2 divide-x divide-y divide-zinc-200 dark:divide-zinc-800 sm:grid-cols-4 sm:divide-y-0">
-              <div className="p-4">
-                <dt className="text-[11px] font-medium text-zinc-500">
-                  Active inbound
-                </dt>
-                <dd className="mt-1 text-base font-semibold tabular-nums text-zinc-950 dark:text-zinc-100">
-                  {
-                    trucks.filter((truck) => truck.status !== "COMPLETED")
-                      .length
-                  }
-                </dd>
-              </div>
-              <div className="p-4">
-                <dt className="text-[11px] font-medium text-zinc-500">
-                  Yard occupancy
-                </dt>
-                <dd className="mt-1 text-base font-semibold tabular-nums text-zinc-950 dark:text-zinc-100">
-                  {yardCapacity.occupied}/{yardCapacity.max}{" "}
-                  <span className="text-xs font-normal text-zinc-500">
-                    (
-                    {Math.round(
-                      (yardCapacity.occupied / Math.max(yardCapacity.max, 1)) *
-                        100,
-                    )}
-                    %)
-                  </span>
-                </dd>
-              </div>
-              <div className="p-4">
-                <dt className="text-[11px] font-medium text-zinc-500">
-                  Available docks
-                </dt>
-                <dd className="mt-1 text-base font-semibold tabular-nums text-zinc-950 dark:text-zinc-100">
-                  {availableDocksCount}/{docks.length || 0}
-                </dd>
-              </div>
-              <div className="p-4">
-                <dt className="text-[11px] font-medium text-zinc-500">
-                  Delayed trucks
-                </dt>
-                <dd
-                  className={`mt-1 text-base font-semibold tabular-nums ${delayedTrucksCount > 0 ? "text-rose-700 dark:text-rose-300" : "text-zinc-950 dark:text-zinc-100"}`}
-                >
-                  {delayedTrucksCount}
-                </dd>
-              </div>
-            </dl>
-          </section>
 
-          {/* Delay Alert Notification Banner */}
-          {delayAlert && (
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/25 dark:text-rose-300">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <span>{delayAlert}</span>
-              </div>
-              <button
-                onClick={() => setDelayAlert(null)}
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900 text-[11px] font-medium hover:opacity-80 transition-opacity cursor-pointer shadow-2xs"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
+            <div className="flex items-center justify-between border-t border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
 
-          {/* Main Logistics Telemetry Layer (Map View vs Yard Digital Twin) */}
-          {activeView === "map" ? (
-            <TruckMap
-              trucks={trucks}
-              isRunning={simRunning}
-              speed={simSpeed}
-              onSimulateStep={handleStartSimulation}
-              onSelectTruck={(t) => setSelectedTruckDetail(t)}
-            />
-          ) : (
-            <YardDigitalTwin
-              trucks={trucks}
-              docks={docks}
-              simRunning={simRunning}
-              simSpeed={simSpeed}
-              yardCapacity={yardCapacity}
-              eventLogs={eventLogs}
-              onSelectTruck={(t) => setSelectedTruckDetail(t)}
-              onSelectDock={(d) => {
-                const dockedTruck = trucks.find(
-                  (t) =>
-                    t.assignedDock === d.dockNumber ||
-                    t.truckId === d.currentTruckId,
-                );
-                if (dockedTruck) setSelectedTruckDetail(dockedTruck);
-              }}
-              onRecommendDock={handleGetDockRecommendation}
-              onReceiveGoods={(poNum) => {
-                const truck = trucks.find((item) => item.poNumber === poNum);
-                if (!truck) {
-                  showNotification(
-                    `The truck for Purchase Order ${poNum} could not be loaded.`,
-                    "error",
-                  );
-                  return;
-                }
-                openReceivingForTruck(truck);
-              }}
-              onReleaseDock={handleReleaseDock}
-            />
-          )}
-
-          <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.5fr)]">
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center justify-between gap-4 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                    Activity
-                  </h2>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    Latest simulation events and operational changes.
-                  </p>
-                </div>
-                <span className="text-xs tabular-nums text-zinc-500">
-                  {eventLogs.length} events
-                </span>
-              </div>
-              <div className="max-h-56 overflow-y-auto">
-                {eventLogs.length === 0 ? (
-                  <div className="px-4 py-8 text-center">
-                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      No activity yet
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Start the simulation to generate yard events.
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {eventLogs.map((log) => (
-                      <li
-                        key={log.id}
-                        className="flex items-start gap-3 px-4 py-3 text-xs"
-                      >
-                        <span className="w-16 shrink-0 tabular-nums text-zinc-400">
-                          {log.time}
-                        </span>
-                        <span
-                          className={`leading-5 ${
-                            log.level === "error"
-                              ? "text-rose-700 dark:text-rose-300"
-                              : log.level === "success"
-                                ? "text-emerald-700 dark:text-emerald-300"
-                                : log.level === "warning"
-                                  ? "text-amber-700 dark:text-amber-300"
-                                  : "text-zinc-700 dark:text-zinc-300"
-                          }`}
-                        >
-                          {log.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                  Dock availability
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Current bay assignments.
-                </p>
-              </div>
-              {docks.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-zinc-500">
-                  No dock data is available.
-                </p>
-              ) : (
-                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {docks.map((dock) => (
-                    <li
-                      key={dock._id || dock.dockNumber}
-                      className="flex items-center justify-between gap-3 px-4 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                          {dock.dockNumber}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-zinc-500">
-                          {dock.currentTruckId
-                            ? `Assigned to ${dock.currentTruckId}`
-                            : dock.name || "No truck assigned"}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
-                            dock.status === "AVAILABLE"
-                              ? "text-emerald-700 dark:text-emerald-300"
-                              : dock.status === "MAINTENANCE"
-                                ? "text-rose-700 dark:text-rose-300"
-                                : "text-zinc-600 dark:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${dock.status === "AVAILABLE" ? "bg-emerald-500" : dock.status === "MAINTENANCE" ? "bg-rose-500" : "bg-zinc-400"}`}
-                            aria-hidden="true"
-                          />
-                          {dock.status}
-                        </span>
-                        {dock.status === "OCCUPIED" && (
-                          <button
-                            type="button"
-                            onClick={() => handleReleaseDock(dock.dockNumber)}
-                            disabled={submitting}
-                            className="min-h-8 rounded-md border border-zinc-200 px-2.5 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                          >
-                            Release
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                  Inbound trucks
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Lifecycle status, ETA and yard actions for active vehicles.
-                </p>
-              </div>
-              <span className="text-xs tabular-nums text-zinc-500">
-                {trucks.filter((t) => t.status !== "COMPLETED").length} active
+              <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                Step 1 · Gate Verification & Receiving
               </span>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left text-xs">
-                <thead className="bg-zinc-50 text-[11px] font-medium text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
-                  <tr>
-                    <th className="px-4 py-3">Truck</th>
-                    <th className="px-4 py-3">Purchase order</th>
-                    <th className="px-4 py-3">Driver / trailer</th>
-                    <th className="px-4 py-3">ETA</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Progress</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {trucks.filter((t) => t.status !== "COMPLETED").length ===
-                  0 ? (
-                    <tr>
-                      <td
-                        colSpan="7"
-                        className="px-4 py-8 text-center text-zinc-500"
-                      >
-                        No active inbound trucks.
-                      </td>
-                    </tr>
-                  ) : (
-                    trucks
-                      .filter((t) => t.status !== "COMPLETED")
-                      .map((truck) => (
-                        <tr
-                          key={truck._id || truck.truckId}
-                          onClick={() => setSelectedTruckDetail(truck)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedTruckDetail(truck);
-                            }
-                          }}
-                          tabIndex={0}
-                          className="cursor-pointer hover:bg-zinc-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500 dark:hover:bg-zinc-800/30"
-                        >
-                          <td className="px-4 py-3 font-mono font-semibold text-zinc-950 dark:text-zinc-100">
-                            {truck.truckId}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-zinc-700 dark:text-zinc-300">
-                            {truck.poNumber}
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                              {truck.driverName || "Not available"}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-zinc-500">
-                              {truck.trailerId || "Trailer not available"}
-                            </p>
-                          </td>
-                          <td className="px-4 py-3 tabular-nums text-zinc-700 dark:text-zinc-300">
-                            {truck.eta || "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                                truck.status === "DELAYED"
-                                  ? "text-rose-700 dark:text-rose-300"
-                                  : truck.status === "UNLOADING"
-                                    ? "text-purple-700 dark:text-purple-300"
-                                    : "text-zinc-700 dark:text-zinc-300"
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${truck.status === "DELAYED" ? "bg-rose-500" : truck.status === "UNLOADING" ? "bg-purple-500" : "bg-zinc-400"}`}
-                                aria-hidden="true"
-                              />
-                              {truck.status}
-                            </span>
-                          </td>
-                          <td className="w-40 px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
-                                aria-hidden="true"
-                              >
-                                <div
-                                  className="h-full rounded-full bg-purple-600 transition-[width] duration-300"
-                                  style={{
-                                    width: `${Math.max(0, Math.min(100, truck.progress || 0))}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="w-9 text-right tabular-nums text-[11px] text-zinc-500">
-                                {truck.progress || 0}%
-                              </span>
-                            </div>
-                          </td>
-                          <td
-                            className="px-4 py-3 text-right"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleSimulateDelay(truck.truckId)
-                                }
-                                disabled={submitting}
-                                className="min-h-8 rounded-md border border-zinc-200 px-2.5 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                              >
-                                Delay
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleGetDockRecommendation(truck)
-                                }
-                                disabled={submitting}
-                                className="min-h-8 rounded-md border border-zinc-200 px-2.5 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                              >
-                                Recommend dock
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openReceivingForTruck(truck)}
-                                disabled={
-                                  submitting || !truckHasPassedGate(truck)
-                                }
-                                title={
-                                  truckHasPassedGate(truck)
-                                    ? "Receive goods and create the GRN"
-                                    : "Complete number-plate and driver-ID verification first"
-                                }
-                                className="min-h-8 rounded-md bg-purple-600 px-2.5 text-[11px] font-medium text-white hover:bg-purple-700 disabled:bg-zinc-200 disabled:text-zinc-500 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-                              >
-                                Receive goods
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
-                  Warehouse inventory
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Stock levels synchronized after goods receiving.
-                </p>
-              </div>
-              <span className="text-xs tabular-nums text-zinc-500">
-                {inventory.length} items
+              <span className="text-[8px] font-mono text-[#8A938F]">
+                GRN generated after inspection
               </span>
+
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-xs">
-                <thead className="bg-zinc-50 text-[11px] font-medium text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
-                  <tr>
-                    <th className="px-4 py-3">SKU</th>
-                    <th className="px-4 py-3">Product</th>
-                    <th className="px-4 py-3">Location</th>
-                    <th className="px-4 py-3 text-right">On hand</th>
-                    <th className="px-4 py-3 text-right">Available</th>
-                    <th className="px-4 py-3">Updated</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {inventory.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan="6"
-                        className="px-4 py-8 text-center text-zinc-500"
-                      >
-                        No inventory data is available.
-                      </td>
-                    </tr>
-                  ) : (
-                    inventory.map((item) => (
-                      <tr
-                        key={item._id || item.sku}
-                        className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30"
-                      >
-                        <td className="px-4 py-3 font-mono font-semibold text-zinc-950 dark:text-zinc-100">
-                          {item.sku}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">
-                          {item.productName}
-                        </td>
-                        <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                          {item.warehouseLocation || "Not assigned"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
-                          {Number(item.quantityOnHand || 0).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
-                          {Number(item.availableQuantity || 0).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-zinc-500">
-                          {item.updatedAt || item.lastUpdated
-                            ? new Date(
-                                item.updatedAt || item.lastUpdated,
-                              ).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      )}
+          </PaperSheet>
 
-      {selectedTruckDetail && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end bg-zinc-950/55"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="truck-detail-title"
-        >
-          <aside className="h-full w-full max-w-md overflow-y-auto border-l border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-5 dark:border-zinc-800">
-              <div>
-                <h3
-                  id="truck-detail-title"
-                  className="text-base font-semibold text-zinc-950 dark:text-zinc-100"
-                >
-                  {selectedTruckDetail.truckId} details
-                </h3>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Current yard state and assignment.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedTruckDetail(null)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                aria-label="Close truck details"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-
-            <div className="p-5">
-              <dl className="divide-y divide-zinc-200 border-y border-zinc-200 text-xs dark:divide-zinc-800 dark:border-zinc-800">
-                {[
-                  ["Status", selectedTruckDetail.status || "Not available"],
-                  [
-                    "Purchase order",
-                    selectedTruckDetail.poNumber || "Not available",
-                  ],
-                  ["Driver", selectedTruckDetail.driverName || "Not available"],
-                  ["Trailer", selectedTruckDetail.trailerId || "Not available"],
-                  ["ETA", selectedTruckDetail.eta || "Not available"],
-                  [
-                    "Assigned dock",
-                    selectedTruckDetail.assignedDock || "Unassigned",
-                  ],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-start justify-between gap-5 py-3"
-                  >
-                    <dt className="text-zinc-500">{label}</dt>
-                    <dd className="max-w-[60%] text-right font-medium text-zinc-900 dark:text-zinc-100">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-
-              {selectedTruckDetail.delayReason && (
-                <div className="mt-5 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/25 dark:text-rose-300">
-                  <strong className="font-semibold">Delay recorded. </strong>
-                  {selectedTruckDetail.delayReason} (+
-                  {selectedTruckDetail.delayMinutes || 15} min)
-                </div>
-              )}
-            </div>
-          </aside>
         </div>
       )}
 
-      {recommendedDock && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="dock-recommendation-title"
-        >
-          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-5 dark:border-zinc-800">
-              <div>
-                <h3
-                  id="dock-recommendation-title"
-                  className="text-base font-semibold text-zinc-950 dark:text-zinc-100"
-                >
-                  Dock recommendation
-                </h3>
-                <p className="mt-1 text-xs text-zinc-500">
-                  For {recommendedDock.truckId} · PO {recommendedDock.poNumber}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRecommendedDock(null)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                aria-label="Close dock recommendation"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
 
-            <div className="space-y-5 p-5 text-xs">
-              <dl className="grid grid-cols-3 gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-                <div>
-                  <dt className="text-zinc-500">ETA</dt>
-                  <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">
-                    {recommendedDock.eta || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Priority</dt>
-                  <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">
-                    {recommendedDock.priority || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Load</dt>
-                  <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">
-                    {recommendedDock.loadType || "—"}
-                  </dd>
-                </div>
-              </dl>
+      {/* =========================================================
+        SIMULATION MODE
+    ========================================================= */}
 
-              {recommendedDock.recommendedDock ? (
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs text-zinc-500">Recommended dock</p>
-                      <p className="mt-1 text-base font-semibold text-zinc-950 dark:text-zinc-100">
-                        {recommendedDock.recommendedDock.dockNumber}
-                      </p>
-                      <p className="mt-0.5 text-xs text-zinc-500">
-                        {recommendedDock.recommendedDock.name}
-                      </p>
-                    </div>
-                    <span className="text-xs font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
-                      Score {recommendedDock.recommendedDock.score}/100
-                    </span>
+      {isSimulation && (
+        <div className="space-y-4">
+
+          {/* Simulation Controls */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 pt-5 pb-4">
+
+              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDE9FE] dark:bg-[#281E3B]">
+                    <Gauge className="h-4 w-4 text-[#7C3AED]" />
                   </div>
 
-                  {recommendedDock.recommendedDock.rationale?.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                        Why this dock
-                      </p>
-                      <ul className="mt-2 list-disc space-y-1.5 pl-4 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
-                        {recommendedDock.recommendedDock.rationale.map(
-                          (reason, idx) => (
-                            <li key={idx}>{reason}</li>
-                          ),
-                        )}
-                      </ul>
+                  <div>
+
+                    <div className="flex items-center gap-2">
+
+                      <h3 className="font-handwriting text-xl sm:text-2xl font-bold tracking-wide text-[#1C201E] dark:text-[#F5F7F6]">
+                        Yard Simulation Controls
+                      </h3>
+
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F3FF] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#7C3AED]">
+
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${simRunning
+                            ? "bg-[#22C55E]"
+                            : "bg-[#9AA29E]"
+                            }`}
+                        />
+
+                        {simRunning
+                          ? `Running · ${simSpeed}x`
+                          : "Paused"}
+
+                      </span>
+
                     </div>
+
+                    <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                      Control simulation speed, yard visualization and operational events.
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                <div className="flex flex-wrap items-center gap-2">
+
+                  {/* Speed */}
+
+                  <div className="flex items-center gap-1 p-1 rounded-lg border border-[#E3DDD1] bg-[#FAF8F3] dark:border-[#2B3835] dark:bg-[#17201D]">
+
+                    <span className="px-2 text-[8px] font-bold uppercase tracking-wider text-[#8A938F]">
+                      Speed
+                    </span>
+
+                    {[1, 2, 5, 10].map((speed) => (
+
+                      <button
+                        key={speed}
+                        type="button"
+                        onClick={() =>
+                          handleSpeedChange(speed)
+                        }
+                        className={`px-2.5 py-1.5 rounded-md text-[9px] font-mono font-bold transition-all ${simSpeed === speed
+                          ? "bg-[#15803D] text-white"
+                          : "text-[#68716D] hover:bg-white dark:hover:bg-[#222D2B]"
+                          }`}
+                      >
+                        {speed}x
+                      </button>
+
+                    ))}
+
+                  </div>
+
+
+                  {/* Start / Pause */}
+
+                  {simRunning ? (
+
+                    <button
+                      type="button"
+                      onClick={handlePauseSimulation}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#FEF3C7] text-[#D97706] text-[9px] font-bold hover:bg-[#FDE68A]"
+                    >
+                      <Pause className="w-3 h-3" />
+                      Pause
+                    </button>
+
+                  ) : (
+
+                    <button
+                      type="button"
+                      onClick={handleStartSimulation}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#15803D] text-white text-[9px] font-bold hover:bg-[#166534]"
+                    >
+                      <Play className="w-3 h-3" />
+                      Start Simulation
+                    </button>
+
                   )}
+
+
+                  <button
+                    type="button"
+                    onClick={handleResetSimulation}
+                    className="flex items-center justify-center w-9 h-9 rounded-lg border border-[#E3DDD1] bg-[#FCFAF4] text-[#68716D] hover:border-[#15803D]"
+                    title="Reset simulation"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSimulateDelay(
+                        trucks[0]?.truckId
+                      )
+                    }
+                    disabled={
+                      submitting || trucks.length === 0
+                    }
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] text-[#DC2626] text-[9px] font-bold disabled:opacity-50"
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    Simulate Delay
+                  </button>
+
                 </div>
-              ) : (
-                <div
-                  className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/25 dark:text-rose-300"
-                  role="alert"
-                >
-                  {recommendedDock.reason || "A dock could not be recommended."}
-                </div>
-              )}
+
+              </div>
+
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+
+            {/* Metrics */}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div className="px-5 py-3">
+
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Active Inbound
+                </p>
+
+                <p className="mt-1 text-lg font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                  {
+                    trucks.filter(
+                      (t) => t.status !== "COMPLETED"
+                    ).length
+                  }
+                </p>
+
+              </div>
+
+
+              <div className="border-x border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Yard Occupancy
+                </p>
+
+                <p className="mt-1 text-lg font-bold text-[#15803D]">
+                  {yardCapacity.occupied}/{yardCapacity.max}
+                </p>
+
+              </div>
+
+
+              <div className="border-r border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Available Docks
+                </p>
+
+                <p className="mt-1 text-lg font-bold text-[#2563EB]">
+                  {availableDocksCount}
+                </p>
+
+              </div>
+
+
+              <div className="px-5 py-3">
+
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
+                  Delayed Trucks
+                </p>
+
+                <p
+                  className={`mt-1 text-lg font-bold ${delayedTrucksCount
+                    ? "text-[#DC2626]"
+                    : "text-[#15803D]"
+                    }`}
+                >
+                  {delayedTrucksCount}
+                </p>
+
+              </div>
+
+            </div>
+
+          </PaperSheet>
+
+
+          {/* Delay Alert */}
+
+          {delayAlert && (
+
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 text-xs text-[#991B1B]">
+
+              <div className="flex items-center gap-3">
+
+                <ShieldAlert className="w-4 h-4 text-[#DC2626]" />
+
+                <span className="text-[9px] font-semibold">
+                  {delayAlert}
+                </span>
+
+              </div>
+
               <button
                 type="button"
-                onClick={() => setRecommendedDock(null)}
-                className="min-h-9 rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                onClick={() => setDelayAlert(null)}
+                className="px-2 py-1 rounded-md bg-white border border-[#FECACA] text-[8px] font-bold"
+              >
+                Dismiss
+              </button>
+
+            </div>
+
+          )}
+
+
+          {/* =====================================================
+            MAIN DIGITAL TWIN / MAP
+        ===================================================== */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div className="flex items-center justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#DBEAFE] dark:bg-[#182942]">
+                    {activeView === "map" ? (
+                      <Route className="h-4 w-4 text-[#2563EB]" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-[#2563EB]" />
+                    )}
+                  </div>
+
+                  <div>
+
+                    <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                      {activeView === "map"
+                        ? "Live Yard Map"
+                        : "Yard Digital Twin"}
+                    </h3>
+
+                    <p className="text-[8px] font-mono text-[#8A938F]">
+                      Real-time operational telemetry
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                  {simRunning ? "LIVE" : "PAUSED"}
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div className="p-3 sm:p-4">
+
+              {activeView === "map" ? (
+
+                <TruckMap
+                  trucks={trucks}
+                  isRunning={simRunning}
+                  speed={simSpeed}
+                  onSimulateStep={handleStartSimulation}
+                  onSelectTruck={(t) =>
+                    setSelectedTruckDetail(t)
+                  }
+                />
+
+              ) : (
+
+                <YardDigitalTwin
+                  trucks={trucks}
+                  docks={docks}
+                  simRunning={simRunning}
+                  simSpeed={simSpeed}
+                  yardCapacity={yardCapacity}
+                  eventLogs={eventLogs}
+                  onSelectTruck={(t) =>
+                    setSelectedTruckDetail(t)
+                  }
+                  onSelectDock={(d) => {
+
+                    const dockedTruck =
+                      trucks.find(
+                        (t) =>
+                          t.assignedDock ===
+                          d.dockNumber ||
+                          t.truckId ===
+                          d.currentTruckId
+                      );
+
+                    if (dockedTruck) {
+                      setSelectedTruckDetail(
+                        dockedTruck
+                      );
+                    }
+
+                  }}
+                  onRecommendDock={
+                    handleGetDockRecommendation
+                  }
+                  onReceiveGoods={(poNum) => {
+
+                    const truck =
+                      trucks.find(
+                        (item) =>
+                          item.poNumber === poNum
+                      );
+
+                    if (!truck) {
+
+                      showNotification(
+                        `The truck for Purchase Order ${poNum} could not be loaded.`,
+                        "error"
+                      );
+
+                      return;
+                    }
+
+                    openReceivingForTruck(truck);
+
+                  }}
+                  onReleaseDock={handleReleaseDock}
+                />
+
+              )}
+
+            </div>
+
+          </PaperSheet>
+
+
+          {/* =====================================================
+            ACTIVITY + DOCKS
+        ===================================================== */}
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_0.5fr] gap-4">
+
+            {/* Activity */}
+
+            <PaperSheet
+              variant="default"
+              className="overflow-hidden p-0"
+            >
+
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+                <div>
+
+                  <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    Yard Activity
+                  </h3>
+
+                  <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                    Latest simulation events and operational changes.
+                  </p>
+
+                </div>
+
+                <span className="text-[8px] font-mono text-[#8A938F]">
+                  {eventLogs.length} events
+                </span>
+
+              </div>
+
+
+              <div className="max-h-64 overflow-y-auto">
+
+                {eventLogs.length === 0 ? (
+
+                  <div className="px-5 py-10 text-center">
+
+                    <Activity className="mx-auto h-6 w-6 text-[#9AA29E]" />
+
+                    <p className="mt-2 text-[10px] font-semibold text-[#59625E]">
+                      No activity yet
+                    </p>
+
+                    <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                      Start the simulation to generate yard events.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                    {eventLogs.map((log) => (
+
+                      <div
+                        key={log.id}
+                        className="flex items-start gap-3 px-5 py-3"
+                      >
+
+                        <span className="w-14 shrink-0 text-[8px] font-mono text-[#9AA29E]">
+                          {log.time}
+                        </span>
+
+                        <span
+                          className={`text-[9px] leading-relaxed ${log.level === "error"
+                            ? "text-[#DC2626]"
+                            : log.level === "success"
+                              ? "text-[#15803D]"
+                              : log.level === "warning"
+                                ? "text-[#D97706]"
+                                : "text-[#59625E] dark:text-[#AAB4AF]"
+                            }`}
+                        >
+                          {log.text}
+                        </span>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                )}
+
+              </div>
+
+            </PaperSheet>
+
+
+            {/* Dock Availability */}
+
+            <PaperSheet
+              variant="default"
+              className="overflow-hidden p-0"
+            >
+
+              <div className="px-5 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+                <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                  Dock Availability
+                </h3>
+
+                <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                  Current bay assignments.
+                </p>
+
+              </div>
+
+
+              {docks.length === 0 ? (
+
+                <div className="px-5 py-10 text-center text-[9px] font-mono text-[#8A938F]">
+                  No dock data available.
+                </div>
+
+              ) : (
+
+                <div className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                  {docks.map((dock) => (
+
+                    <div
+                      key={
+                        dock._id ||
+                        dock.dockNumber
+                      }
+                      className="flex items-center justify-between gap-3 px-5 py-3"
+                    >
+
+                      <div>
+
+                        <p className="text-[10px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                          {dock.dockNumber}
+                        </p>
+
+                        <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                          {dock.currentTruckId
+                            ? `Assigned to ${dock.currentTruckId}`
+                            : dock.name ||
+                            "No truck assigned"}
+                        </p>
+
+                      </div>
+
+
+                      <div className="flex items-center gap-2">
+
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[8px] font-bold ${dock.status ===
+                            "AVAILABLE"
+                            ? "text-[#15803D]"
+                            : dock.status ===
+                              "MAINTENANCE"
+                              ? "text-[#DC2626]"
+                              : "text-[#68716D]"
+                            }`}
+                        >
+
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${dock.status ===
+                              "AVAILABLE"
+                              ? "bg-[#22C55E]"
+                              : dock.status ===
+                                "MAINTENANCE"
+                                ? "bg-[#DC2626]"
+                                : "bg-[#9AA29E]"
+                              }`}
+                          />
+
+                          {dock.status}
+
+                        </span>
+
+                        {dock.status ===
+                          "OCCUPIED" && (
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleReleaseDock(
+                                  dock.dockNumber
+                                )
+                              }
+                              disabled={submitting}
+                              className="rounded-md border border-[#E3DDD1] px-2 py-1 text-[8px] font-bold text-[#68716D] hover:border-[#15803D] disabled:opacity-50"
+                            >
+                              Release
+                            </button>
+
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </PaperSheet>
+
+          </div>
+
+
+          {/* =====================================================
+            INBOUND TRUCKS
+        ===================================================== */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <h3 className="font-handwriting text-xl sm:text-2xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    Inbound Trucks
+                  </h3>
+
+                  <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                    Lifecycle status, ETA and yard actions for active vehicles.
+                  </p>
+
+                </div>
+
+                <span className="rounded-full bg-[#DBEAFE] px-2 py-1 text-[8px] font-bold text-[#2563EB]">
+                  {
+                    trucks.filter(
+                      (t) => t.status !== "COMPLETED"
+                    ).length
+                  } Active
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[1000px]">
+
+                <thead className="bg-[#FAF8F3] dark:bg-[#17201D]">
+
+                  <tr>
+
+                    {[
+                      "Truck",
+                      "Purchase Order",
+                      "Driver / Trailer",
+                      "ETA",
+                      "Status",
+                      "Progress",
+                      "Actions",
+                    ].map((heading) => (
+
+                      <th
+                        key={heading}
+                        className="px-5 py-3 text-left text-[8px] font-bold uppercase tracking-widest text-[#8A938F]"
+                      >
+                        {heading}
+                      </th>
+
+                    ))}
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                  {trucks
+                    .filter(
+                      (t) => t.status !== "COMPLETED"
+                    )
+                    .map((truck) => (
+
+                      <tr
+                        key={
+                          truck._id ||
+                          truck.truckId
+                        }
+                        onClick={() =>
+                          setSelectedTruckDetail(
+                            truck
+                          )
+                        }
+                        className="group cursor-pointer hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                      >
+
+                        <td className="px-5 py-4">
+
+                          <div className="flex items-center gap-2">
+
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F0FDF4] dark:bg-[#163824]">
+                              <Truck className="h-3.5 w-3.5 text-[#15803D]" />
+                            </div>
+
+                            <div>
+
+                              <p className="text-[10px] font-bold text-[#15803D]">
+                                {truck.truckId}
+                              </p>
+
+                              <p className="text-[7px] uppercase tracking-wider text-[#9AA29E]">
+                                Inbound
+                              </p>
+
+                            </div>
+
+                          </div>
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <span className="text-[9px] font-mono font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                            {truck.poNumber}
+                          </span>
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <p className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                            {truck.driverName ||
+                              "Not available"}
+                          </p>
+
+                          <p className="mt-0.5 text-[7px] text-[#8A938F]">
+                            {truck.trailerId ||
+                              "Trailer unavailable"}
+                          </p>
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <span className="text-[9px] font-mono text-[#68716D]">
+                            {truck.eta || "—"}
+                          </span>
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase ${truck.status ===
+                              "DELAYED"
+                              ? "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                              : truck.status ===
+                                "UNLOADING"
+                                ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#7C3AED]"
+                                : "border-[#E3DDD1] bg-[#FCFAF4] text-[#68716D]"
+                              }`}
+                          >
+
+                            {truck.status ===
+                              "DELAYED" ? (
+                              <AlertTriangle className="h-3 w-3" />
+                            ) : (
+                              <Truck className="h-3 w-3" />
+                            )}
+
+                            {truck.status}
+
+                          </span>
+
+                        </td>
+
+
+                        <td className="px-5 py-4 w-44">
+
+                          <div className="flex items-center gap-2">
+
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#E7E2D7] dark:bg-[#2B3835]">
+
+                              <div
+                                className="h-full rounded-full bg-[#15803D] transition-all"
+                                style={{
+                                  width: `${Math.max(
+                                    0,
+                                    Math.min(
+                                      100,
+                                      truck.progress ||
+                                      0
+                                    )
+                                  )}%`,
+                                }}
+                              />
+
+                            </div>
+
+                            <span className="text-[8px] font-mono text-[#8A938F]">
+                              {truck.progress ||
+                                0}
+                              %
+                            </span>
+
+                          </div>
+
+                        </td>
+
+
+                        <td
+                          className="px-5 py-4 text-right"
+                          onClick={(e) =>
+                            e.stopPropagation()
+                          }
+                        >
+
+                          <div className="flex justify-end gap-1.5">
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSimulateDelay(
+                                  truck.truckId
+                                )
+                              }
+                              disabled={submitting}
+                              className="rounded-lg border border-[#E3DDD1] px-2.5 py-2 text-[8px] font-bold text-[#68716D] hover:border-[#DC2626]"
+                            >
+                              Delay
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleGetDockRecommendation(
+                                  truck
+                                )
+                              }
+                              className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-2 text-[8px] font-bold text-[#2563EB]"
+                            >
+                              Recommend Dock
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+
+            <div className="flex items-center justify-between border-t border-[#E3DDD1] px-5 py-3 dark:border-[#2B3835]">
+
+              <span className="text-[8px] font-mono uppercase tracking-wider text-[#8A938F]">
+                Step 2 · Yard Movement & Dock Allocation
+              </span>
+
+              <span className="text-[8px] font-mono text-[#8A938F]">
+                {
+                  trucks.filter(
+                    (t) =>
+                      t.status !==
+                      "COMPLETED"
+                  ).length
+                } active vehicles
+              </span>
+
+            </div>
+
+          </PaperSheet>
+
+
+          {/* =====================================================
+            INVENTORY
+        ===================================================== */}
+
+          <PaperSheet
+            variant="default"
+            className="overflow-hidden p-0 border border-[#E3DDD1] dark:border-[#2B3835]"
+          >
+
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div className="flex items-center justify-between">
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#DCFCE7] dark:bg-[#163824]">
+                    <Boxes className="h-4 w-4 text-[#15803D]" />
+                  </div>
+
+                  <div>
+
+                    <h3 className="font-handwriting text-xl sm:text-2xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                      Warehouse Inventory
+                    </h3>
+
+                    <p className="mt-1 text-[8px] font-mono text-[#8A938F]">
+                      Stock levels synchronized after goods receiving.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <span className="text-[8px] font-mono text-[#8A938F]">
+                  {inventory.length} items
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[800px]">
+
+                <thead className="bg-[#FAF8F3] dark:bg-[#17201D]">
+
+                  <tr>
+
+                    {[
+                      "SKU",
+                      "Product",
+                      "Location",
+                      "On Hand",
+                      "Available",
+                      "Updated",
+                    ].map((heading) => (
+
+                      <th
+                        key={heading}
+                        className="px-5 py-3 text-left text-[8px] font-bold uppercase tracking-widest text-[#8A938F]"
+                      >
+                        {heading}
+                      </th>
+
+                    ))}
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody className="divide-y divide-[#E3DDD1] dark:divide-[#2B3835]">
+
+                  {inventory.map((item) => (
+
+                    <tr
+                      key={
+                        item._id ||
+                        item.sku
+                      }
+                      className="hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                    >
+
+                      <td className="px-5 py-4">
+
+                        <span className="text-[9px] font-mono font-bold text-[#15803D]">
+                          {item.sku}
+                        </span>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <span className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                          {item.productName}
+                        </span>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <span className="text-[9px] text-[#68716D]">
+                          {item.warehouseLocation ||
+                            "Not assigned"}
+                        </span>
+
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+
+                        <span className="text-[10px] font-mono font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                          {Number(
+                            item.quantityOnHand ||
+                            0
+                          ).toLocaleString()}
+                        </span>
+
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+
+                        <span className="text-[10px] font-mono font-bold text-[#15803D]">
+                          {Number(
+                            item.availableQuantity ||
+                            0
+                          ).toLocaleString()}
+                        </span>
+
+                      </td>
+
+                      <td className="px-5 py-4">
+
+                        <span className="text-[8px] font-mono text-[#8A938F]">
+                          {item.updatedAt ||
+                            item.lastUpdated
+                            ? new Date(
+                              item.updatedAt ||
+                              item.lastUpdated
+                            ).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute:
+                                  "2-digit",
+                              }
+                            )
+                            : "—"}
+                        </span>
+
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </PaperSheet>
+
+        </div>
+      )}
+
+
+      {/* =========================================================
+        TRUCK DETAILS MODAL
+    ========================================================= */}
+
+      {selectedTruckDetail && (
+
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+
+          <div className="h-full w-full max-w-md overflow-y-auto bg-[#FCFAF4] dark:bg-[#1B2422] border-l border-[#E3DDD1] dark:border-[#2B3835] shadow-2xl">
+
+            <div className="flex items-start justify-between p-5 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div>
+
+                <div className="flex items-center gap-2">
+
+                  <Truck className="w-4 h-4 text-[#15803D]" />
+
+                  <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    {selectedTruckDetail.truckId}
+                  </h3>
+
+                </div>
+
+                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                  Current yard state and assignment.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedTruckDetail(null)
+                }
+                className="text-[#68716D] hover:text-[#1C201E]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+            </div>
+
+
+            <div className="p-5">
+
+              <div className="rounded-lg border border-[#E3DDD1] dark:border-[#2B3835] overflow-hidden">
+
+                {[
+                  [
+                    "Status",
+                    selectedTruckDetail.status ||
+                    "Not available",
+                  ],
+                  [
+                    "Purchase Order",
+                    selectedTruckDetail.poNumber ||
+                    "Not available",
+                  ],
+                  [
+                    "Driver",
+                    selectedTruckDetail.driverName ||
+                    "Not available",
+                  ],
+                  [
+                    "Trailer",
+                    selectedTruckDetail.trailerId ||
+                    "Not available",
+                  ],
+                  [
+                    "ETA",
+                    selectedTruckDetail.eta ||
+                    "Not available",
+                  ],
+                  [
+                    "Assigned Dock",
+                    selectedTruckDetail.assignedDock ||
+                    "Unassigned",
+                  ],
+                ].map(([label, value]) => (
+
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-4 px-4 py-3 border-b last:border-b-0 border-[#E3DDD1] dark:border-[#2B3835]"
+                  >
+
+                    <span className="text-[8px] font-bold uppercase tracking-wider text-[#8A938F]">
+                      {label}
+                    </span>
+
+                    <span className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                      {value}
+                    </span>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+
+              {selectedTruckDetail.delayReason && (
+
+                <div className="mt-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 text-[9px] text-[#991B1B]">
+
+                  <strong>Delay recorded.</strong>{" "}
+                  {selectedTruckDetail.delayReason}
+                  {" "}
+                  (+
+                  {selectedTruckDetail.delayMinutes ||
+                    15}
+                  min)
+
+                </div>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* =========================================================
+        DOCK RECOMMENDATION MODAL
+    ========================================================= */}
+
+      {recommendedDock && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+
+          <div className="w-full max-w-md rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-2xl">
+
+            <div className="flex items-start justify-between p-5 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <div>
+
+                <div className="flex items-center gap-2">
+
+                  <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+
+                  <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    Dock Recommendation
+                  </h3>
+
+                </div>
+
+                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                  For {recommendedDock.truckId} · PO{" "}
+                  {recommendedDock.poNumber}
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setRecommendedDock(null)
+                }
+                className="text-[#68716D]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+            </div>
+
+
+            <div className="p-5 space-y-4">
+
+              <div className="grid grid-cols-3 gap-2">
+
+                {[
+                  ["ETA", recommendedDock.eta],
+                  [
+                    "Priority",
+                    recommendedDock.priority,
+                  ],
+                  [
+                    "Load",
+                    recommendedDock.loadType,
+                  ],
+                ].map(([label, value]) => (
+
+                  <div
+                    key={label}
+                    className="rounded-lg bg-[#F4EFE6] dark:bg-[#222D2B] p-3"
+                  >
+
+                    <p className="text-[7px] font-bold uppercase tracking-wider text-[#8A938F]">
+                      {label}
+                    </p>
+
+                    <p className="mt-1 text-[9px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                      {value || "—"}
+                    </p>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+
+              {recommendedDock.recommendedDock ? (
+
+                <div className="rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] p-4">
+
+                  <div className="flex items-center justify-between">
+
+                    <div>
+
+                      <p className="text-[8px] font-bold uppercase tracking-wider text-[#15803D]">
+                        Recommended Dock
+                      </p>
+
+                      <p className="mt-1 text-lg font-bold text-[#1C201E]">
+                        {
+                          recommendedDock
+                            .recommendedDock
+                            .dockNumber
+                        }
+                      </p>
+
+                      <p className="text-[8px] text-[#68716D]">
+                        {
+                          recommendedDock
+                            .recommendedDock
+                            .name
+                        }
+                      </p>
+
+                    </div>
+
+                    <span className="text-[9px] font-bold text-[#15803D]">
+                      Score{" "}
+                      {
+                        recommendedDock
+                          .recommendedDock
+                          .score
+                      }
+                      /100
+                    </span>
+
+                  </div>
+
+
+                  {recommendedDock.recommendedDock.rationale?.length > 0 && (
+
+                    <ul className="mt-3 space-y-1 text-[8px] text-[#68716D] list-disc pl-4">
+
+                      {recommendedDock.recommendedDock.rationale.map(
+                        (reason, idx) => (
+                          <li key={idx}>
+                            {reason}
+                          </li>
+                        )
+                      )}
+
+                    </ul>
+
+                  )}
+
+                </div>
+
+              ) : (
+
+                <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 text-[9px] text-[#DC2626]">
+                  {recommendedDock.reason ||
+                    "A dock could not be recommended."}
+                </div>
+
+              )}
+
+            </div>
+
+
+            <div className="flex justify-end gap-2 p-5 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setRecommendedDock(null)
+                }
+                className="px-3 py-1.5 rounded-xs border border-[#E3DDD1] text-[9px] font-mono"
               >
                 Cancel
               </button>
+
               {recommendedDock.recommendedDock && (
+
                 <button
                   type="button"
                   onClick={() =>
                     handleAssignDock(
-                      recommendedDock.recommendedDock.dockNumber,
-                      recommendedDock.truckId,
+                      recommendedDock
+                        .recommendedDock
+                        .dockNumber,
+                      recommendedDock.truckId
                     )
                   }
                   disabled={submitting}
-                  className="min-h-9 rounded-md bg-purple-600 px-3 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-xs bg-[#15803D] text-white text-[9px] font-mono font-bold disabled:opacity-50"
                 >
-                  Assign {recommendedDock.recommendedDock.dockNumber}
+                  Assign Dock
                 </button>
+
               )}
+
             </div>
+
           </div>
+
         </div>
+
       )}
 
+
+      {/* =========================================================
+        RECEIVING / GRN MODAL
+    ========================================================= */}
+
       {receivingPo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="receiving-dialog-title"
-        >
-          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-5 dark:border-zinc-800">
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+
+          <div className="w-full max-w-md rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-2xl">
+
+            <div className="flex items-start justify-between p-5 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+
               <div>
-                <h3
-                  id="receiving-dialog-title"
-                  className="text-base font-semibold text-zinc-950 dark:text-zinc-100"
-                >
-                  Receive goods and create GRN
-                </h3>
-                <p className="mt-1 text-xs text-zinc-500">
-                  PO {receivingPo.poNumber}
+
+                <div className="flex items-center gap-2">
+
+                  <PackageCheck className="w-4 h-4 text-[#15803D]" />
+
+                  <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                    Receive Goods & Create GRN
+                  </h3>
+
+                </div>
+
+                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
+                  Purchase Order {receivingPo.poNumber}
                 </p>
+
               </div>
+
               <button
                 type="button"
-                onClick={() => setReceivingPo(null)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                aria-label="Close receiving dialog"
+                onClick={() =>
+                  setReceivingPo(null)
+                }
+                className="text-[#68716D]"
               >
-                <X className="h-4 w-4" aria-hidden="true" />
+                <X className="w-4 h-4" />
               </button>
+
             </div>
+
 
             <form
               onSubmit={handleProcessReceiving}
-              className="space-y-4 p-5 text-xs"
+              className="p-5 space-y-4"
             >
-              <div className="border-b border-zinc-200 pb-4 dark:border-zinc-800">
-                <p className="font-medium text-zinc-900 dark:text-zinc-100">
+
+              <div className="rounded-lg bg-[#F4EFE6] dark:bg-[#222D2B] p-3">
+
+                <p className="text-[10px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
                   {receivingPo.item}
                 </p>
-                <p className="mt-1 text-zinc-500">
-                  Ordered quantity:{" "}
-                  <span className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
-                    {receivingPo.ordered} units
-                  </span>
+
+                <p className="mt-1 text-[8px] text-[#68716D]">
+                  Ordered Quantity:{" "}
+                  <strong>
+                    {receivingPo.ordered}
+                  </strong>{" "}
+                  units
                 </p>
+
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+              <div className="grid grid-cols-2 gap-3">
+
                 <div>
-                  <label
-                    htmlFor="received-quantity"
-                    className="mb-1.5 block font-medium text-zinc-700 dark:text-zinc-300"
-                  >
-                    Received quantity
+
+                  <label className="text-[8px] font-bold uppercase tracking-wider text-[#68716D]">
+                    Received Quantity
                   </label>
+
                   <input
-                    id="received-quantity"
                     type="number"
                     min="0"
                     value={receivedQty}
-                    onChange={(e) => setReceivedQty(e.target.value)}
-                    className="min-h-10 w-full rounded-md border border-zinc-300 bg-white px-3 font-mono text-zinc-900 focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    onChange={(e) =>
+                      setReceivedQty(
+                        e.target.value
+                      )
+                    }
+                    className="mt-1 w-full px-3 py-2 rounded-xs bg-white dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835] font-mono text-xs focus:outline-none focus:border-[#15803D]"
                     required
                   />
+
                 </div>
+
+
                 <div>
-                  <label
-                    htmlFor="damaged-quantity"
-                    className="mb-1.5 block font-medium text-zinc-700 dark:text-zinc-300"
-                  >
-                    Damaged / rejected
+
+                  <label className="text-[8px] font-bold uppercase tracking-wider text-[#68716D]">
+                    Damaged / Rejected
                   </label>
+
                   <input
-                    id="damaged-quantity"
                     type="number"
                     min="0"
                     value={damagedQty}
-                    onChange={(e) => setDamagedQty(e.target.value)}
-                    className="min-h-10 w-full rounded-md border border-zinc-300 bg-white px-3 font-mono text-zinc-900 focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    onChange={(e) =>
+                      setDamagedQty(
+                        e.target.value
+                      )
+                    }
+                    className="mt-1 w-full px-3 py-2 rounded-xs bg-white dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835] font-mono text-xs focus:outline-none focus:border-[#15803D]"
                   />
+
                 </div>
+
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/25 dark:text-emerald-300">
-                <span>Accepted into inventory</span>
-                <strong className="font-mono text-sm tabular-nums">
+
+              <div className="flex items-center justify-between rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2.5">
+
+                <span className="text-[8px] font-bold uppercase tracking-wider text-[#15803D]">
+                  Accepted into Inventory
+                </span>
+
+                <strong className="text-sm font-mono text-[#15803D]">
                   {calculatedAccepted} units
                 </strong>
+
               </div>
+
 
               <div>
-                <label
-                  htmlFor="receiving-remarks"
-                  className="mb-1.5 block font-medium text-zinc-700 dark:text-zinc-300"
-                >
-                  Inspector remarks
+
+                <label className="text-[8px] font-bold uppercase tracking-wider text-[#68716D]">
+                  Inspector Remarks
                 </label>
+
                 <textarea
-                  id="receiving-remarks"
                   value={receivingRemarks}
-                  onChange={(e) => setReceivingRemarks(e.target.value)}
+                  onChange={(e) =>
+                    setReceivingRemarks(
+                      e.target.value
+                    )
+                  }
                   placeholder="Add inspection notes if needed"
-                  className="min-h-20 w-full resize-y rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                  className="mt-1 min-h-20 w-full resize-y px-3 py-2 rounded-xs bg-white dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835] text-xs focus:outline-none focus:border-[#15803D]"
                 />
+
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#E3DDD1] dark:border-[#2B3835]">
+
                 <button
                   type="button"
-                  onClick={() => setReceivingPo(null)}
-                  className="min-h-9 rounded-md border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  onClick={() =>
+                    setReceivingPo(null)
+                  }
+                  className="px-3 py-1.5 rounded-xs border border-[#E3DDD1] text-[9px] font-mono"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-9 rounded-md bg-purple-600 px-3 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-xs bg-[#15803D] text-white text-[9px] font-mono font-bold hover:bg-[#166534] disabled:opacity-50"
                 >
-                  {submitting ? "Creating GRN…" : "Create GRN"}
+                  {submitting
+                    ? "Creating GRN..."
+                    : "Create GRN"}
                 </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 }
