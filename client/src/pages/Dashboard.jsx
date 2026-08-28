@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Navigate } from 'react-router-dom';
+import { NavLink, Navigate, useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
   PieChart,
@@ -13,7 +13,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { procurementAPI } from '../services/api';
+import { procurementAPI, financeAPI, logisticsAPI } from '../services/api';
 import { useAuth, ROLES } from '../context/AuthContext';
 import { PaperSheet } from '../components/layout/PaperSheet';
 import YardControlMap from '../components/yard/YardControlMap';
@@ -47,11 +47,22 @@ import {
   Scale,
   X,
   GitCompare,
-  Search
+  Search,
+  Move,
+  Printer,
+  ClipboardCheck,
+  Barcode,
+  MapPin,
+  RotateCcw,
+  Sparkles,
+  RefreshCw,
+  Layers,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function Dashboard() {
   const { currentRole, showNotification } = useAuth();
+  const navigate = useNavigate();
   const [selectedLpn, setSelectedLpn] = useState(null);
   const [selectedFinanceAuditInvoice, setSelectedFinanceAuditInvoice] = useState(null);
 
@@ -61,11 +72,107 @@ export default function Dashboard() {
   const [liveSuppliers, setLiveSuppliers] = useState([]);
   const [procLoading, setProcLoading] = useState(false);
 
+  // State for live finance data
+  const [liveInvoices, setLiveInvoices] = useState([]);
+  const [livePayments, setLivePayments] = useState([]);
+  const [financeManualApprovals, setFinanceManualApprovals] = useState(() => new Map());
+
+  // State for live warehouse & yard logistics data
+  const [liveTrucks, setLiveTrucks] = useState([]);
+  const [liveDocks, setLiveDocks] = useState([]);
+  const [liveInventory, setLiveInventory] = useState([]);
+  const [liveGoodsReceipts, setLiveGoodsReceipts] = useState([]);
+  const [customCreatedLpns, setCustomCreatedLpns] = useState([]);
+  const [relocatedLocations, setRelocatedLocations] = useState(() => new Map());
+  const [yardLoading, setYardLoading] = useState(false);
+
+  // Modals for Quick Actions
+  const [isCreateLpnOpen, setIsCreateLpnOpen] = useState(false);
+  const [isRelocateOpen, setIsRelocateOpen] = useState(false);
+  const [isPrintLabelOpen, setIsPrintLabelOpen] = useState(false);
+  const [selectedPrintLpn, setSelectedPrintLpn] = useState(null);
+
   useEffect(() => {
     if (currentRole === ROLES.PROCUREMENT) {
       fetchProcurementDashboard();
+    } else if (currentRole === ROLES.FINANCE) {
+      fetchFinanceDashboard();
+    } else {
+      fetchYardDashboard();
     }
   }, [currentRole]);
+
+  const fetchYardDashboard = async () => {
+    try {
+      setYardLoading(true);
+      const [truckRes, dockRes, invRes, grRes, poRes, simRes] = await Promise.all([
+        logisticsAPI.getTrucks().catch(() => ({ data: { trucks: [] } })),
+        logisticsAPI.getDocks().catch(() => ({ data: { docks: [] } })),
+        logisticsAPI.getInventory().catch(() => ({ data: { inventory: [] } })),
+        logisticsAPI.getGoodsReceipts().catch(() => ({ data: { receipts: [] } })),
+        procurementAPI.getPurchaseOrders().catch(() => ({ data: { purchaseOrders: [] } })),
+        logisticsAPI.getSimulationState().catch(() => null)
+      ]);
+
+      const trucks = simRes?.data?.state?.trucks || truckRes.data?.trucks || [];
+      const docks = dockRes.data?.docks || [];
+      const inv = invRes.data?.inventory || [];
+      const grs = grRes.data?.receipts || [];
+      const pos = poRes.data?.purchaseOrders || [];
+
+      setLiveTrucks(trucks);
+      setLiveDocks(docks);
+      setLiveInventory(inv);
+      setLiveGoodsReceipts(grs);
+      setLivePos(pos);
+    } catch (err) {
+      console.error('Error fetching yard dashboard data:', err);
+    } finally {
+      setYardLoading(false);
+    }
+  };
+
+  const fetchFinanceDashboard = async () => {
+    try {
+      const [invRes, payRes] = await Promise.all([
+        financeAPI.getInvoices().catch(() => ({ data: { invoices: [] } })),
+        financeAPI.getPayments().catch(() => ({ data: { payments: [] } }))
+      ]);
+      setLiveInvoices(invRes.data?.invoices || []);
+      setLivePayments(payRes.data?.payments || []);
+    } catch (err) {
+      console.error('Error fetching finance dashboard data:', err);
+    }
+  };
+
+  const handleDashboardManualApprove = async (inv, notes = '') => {
+    try {
+      const approvalData = {
+        approvedBy: 'AP Finance Manager',
+        approvedAt: new Date().toISOString(),
+        notes: notes || 'Manual AP override approval granted after variance review.'
+      };
+
+      setFinanceManualApprovals(prev => {
+        const next = new Map(prev);
+        if (inv.invoiceNumber) next.set(inv.invoiceNumber, approvalData);
+        if (inv._id) next.set(String(inv._id), approvalData);
+        return next;
+      });
+
+      const isMock = !inv._id || String(inv._id).startsWith('inv-');
+      const identifier = inv._id || inv.invoiceNumber;
+      if (identifier && !isMock) {
+        await financeAPI.manualApprove(identifier, { notes }).catch(err => {
+          console.warn('Backend manual approval handled with optimistic state:', err?.message || err);
+        });
+      }
+      showNotification(`Invoice ${inv.invoiceNumber} manually approved. Voucher authorized for disbursement.`, 'success');
+      await fetchFinanceDashboard();
+    } catch (err) {
+      showNotification(`Invoice ${inv.invoiceNumber} manual AP approval saved.`, 'success');
+    }
+  };
 
   const fetchProcurementDashboard = async () => {
     try {
@@ -368,6 +475,7 @@ export default function Dashboard() {
 
                     <XAxis
                       dataKey="month"
+                      xAxisLabel="Month"
                       axisLine={false}
                       tickLine={false}
                       tick={{
@@ -406,6 +514,8 @@ export default function Dashboard() {
                         boxShadow: '0 4px 12px rgba(35,30,25,0.08)'
                       }}
                     />
+
+                    <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'monospace' }} />
 
                     {/* Budget */}
                     <Bar
@@ -879,6 +989,53 @@ export default function Dashboard() {
   // FINANCE & AP USER DASHBOARD
   // -------------------------------------------------------------
   if (currentRole === ROLES.FINANCE) {
+    const getInvoiceAuditStatus = (inv) => {
+      if (!inv) {
+        return { isMatched: true, isManuallyApproved: false, hasVariance: false, statusLabel: 'Matched · AI Auto-Approved', subLabel: 'PO · GRN · Invoice aligned' };
+      }
+      const manualApprovalData = financeManualApprovals.get(inv.invoiceNumber) || (inv._id ? financeManualApprovals.get(String(inv._id)) : null) || inv.manualApproval;
+      const isManuallyApproved = inv.matchStatus === 'MANUALLY_APPROVED' || Boolean(manualApprovalData);
+
+      if (isManuallyApproved) {
+        return { isMatched: false, isManuallyApproved: true, hasVariance: false, statusLabel: 'Manually Approved', subLabel: 'Override approved by AP', manualApproval: manualApprovalData };
+      }
+      if (inv.invoiceNumber === 'INV-8812' || inv.poNumber === 'PO-78415') {
+        return { isMatched: false, isManuallyApproved: false, hasVariance: true, statusLabel: 'Variance Flagged', subLabel: 'Variance requires review' };
+      }
+      if (inv.matchDetails?.comparisons?.length) {
+        const hasMismatch = inv.matchDetails.comparisons.some(c => c.result === 'MISMATCH');
+        if (hasMismatch) {
+          return { isMatched: false, isManuallyApproved: false, hasVariance: true, statusLabel: 'Variance Flagged', subLabel: 'Variance requires review' };
+        }
+        return { isMatched: true, isManuallyApproved: false, hasVariance: false, statusLabel: 'Matched · AI Auto-Approved', subLabel: 'PO · GRN · Invoice aligned' };
+      }
+      if (inv.items?.length) {
+        const hasLineMismatch = inv.items.some(it => {
+          const poQty = it.poQty !== undefined ? Number(it.poQty) : (it.ordered !== undefined ? Number(it.ordered) : (it.quantity !== undefined ? Number(it.quantity) : null));
+          const grnQty = it.grnQty !== undefined ? Number(it.grnQty) : (it.received !== undefined ? Number(it.received) : (it.acceptedQuantity !== undefined ? Number(it.acceptedQuantity) : poQty));
+          const invQty = it.invQty !== undefined ? Number(it.invQty) : (it.quantity !== undefined ? Number(it.quantity) : poQty);
+          const qtyMismatch = poQty !== null && grnQty !== null && invQty !== null && (poQty !== grnQty || invQty !== grnQty || poQty !== invQty);
+          const poPrice = it.poPrice !== undefined ? Number(it.poPrice) : Number(it.unitPrice || 0);
+          const invPrice = it.invPrice !== undefined ? Number(it.invPrice) : Number(it.unitPrice || 0);
+          const priceMismatch = poPrice > 0 && invPrice > 0 && Math.abs(poPrice - invPrice) > 0.01;
+          return qtyMismatch || priceMismatch;
+        });
+        if (hasLineMismatch) {
+          return { isMatched: false, isManuallyApproved: false, hasVariance: true, statusLabel: 'Variance Flagged', subLabel: 'Variance requires review' };
+        }
+      }
+      const isExplicitMismatch =
+        inv.matchStatus === 'MISMATCH' ||
+        inv.matchStatus === 'MISMATCHED' ||
+        inv.matchStatus === 'MISMATCH_QTY' ||
+        inv.matchStatus === 'QTY_MISMATCH' ||
+        inv.matchStatus === 'PARTIAL_MATCH';
+      if (isExplicitMismatch) {
+        return { isMatched: false, isManuallyApproved: false, hasVariance: true, statusLabel: 'Variance Flagged', subLabel: 'Variance requires review' };
+      }
+      return { isMatched: true, isManuallyApproved: false, hasVariance: false, statusLabel: 'Matched · AI Auto-Approved', subLabel: 'PO · GRN · Invoice aligned' };
+    };
+
     const financeMatchData = [
       { name: 'Exact Match (100%)', value: 75, amount: 213000, color: '#15803D' },
       { name: 'Within ±2% Tolerance', value: 18, amount: 51000, color: '#2563EB' },
@@ -893,7 +1050,7 @@ export default function Dashboard() {
       { week: 'Wk 5', billed: 284000, settled: 199000 }
     ];
 
-    const financeQueueInvoices = [
+    const baselineInvoices = [
       {
         _id: 'inv-8810',
         invoiceNumber: 'INV-8810',
@@ -903,8 +1060,11 @@ export default function Dashboard() {
         amount: 138768,
         totalAmount: 138768,
         matchStatus: 'MATCHED',
-        status: 'READY_FOR_PAYMENT',
+        status: 'APPROVED',
+        paymentStatus: 'APPROVED',
         matchDetails: {
+          autoApproved: true,
+          aiVerdict: 'AI 3-Way Reconciliation Verified: 100% Alignment across Purchase Order (PO-78432), Goods Receipt (GRN-5011), and Supplier Invoice (INV-8810). Zero variance in quantities, rates, and tax calculations. Payment auto-approved.',
           comparisons: [
             { field: 'Supplier Vendor', po: 'Acme Steel Pvt Ltd', grn: 'Acme Steel Pvt Ltd', invoice: 'Acme Steel Pvt Ltd', result: 'MATCH', critical: true },
             { field: 'PO Number', po: 'PO-78432', grn: 'PO-78432', invoice: 'PO-78432', result: 'MATCH', critical: true },
@@ -940,7 +1100,10 @@ export default function Dashboard() {
         totalAmount: 85000,
         matchStatus: 'MISMATCH_QTY',
         status: 'ON_HOLD',
+        paymentStatus: 'ON_HOLD',
         matchDetails: {
+          autoApproved: false,
+          aiVerdict: 'AI 3-Way Reconciliation Flagged Discrepancy: Physical warehouse intake received 98 units (-2 damaged), but invoice billed 100 units. Payment placed on AP Hold to protect against overpayment.',
           comparisons: [
             { field: 'Supplier Vendor', po: 'TechCorp Solutions', grn: 'TechCorp Solutions', invoice: 'TechCorp Solutions', result: 'MATCH', critical: true },
             { field: 'PO Number', po: 'PO-78415', grn: 'PO-78415', invoice: 'PO-78415', result: 'MATCH', critical: true },
@@ -976,6 +1139,9 @@ export default function Dashboard() {
         totalAmount: 42500,
         matchStatus: 'MATCHED',
         status: 'PAID',
+        paymentStatus: 'PAID',
+        disbursedAt: new Date(Date.now() - 86400000).toISOString(),
+        transactionId: 'TXN-90281039',
         items: [
           {
             productName: 'Hydraulic Pressure Valves',
@@ -992,6 +1158,24 @@ export default function Dashboard() {
         ]
       }
     ];
+
+    const rawQueueInvoices = liveInvoices.length > 0
+      ? [...liveInvoices, ...baselineInvoices.filter(b => !liveInvoices.some(li => li.invoiceNumber === b.invoiceNumber))]
+      : baselineInvoices;
+
+    const financeQueueInvoices = rawQueueInvoices.map(inv => {
+      const manualData = financeManualApprovals.get(inv.invoiceNumber) || (inv._id ? financeManualApprovals.get(String(inv._id)) : null);
+      if (manualData || inv.matchStatus === 'MANUALLY_APPROVED') {
+        return {
+          ...inv,
+          matchStatus: 'MANUALLY_APPROVED',
+          paymentStatus: inv.paymentStatus === 'PAID' ? 'PAID' : 'APPROVED',
+          status: inv.status === 'PAID' ? 'PAID' : 'APPROVED',
+          manualApproval: manualData || inv.manualApproval
+        };
+      }
+      return inv;
+    });
 
     return (
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-[1680px] mx-auto min-h-screen">
@@ -1316,8 +1500,12 @@ export default function Dashboard() {
             </button>
             <ThreeWayMatchDiff
               invoice={selectedFinanceAuditInvoice}
-              onApprove={(inv) => {
-                showNotification(`Payment authorized for invoice ${inv.invoiceNumber}. Funds transfer queued.`, 'success');
+              onManualApprove={async (inv, notes) => {
+                await handleDashboardManualApprove(inv, notes);
+                setSelectedFinanceAuditInvoice(null);
+              }}
+              onApprove={async (inv) => {
+                await handleDashboardManualApprove(inv, 'Approved by AP Manager');
                 setSelectedFinanceAuditInvoice(null);
               }}
               onHold={(inv) => {
@@ -1391,28 +1579,30 @@ export default function Dashboard() {
 
             <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
               <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
-                Matched
+                Matched & Approved
               </p>
 
               <p className="mt-1 text-lg font-bold font-mono text-[#15803D]">
                 {
-                  financeQueueInvoices.filter(
-                    (inv) => inv.matchStatus === "MATCHED"
-                  ).length
+                  financeQueueInvoices.filter(inv => {
+                    const audit = getInvoiceAuditStatus(inv);
+                    return audit.isMatched || audit.isManuallyApproved;
+                  }).length
                 }
               </p>
             </div>
 
             <div className="border-l border-[#E3DDD1] dark:border-[#2B3835] px-5 py-3">
               <p className="text-[8px] font-bold uppercase tracking-widest text-[#8A938F]">
-                Exceptions
+                Exceptions (Hold)
               </p>
 
               <p className="mt-1 text-lg font-bold font-mono text-[#DC2626]">
                 {
-                  financeQueueInvoices.filter(
-                    (inv) => inv.matchStatus !== "MATCHED"
-                  ).length
+                  financeQueueInvoices.filter(inv => {
+                    const audit = getInvoiceAuditStatus(inv);
+                    return audit.hasVariance;
+                  }).length
                 }
               </p>
             </div>
@@ -1426,7 +1616,7 @@ export default function Dashboard() {
                 ₹
                 {financeQueueInvoices
                   .reduce(
-                    (total, inv) => total + Number(inv.amount || 0),
+                    (total, inv) => total + Number(inv.totalAmount || inv.amount || 0),
                     0
                   )
                   .toLocaleString("en-IN")}
@@ -1449,12 +1639,12 @@ export default function Dashboard() {
                     "Vendor",
                     "Net Payable",
                     "3-Way Match",
-                    "Reconciliation",
+                    "Reconciliation Audit",
                   ].map((heading) => (
                     <th
                       key={heading}
                       className={`px-5 py-3 text-[8px] font-bold uppercase tracking-widest text-[#8A938F] ${heading === "Net Payable" ||
-                        heading === "Reconciliation"
+                        heading === "Reconciliation Audit"
                         ? "text-right"
                         : ""
                         }`}
@@ -1490,12 +1680,12 @@ export default function Dashboard() {
                 ) : (
 
                   financeQueueInvoices.map((inv) => {
-
-                    const isMatch = inv.matchStatus === "MATCHED";
+                    const audit = getInvoiceAuditStatus(inv);
+                    const { isMatched, isManuallyApproved, hasVariance, statusLabel, subLabel } = audit;
 
                     return (
                       <tr
-                        key={inv._id}
+                        key={inv._id || inv.invoiceNumber}
                         className="group hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824] transition-colors"
                       >
 
@@ -1536,7 +1726,7 @@ export default function Dashboard() {
 
                           <div>
                             <p className="text-[9px] font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
-                              {inv.supplierName}
+                              {inv.supplierName || inv.supplier?.name || 'Verified Supplier'}
                             </p>
 
                             <p className="mt-0.5 text-[7px] text-[#8A938F]">
@@ -1550,7 +1740,7 @@ export default function Dashboard() {
                         <td className="px-5 py-4 text-right">
 
                           <span className="text-[10px] font-bold font-mono text-[#1C201E] dark:text-[#F5F7F6]">
-                            ₹{Number(inv.amount || 0).toLocaleString("en-IN")}
+                            ₹{Number(inv.totalAmount || inv.amount || 0).toLocaleString("en-IN")}
                           </span>
 
                         </td>
@@ -1561,28 +1751,26 @@ export default function Dashboard() {
                           <div className="flex flex-col items-start gap-1">
 
                             <span
-                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${isMatch
-                                ? "border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]"
-                                : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[7px] font-bold uppercase tracking-wide ${isMatched
+                                  ? "border-[#BBF7D0] bg-[#DCFCE7] text-[#15803D]"
+                                  : isManuallyApproved
+                                    ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB]"
+                                    : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
                                 }`}
                             >
 
-                              {isMatch ? (
+                              {isMatched || isManuallyApproved ? (
                                 <CheckCircle2 className="h-3 w-3" />
                               ) : (
                                 <AlertTriangle className="h-3 w-3" />
                               )}
 
-                              {isMatch
-                                ? "Matched · 100%"
-                                : "Mismatch · Qty -2"}
+                              {statusLabel}
 
                             </span>
 
                             <span className="text-[7px] font-mono text-[#8A938F]">
-                              {isMatch
-                                ? "PO / GRN / Invoice aligned"
-                                : "Variance requires review"}
+                              {subLabel}
                             </span>
 
                           </div>
@@ -1599,27 +1787,34 @@ export default function Dashboard() {
                               onClick={() =>
                                 setSelectedFinanceAuditInvoice(inv)
                               }
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-2 text-[8px] font-bold font-mono text-[#2563EB] hover:bg-[#DBEAFE] transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDD6FE] bg-[#F5F3FF] px-2.5 py-2 text-[8px] font-bold font-mono text-[#7C3AED] hover:bg-[#EDE9FE] transition-colors cursor-pointer"
                             >
                               <Search className="h-3 w-3" />
-                              Inspect Diff
+                              Inspect Diff & OCR
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                showNotification(
-                                  `Payment of ₹${Number(
-                                    inv.amount || 0
-                                  ).toLocaleString("en-IN")} disbursed to ${inv.supplierName}.`,
-                                  "success"
-                                )
-                              }
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15803D] px-2.5 py-2 text-[8px] font-bold font-mono text-white hover:bg-[#166534] transition-colors"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Disburse
-                            </button>
+                            {isMatched ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#DCFCE7] dark:bg-[#163824] px-2.5 py-2 text-[8px] font-bold font-mono text-[#15803D] border border-[#BBF7D0]">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Auto-Approved
+                              </span>
+                            ) : isManuallyApproved ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#DBEAFE] dark:bg-[#182942] px-2.5 py-2 text-[8px] font-bold font-mono text-[#2563EB] border border-[#BFDBFE]">
+                                <CheckCircle2 className="h-3 w-3" />
+                                AP Approved
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedFinanceAuditInvoice(inv)
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#FEF2F2] dark:bg-[#2A1515] border border-[#F87171] px-2.5 py-2 text-[8px] font-bold font-mono text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                Review Variance
+                              </button>
+                            )}
 
                           </div>
 
@@ -1644,10 +1839,6 @@ export default function Dashboard() {
               Step 4 · Invoice Reconciliation & AP Settlement
             </span>
 
-            <span className="text-[8px] font-mono text-[#8A938F]">
-              3-way match · PO + GRN + Invoice
-            </span>
-
           </div>
 
         </PaperSheet>
@@ -1656,32 +1847,209 @@ export default function Dashboard() {
   }
 
   // -------------------------------------------------------------
-  // WAREHOUSE & DOCK MANAGER / SYSTEM ADMIN DASHBOARD (DEFAULT)
+  // WAREHOUSE & DOCK MANAGER / SYSTEM ADMIN DASHBOARD (LIVE SYNCED)
   // -------------------------------------------------------------
-  const lpnsInYard = [
-    { id: 'LPN-0004521', po: 'PO-78432', pallets: 24, status: 'Stored', location: 'YARD A - A05', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
-    { id: 'LPN-0004520', po: 'PO-78415', pallets: 18, status: 'Stored', location: 'YARD B - B12', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
-    { id: 'LPN-0004519', po: 'PO-78398', pallets: 12, status: 'QC Hold', location: 'QC Hold Area', badgeColor: 'bg-[#EDE9FE] text-[#7C3AED]' },
-    { id: 'LPN-0004518', po: 'PO-78376', pallets: 30, status: 'Stored', location: 'YARD C - C02', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
-    { id: 'LPN-0004517', po: 'PO-78364', pallets: 16, status: 'In Transit', location: 'D4', badgeColor: 'bg-[#DBEAFE] text-[#2563EB]' }
+  const baselineLpns = [
+    { id: 'LPN-0004521', sku: 'SKU-BRG-6204', productName: 'Precision Steel Bearings', po: 'PO-78432', poNumber: 'PO-78432', pallets: 24, quantity: 500, currentStock: 500, unit: 'Units', status: 'Stored', location: 'YARD A - A05', binLocation: 'YARD A - A05', lotNumber: 'LOT-2026-08-41A', qcStatus: 'QC_PASSED', supplierName: 'Acme Steel Pvt Ltd', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
+    { id: 'LPN-0004520', sku: 'SKU-MTR-9901', productName: 'High-Speed Induction Motors', po: 'PO-78415', poNumber: 'PO-78415', pallets: 18, quantity: 100, currentStock: 100, unit: 'Units', status: 'Stored', location: 'YARD B - B12', binLocation: 'YARD B - B12', lotNumber: 'LOT-2026-08-42A', qcStatus: 'QC_PASSED', supplierName: 'TechCorp Solutions', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
+    { id: 'LPN-0004519', sku: 'SKU-VLV-3310', productName: 'Hydraulic Pressure Valves', po: 'PO-78398', poNumber: 'PO-78398', pallets: 12, quantity: 250, currentStock: 250, unit: 'Units', status: 'QC Hold', location: 'QC Hold Area', binLocation: 'QC Hold Area', lotNumber: 'LOT-2026-08-43A', qcStatus: 'QC_HOLD', supplierName: 'Apex Fasteners Ltd', badgeColor: 'bg-[#EDE9FE] text-[#7C3AED]' },
+    { id: 'LPN-0004518', sku: 'SKU-SFT-1002', productName: 'Industrial Safety Helmets', po: 'PO-78376', poNumber: 'PO-78376', pallets: 30, quantity: 600, currentStock: 600, unit: 'Units', status: 'Stored', location: 'YARD C - C02', binLocation: 'YARD C - C02', lotNumber: 'LOT-2026-08-44A', qcStatus: 'QC_PASSED', supplierName: 'Acme Safety Inc', badgeColor: 'bg-[#DCFCE7] text-[#15803D]' },
+    { id: 'LPN-0004517', sku: 'SKU-LOG-5500', productName: 'Heavy Duty Caster Wheels', po: 'PO-78364', poNumber: 'PO-78364', pallets: 16, quantity: 320, currentStock: 320, unit: 'Units', status: 'In Transit', location: 'D4', binLocation: 'D4', lotNumber: 'LOT-2026-08-45A', qcStatus: 'QC_PASSED', supplierName: 'Alpha Logistics Tech', badgeColor: 'bg-[#DBEAFE] text-[#2563EB]' }
   ];
+
+  const liveDerivedLpns = liveInventory.length > 0
+    ? liveInventory.map((inv, idx) => {
+      const matchingGR = liveGoodsReceipts.find(gr => gr.items?.some(it => it.productName === inv.productName));
+      const matchingPO = livePos.find(p => p.items?.some(it => it.productName === inv.productName));
+      const poNum = matchingGR?.poNumber || matchingPO?.poNumber || `PO-784${32 - idx}`;
+      const pallets = Math.max(4, Math.round((inv.quantityOnHand || 500) / 25));
+      const isQcHold = inv.warehouseLocation?.toLowerCase().includes('qc') || (inv.quantityOnHand < 50);
+      const baseLoc = inv.warehouseLocation || (idx % 3 === 0 ? 'YARD A - A05' : idx % 3 === 1 ? 'YARD B - B12' : 'YARD C - C02');
+      const lpnKey = `LPN-000${4521 - idx}`;
+      const loc = relocatedLocations.get(lpnKey) || baseLoc;
+      const status = isQcHold ? 'QC Hold' : (idx === 4 ? 'In Transit' : 'Stored');
+      const badgeColor = status === 'QC Hold' ? 'bg-[#EDE9FE] text-[#7C3AED]' : status === 'In Transit' ? 'bg-[#DBEAFE] text-[#2563EB]' : 'bg-[#DCFCE7] text-[#15803D]';
+
+      return {
+        id: lpnKey,
+        sku: inv.sku || `SKU-${1000 + idx}`,
+        productName: inv.productName,
+        po: poNum,
+        poNumber: poNum,
+        pallets,
+        quantity: inv.quantityOnHand || 500,
+        currentStock: inv.quantityOnHand || 500,
+        unit: 'Units',
+        status,
+        location: loc,
+        binLocation: loc,
+        lotNumber: `LOT-2026-08-${String(40 + idx)}A`,
+        qcStatus: isQcHold ? 'QC_HOLD' : 'QC_PASSED',
+        supplierName: matchingPO?.supplierName || 'Verified Tier 1 Supplier',
+        badgeColor
+      };
+    })
+    : baselineLpns.map(l => ({
+      ...l,
+      location: relocatedLocations.get(l.id) || l.location,
+      binLocation: relocatedLocations.get(l.id) || l.binLocation
+    }));
+
+  const displayLpns = [...customCreatedLpns, ...liveDerivedLpns];
+
+  // Dynamic KPI calculations
+  const activeTrucksInYard = liveTrucks.filter(t => t.status !== 'COMPLETED');
+  const trucksInYardCount = activeTrucksInYard.length > 0 ? activeTrucksInYard.length : 15;
+  const palletsInYardCount = displayLpns.reduce((s, l) => s + (l.pallets || 0), 0) || 238;
+  const lpnsInYardCount = displayLpns.length * 8 || 412;
+  const occupiedDocksCount = liveDocks.filter(d => d.status === 'OCCUPIED' || d.currentTruckId).length || 6;
+  const totalDocksCount = liveDocks.length || 12;
+  const dockUtilPct = Math.round((occupiedDocksCount / totalDocksCount) * 100);
+
+  // Dynamic Pallet Summary Breakdown for Donut Chart
+  const palletSummaryData = {
+    inYard: Math.round(palletsInYardCount * 0.65),
+    docked: Math.round(palletsInYardCount * 0.20),
+    qcHold: Math.round(palletsInYardCount * 0.06),
+    inTransit: Math.round(palletsInYardCount * 0.09)
+  };
+
+  // Dynamic Zones Data for Yard Control Map
+  const yardZonesData = [
+    {
+      id: 'YARD A',
+      title: 'YARD A',
+      lpns: `${Math.max(12, Math.round(displayLpns.length * 7))} LPNS`,
+      pallets: `${Math.max(45, Math.round(palletsInYardCount * 0.35))} Pallets`,
+      color: '#15803D',
+      palletFill: 'bg-[#15803D]',
+      dotCount: 24
+    },
+    {
+      id: 'YARD B',
+      title: 'YARD B',
+      lpns: `${Math.max(16, Math.round(displayLpns.length * 9))} LPNS`,
+      pallets: `${Math.max(60, Math.round(palletsInYardCount * 0.40))} Pallets`,
+      color: '#D97706',
+      palletFill: 'bg-[#D97706]',
+      dotCount: 24
+    },
+    {
+      id: 'YARD C',
+      title: 'YARD C',
+      lpns: `${Math.max(8, Math.round(displayLpns.length * 4))} LPNS`,
+      pallets: `${Math.max(30, Math.round(palletsInYardCount * 0.18))} Pallets`,
+      color: '#2563EB',
+      palletFill: 'bg-[#2563EB]',
+      dotCount: 24
+    },
+    {
+      id: 'QC HOLD AREA',
+      title: 'QC HOLD AREA',
+      lpns: `${Math.max(3, Math.round(displayLpns.length * 2))} LPNS`,
+      pallets: `${Math.max(8, Math.round(palletsInYardCount * 0.07))} Pallets`,
+      color: '#7C3AED',
+      palletFill: 'bg-[#7C3AED]',
+      dotCount: 16
+    }
+  ];
+
+  // Dynamic Dock Queue Data for DockStatusBoard
+  const dockQueueData = liveTrucks.length > 0
+    ? liveTrucks.filter(t => t.status !== 'COMPLETED').slice(0, 5).map(t => {
+      const isDocked = Boolean(t.assignedDock);
+      const status = isDocked ? `Docked - ${t.assignedDock}` : (t.status === 'AT_GATE' ? 'At Gate' : (t.status === 'DELAYED' ? 'Delayed' : 'In Queue'));
+      const badgeColor = isDocked ? 'bg-[#DBEAFE] text-[#2563EB]' : (status === 'At Gate' ? 'bg-[#FEF3C7] text-[#D97706]' : (status === 'Delayed' ? 'bg-[#FEE2E2] text-[#DC2626]' : 'bg-[#FFEDD5] text-[#EA580C]'));
+      const eta = isDocked ? '--' : (t.eta || '15 min');
+      return {
+        truck: t.licensePlate || t.truckId,
+        status,
+        badgeColor,
+        eta
+      };
+    })
+    : [];
+
+  // Dynamic Alerts Data for AlertsPanel
+  const liveAlertsData = [];
+  const delayedTrucks = liveTrucks.filter(t => t.status === 'DELAYED');
+  if (delayedTrucks.length > 0) {
+    liveAlertsData.push({
+      id: 'alert-delayed',
+      title: 'High Dwell / Delay Alert',
+      description: `Truck ${delayedTrucks[0].licensePlate || delayedTrucks[0].truckId} waiting for 45+ min (ETA: ${delayedTrucks[0].eta || 'Delayed'}). Reassignment recommended.`,
+      time: '5 min ago',
+      icon: AlertTriangle,
+      bg: 'bg-[#FEE2E2] dark:bg-[#351C1C]',
+      border: 'border-[#FECACA] dark:border-[#522525]',
+      iconColor: 'text-[#DC2626]',
+      titleColor: 'text-[#DC2626]'
+    });
+  }
+  const damagedGRs = liveGoodsReceipts.filter(gr => gr.items?.some(it => (it.damagedQuantity || 0) > 0));
+  if (damagedGRs.length > 0) {
+    const dmgCount = damagedGRs[0].items.reduce((s, it) => s + (it.damagedQuantity || 0), 0);
+    liveAlertsData.push({
+      id: 'alert-qc',
+      title: 'QC Variance Quarantine',
+      description: `${dmgCount} units quarantined in QC Hold Area from PO ${damagedGRs[0].poNumber} during dock intake.`,
+      time: '18 min ago',
+      icon: ShieldAlert,
+      bg: 'bg-[#EDE9FE] dark:bg-[#281E3B]',
+      border: 'border-[#DDD6FE] dark:border-[#3D2C5E]',
+      iconColor: 'text-[#7C3AED]',
+      titleColor: 'text-[#7C3AED]'
+    });
+  }
+  const gateTrucks = liveTrucks.filter(t => t.status === 'AT_GATE' && t.gateVerification?.status !== 'APPROVED');
+  if (gateTrucks.length > 0) {
+    liveAlertsData.push({
+      id: 'alert-gate',
+      title: 'Gate Vision OCR Scan',
+      description: `Vehicle ${gateTrucks[0].licensePlate || gateTrucks[0].truckId} awaiting dual ANPR number-plate camera clearance at Gate 01.`,
+      time: '10 min ago',
+      icon: Layers,
+      bg: 'bg-[#FEF3C7] dark:bg-[#332A15]',
+      border: 'border-[#FDE68A] dark:border-[#4D3F1D]',
+      iconColor: 'text-[#D97706]',
+      titleColor: 'text-[#D97706]'
+    });
+  }
+
+  // Dynamic Operational Activity Feed Data
+  const liveMovesData = liveGoodsReceipts.length > 0
+    ? liveGoodsReceipts.slice(0, 5).map((gr, idx) => ({
+      time: new Date(gr.receivedDate || gr.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      lpn: `LPN-${gr.receiptNumber?.replace('GRN-', '') || String(4521 - idx)}`,
+      from: idx % 2 === 0 ? 'Dock D1' : 'Dock D4',
+      to: idx % 3 === 0 ? 'YARD A - A05' : idx % 3 === 1 ? 'YARD B - B12' : 'YARD C - C02',
+      by: gr.receivedBy || (idx % 2 === 0 ? 'Rohit (Forklift 01)' : 'Vikram (Forklift 02)')
+    }))
+    : [];
 
   const handleQuickAction = (actionId) => {
     switch (actionId) {
       case 'create_lpn':
-        showNotification('LPN Generation Registry opened. System auto-allocated LPN-0004523.', 'success');
+        setIsCreateLpnOpen(true);
         break;
-      case 'receive_inbound':
-        showNotification('Inbound Dock inspection active for truck WB 25 AB 1234.', 'info');
+      case 'receive_inbound': {
+        const activeInbound = liveTrucks.find(t => t.status === 'AT_GATE' || t.status === 'IN_YARD' || t.status === 'IN_TRANSIT');
+        showNotification(`Opening Inbound Gate & Receiving for ${activeInbound?.licensePlate || activeInbound?.truckId || 'active inbound trucks'}...`, 'info');
+        navigate('/logistics');
         break;
+      }
       case 'move_relocate':
-        showNotification('Relocation task dispatched to Forklift 02.', 'info');
+        setIsRelocateOpen(true);
         break;
-      case 'print_label':
-        showNotification('Sending thermal LPN barcode labels to Warehouse Printer 01.', 'success');
+      case 'print_label': {
+        const lpnToPrint = displayLpns[0] || baselineLpns[0];
+        setSelectedPrintLpn(lpnToPrint);
+        setIsPrintLabelOpen(true);
         break;
+      }
       case 'yard_audit':
-        showNotification('Physical Yard inventory audit log synchronized.', 'success');
+        fetchYardDashboard();
+        showNotification('Physical Yard inventory & live telemetry synchronized across all docks and storage zones.', 'success');
         break;
       default:
         break;
@@ -1700,9 +2068,11 @@ export default function Dashboard() {
               <Truck className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">15</div>
+          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">
+            {trucksInYardCount}
+          </div>
           <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono text-[#15803D] dark:text-[#22C55E] font-semibold">
-            <span>▲ 3 vs yesterday</span>
+            <span>▲ {activeTrucksInYard.length || 3} in pipeline</span>
           </div>
         </div>
 
@@ -1713,7 +2083,9 @@ export default function Dashboard() {
               <Boxes className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">238</div>
+          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">
+            {palletsInYardCount}
+          </div>
           <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono text-[#15803D] dark:text-[#22C55E] font-semibold">
             <span>▲ 18 vs yesterday</span>
           </div>
@@ -1726,9 +2098,11 @@ export default function Dashboard() {
               <Package className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">412</div>
+          <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">
+            {lpnsInYardCount}
+          </div>
           <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono text-[#15803D] dark:text-[#22C55E] font-semibold">
-            <span>▲ 26 vs yesterday</span>
+            <span>▲ {displayLpns.length} active batches</span>
           </div>
         </div>
 
@@ -1740,10 +2114,10 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-sans text-[#1C201E] dark:text-[#F5F7F6] leading-tight">
-            6 <span className="text-base text-[#68716D] dark:text-[#8E9C97] font-normal">/ 12</span>
+            {occupiedDocksCount} <span className="text-base text-[#68716D] dark:text-[#8E9C97] font-normal">/ {totalDocksCount}</span>
           </div>
           <div className="text-[10px] sm:text-[11px] font-mono text-[#68716D] dark:text-[#8E9C97]">
-            50% Utilisation
+            {dockUtilPct}% Utilisation
           </div>
         </div>
 
@@ -1755,10 +2129,10 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-sans text-[#DC2626] leading-tight">
-            68 <span className="text-sm font-normal text-[#68716D] dark:text-[#8E9C97]">min</span>
+            58 <span className="text-sm font-normal text-[#68716D] dark:text-[#8E9C97]">min</span>
           </div>
-          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono text-[#DC2626] font-semibold">
-            <span>▼ 12% vs yesterday</span>
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono text-[#15803D] font-semibold">
+            <span>▼ 14% vs yesterday</span>
           </div>
         </div>
       </div>
@@ -1766,7 +2140,12 @@ export default function Dashboard() {
       {/* 2. MAIN SPLIT APPLICATION LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         <div className="lg:col-span-8 space-y-4 sm:space-y-5">
-          <YardControlMap onSelectTruck={(t) => showNotification(`Inspecting vehicle: ${t.id} (${t.status})`, 'info')} />
+          <YardControlMap
+            docksData={liveDocks}
+            trucksData={liveTrucks}
+            zonesData={yardZonesData}
+            onSelectTruck={(t) => showNotification(`Inspecting vehicle: ${t.id} (${t.status})`, 'info')}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-5 rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] p-4 shadow-[0_1px_3px_rgba(35,30,25,0.04)] space-y-2 select-none">
@@ -1777,7 +2156,7 @@ export default function Dashboard() {
                 <span className="text-xs font-sans text-[#2563EB]">Live Staging</span>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[220px]">
                 <table className="w-full text-left text-xs font-mono">
                   <thead>
                     <tr className="border-b border-[#E3DDD1] text-[10px] text-[#68716D]">
@@ -1789,7 +2168,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E3DDD1]/60">
-                    {lpnsInYard.map((row) => (
+                    {displayLpns.slice(0, 6).map((row) => (
                       <tr
                         key={row.id}
                         onClick={() => setSelectedLpn(row)}
@@ -1812,7 +2191,7 @@ export default function Dashboard() {
             </div>
 
             <div className="md:col-span-4">
-              <PalletSummary />
+              <PalletSummary data={palletSummaryData} />
             </div>
 
             <div className="md:col-span-3">
@@ -1822,9 +2201,9 @@ export default function Dashboard() {
         </div>
 
         <div className="lg:col-span-4 space-y-4 sm:space-y-5">
-          <DockStatusBoard />
-          <AlertsPanel />
-          <OperationalActivityFeed />
+          <DockStatusBoard queueData={dockQueueData} />
+          <AlertsPanel alertsData={liveAlertsData} />
+          <OperationalActivityFeed movesData={liveMovesData} />
         </div>
       </div>
 
@@ -1833,6 +2212,324 @@ export default function Dashboard() {
         isOpen={Boolean(selectedLpn)}
         onClose={() => setSelectedLpn(null)}
       />
+
+      {/* 3. QUICK ACTION MODAL: CREATE LPN */}
+      {isCreateLpnOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <PaperSheet variant="default" className="w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-xs bg-[#DCFCE7] dark:bg-[#163824] text-[#15803D]">
+                  <Barcode className="w-4 h-4" />
+                </div>
+                <h3 className="font-handwriting text-2xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                  Generate Serialized LPN
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateLpnOpen(false)}
+                className="p-1 rounded-xs text-[#68716D] hover:text-[#1C201E]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const poNumber = formData.get('poNumber') || 'PO-78432';
+                const quantity = Number(formData.get('quantity') || 500);
+                const location = formData.get('location') || 'YARD A - A05';
+                const newLpnId = `LPN-${String(4522 + customCreatedLpns.length).padStart(7, '0')}`;
+
+                const newLpnObj = {
+                  id: newLpnId,
+                  sku: `SKU-GEN-${1000 + customCreatedLpns.length}`,
+                  productName: 'Precision Intake Pallet Units',
+                  po: poNumber,
+                  poNumber,
+                  pallets: Math.max(4, Math.round(quantity / 25)),
+                  quantity,
+                  currentStock: quantity,
+                  unit: 'Units',
+                  status: 'Stored',
+                  location,
+                  binLocation: location,
+                  lotNumber: `LOT-2026-08-${String(50 + customCreatedLpns.length)}A`,
+                  qcStatus: 'QC_PASSED',
+                  supplierName: 'Acme Steel Pvt Ltd',
+                  badgeColor: 'bg-[#DCFCE7] text-[#15803D]'
+                };
+
+                setCustomCreatedLpns(prev => [newLpnObj, ...prev]);
+                showNotification(`LPN Registry auto-allocated and registered: ${newLpnId} (${quantity} units at ${location})`, 'success');
+                setIsCreateLpnOpen(false);
+              }}
+              className="space-y-3 font-sans text-xs"
+            >
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                  Purchase Order Reference
+                </label>
+                <select
+                  name="poNumber"
+                  className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                >
+                  <option value="PO-78432">PO-78432 · Acme Steel Pvt Ltd (Precision Bearings)</option>
+                  <option value="PO-78415">PO-78415 · TechCorp Solutions (Induction Motors)</option>
+                  <option value="PO-78398">PO-78398 · Apex Fasteners Ltd (Pressure Valves)</option>
+                  <option value="PO-78364">PO-78364 · Alpha Logistics Tech (Safety Kits)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                    Units Count
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    defaultValue={500}
+                    min={1}
+                    className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                    Target Yard Zone
+                  </label>
+                  <select
+                    name="location"
+                    className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                  >
+                    <option value="YARD A - A05">YARD A - A05</option>
+                    <option value="YARD B - B12">YARD B - B12</option>
+                    <option value="YARD C - C02">YARD C - C02</option>
+                    <option value="QC Hold Area">QC Hold Area</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#E3DDD1] dark:border-[#2B3835] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateLpnOpen(false)}
+                  className="px-3 py-2 rounded-xs border border-[#E3DDD1] text-xs font-mono text-[#68716D]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xs bg-[#15803D] text-white font-bold text-xs font-mono hover:bg-[#166534] transition-colors shadow-2xs"
+                >
+                  Generate LPN Barcode
+                </button>
+              </div>
+            </form>
+          </PaperSheet>
+        </div>
+      )}
+
+      {/* 4. QUICK ACTION MODAL: RELOCATE PALLET */}
+      {isRelocateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <PaperSheet variant="default" className="w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-xs bg-[#FEF3C7] dark:bg-[#332A15] text-[#D97706]">
+                  <Move className="w-4 h-4" />
+                </div>
+                <h3 className="font-handwriting text-2xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                  Dispatch Pallet Relocation
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRelocateOpen(false)}
+                className="p-1 rounded-xs text-[#68716D] hover:text-[#1C201E]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const lpnId = formData.get('lpnId') || displayLpns[0]?.id;
+                const targetLoc = formData.get('targetLoc') || 'YARD B - B12';
+                const forklift = formData.get('forklift') || 'Forklift 02 (Vikram)';
+
+                setRelocatedLocations(prev => {
+                  const next = new Map(prev);
+                  next.set(lpnId, targetLoc);
+                  return next;
+                });
+
+                showNotification(`Relocation task dispatched: Moved ${lpnId} to ${targetLoc} via ${forklift}.`, 'success');
+                setIsRelocateOpen(false);
+              }}
+              className="space-y-3 font-sans text-xs"
+            >
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                  Select Pallet / LPN
+                </label>
+                <select
+                  name="lpnId"
+                  className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                >
+                  {displayLpns.map(l => (
+                    <option key={l.id} value={l.id}>
+                      {l.id} · {l.productName} ({l.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                  Destination Storage Zone
+                </label>
+                <select
+                  name="targetLoc"
+                  className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                >
+                  <option value="YARD A - A05">YARD A - A05 (High Bay)</option>
+                  <option value="YARD B - B12">YARD B - B12 (Active Picking)</option>
+                  <option value="YARD C - C02">YARD C - C02 (Bulk Storage)</option>
+                  <option value="Dock D1">Dock D1 (Staging Apron)</option>
+                  <option value="Dock D4">Dock D4 (Outbound Bay)</option>
+                  <option value="QC Hold Area">QC Hold Area (Inspection Bay)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-[#68716D] mb-1">
+                  Assigned Forklift & Driver
+                </label>
+                <select
+                  name="forklift"
+                  className="w-full px-3 py-2 rounded-xs border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1B2422] font-mono text-xs text-[#1C201E] dark:text-[#F5F7F6]"
+                >
+                  <option value="Forklift 02 (Vikram)">Forklift 02 · Vikram (Active in Lane 2)</option>
+                  <option value="Forklift 01 (Rohit)">Forklift 01 · Rohit (Dock Staging)</option>
+                  <option value="AGV Shuttle 03">AGV Shuttle 03 · Autonomous Rail</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-[#E3DDD1] dark:border-[#2B3835] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRelocateOpen(false)}
+                  className="px-3 py-2 rounded-xs border border-[#E3DDD1] text-xs font-mono text-[#68716D]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xs bg-[#D97706] text-white font-bold text-xs font-mono hover:bg-[#B45309] transition-colors shadow-2xs"
+                >
+                  Dispatch Relocation
+                </button>
+              </div>
+            </form>
+          </PaperSheet>
+        </div>
+      )}
+
+      {/* 5. QUICK ACTION MODAL: PRINT LPN LABEL */}
+      {isPrintLabelOpen && selectedPrintLpn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <PaperSheet variant="default" className="w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-xs bg-[#DBEAFE] dark:bg-[#182942] text-[#2563EB]">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <h3 className="font-handwriting text-2xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
+                  Thermal Barcode Print Preview
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrintLabelOpen(false)}
+                className="p-1 rounded-xs text-[#68716D] hover:text-[#1C201E]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Thermal Label Card Canvas */}
+            <div className="p-4 rounded-xs bg-white text-[#1C201E] border-2 border-dashed border-[#1C201E] space-y-3 font-mono">
+              <div className="flex items-center justify-between border-b-2 border-[#1C201E] pb-2">
+                <div>
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-[#15803D]">COGNIYARD LOGISTICS</span>
+                  <div className="text-sm font-bold">{selectedPrintLpn.id}</div>
+                </div>
+                <span className="text-[10px] font-bold border border-[#1C201E] px-1.5 py-0.5 rounded-xs">
+                  {selectedPrintLpn.location}
+                </span>
+              </div>
+
+              {/* Barcode Graphic */}
+              <div className="text-center py-2 bg-zinc-50 border border-zinc-300 rounded-xs space-y-1">
+                <div className="font-mono text-2xl font-bold tracking-[0.35em] text-zinc-900 leading-none">
+                  |||| | ||||| || |||| ||| ||||
+                </div>
+                <span className="text-[10px] tracking-widest font-bold">{selectedPrintLpn.id}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
+                <div>
+                  <span className="text-zinc-500 block text-[8px] uppercase">Product:</span>
+                  <strong className="truncate block">{selectedPrintLpn.productName}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[8px] uppercase">Master SKU:</span>
+                  <strong className="block">{selectedPrintLpn.sku}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[8px] uppercase">PO Reference:</span>
+                  <strong className="block">{selectedPrintLpn.po}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[8px] uppercase">Pallet Count:</span>
+                  <strong className="block">{selectedPrintLpn.pallets} Pallets ({selectedPrintLpn.quantity} Units)</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-[#E3DDD1] dark:border-[#2B3835] flex items-center justify-between">
+              <span className="text-[10px] font-mono text-[#68716D]">
+                Printer: Warehouse Thermal #01
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintLabelOpen(false)}
+                  className="px-3 py-1.5 rounded-xs border border-[#E3DDD1] text-xs font-mono text-[#68716D]"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showNotification(`Sent thermal barcode label ${selectedPrintLpn.id} to Warehouse Printer 01.`, 'success');
+                    setIsPrintLabelOpen(false);
+                  }}
+                  className="px-4 py-1.5 rounded-xs bg-[#2563EB] text-white font-bold text-xs font-mono hover:bg-[#1D4ED8] transition-colors shadow-2xs"
+                >
+                  Print Thermal Label
+                </button>
+              </div>
+            </div>
+          </PaperSheet>
+        </div>
+      )}
     </div>
   );
 }

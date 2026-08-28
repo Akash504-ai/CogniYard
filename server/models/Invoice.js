@@ -52,9 +52,22 @@ const invoiceSchema = new mongoose.Schema({
   matchDetails: { type: Object, default: {} },
   matchStatus: {
     type: String,
-    enum: ['PENDING', 'MATCHED', 'PARTIALLY_MATCHED', 'MISMATCHED', 'MISMATCH', 'EXEMPT'],
+    enum: ['PENDING', 'MATCHED', 'PARTIALLY_MATCHED', 'MISMATCHED', 'MISMATCH', 'EXEMPT', 'MANUALLY_APPROVED'],
     default: 'PENDING'
   },
+  paymentStatus: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'ON_HOLD', 'PROCESSING', 'PAID', 'DISBURSED', 'AUTHORIZED'],
+    default: 'PENDING'
+  },
+  manualApproval: {
+    approvedBy: { type: String },
+    approvedAt: { type: Date },
+    notes: { type: String }
+  },
+  transactionId: { type: String },
+  payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
+  disbursedAt: { type: Date, default: null },
   notes: { type: String }
 }, { timestamps: true });
 

@@ -124,3 +124,76 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--ink-muted);
 }
+
+/* =========================================================
+   BLINKIT / ZOMATO LIVE DELIVERY TRACKING STYLES
+   ========================================================= */
+
+@keyframes routeFlow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.route-flow-line {
+  animation: routeFlow 1.2s linear infinite;
+}
+
+@keyframes deliveryRadarRing {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scale(1.6);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.delivery-radar-ring {
+  animation: deliveryRadarRing 2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+}
+
+@keyframes headlightGlow {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.headlight-beam {
+  animation: headlightGlow 2.5s ease-in-out infinite;
+}
+
+/* Leaflet Custom Marker & Popup Resets for Ultra Sleek Tracking */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+}
+
+.delivery-tracking-popup .leaflet-popup-content-wrapper {
+  background: rgba(28, 32, 30, 0.95);
+  backdrop-filter: blur(12px);
+  color: #F5F7F6;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.delivery-tracking-popup .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.delivery-tracking-popup .leaflet-popup-tip {
+  background: rgba(28, 32, 30, 0.95);
+}

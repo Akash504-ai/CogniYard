@@ -8,6 +8,7 @@ router.get('/invoices', protect, authorize('finance_user', 'admin'), finance.get
 router.get('/invoices/ready-purchase-orders', protect, authorize('finance_user', 'admin'), finance.getReadyPurchaseOrders);
 router.get('/invoices/:id/document', protect, authorize('finance_user', 'admin'), finance.getInvoiceDocument);
 router.post('/invoices/:id/match', protect, authorize('finance_user', 'admin'), finance.triggerMatch);
+router.post('/invoices/:id/manual-approve', protect, authorize('finance_user', 'admin'), finance.manualApproveInvoice);
 router.delete('/invoices/:id', protect, authorize('finance_user', 'admin'), finance.deleteInvoice);
 
 // Payments

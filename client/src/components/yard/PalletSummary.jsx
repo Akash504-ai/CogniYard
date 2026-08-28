@@ -2,14 +2,20 @@ import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function PalletSummary({ data }) {
-  const chartData = [
-    { name: 'In Yard', value: 154, percentage: '65%', color: '#15803D' },
-    { name: 'Docked', value: 48, percentage: '20%', color: '#2563EB' },
-    { name: 'QC Hold', value: 15, percentage: '6%', color: '#7C3AED' },
-    { name: 'In Transit', value: 21, percentage: '9%', color: '#F97316' }
-  ];
+  const inYard = data?.inYard !== undefined ? Number(data.inYard) : 154;
+  const docked = data?.docked !== undefined ? Number(data.docked) : 48;
+  const qcHold = data?.qcHold !== undefined ? Number(data.qcHold) : 15;
+  const inTransit = data?.inTransit !== undefined ? Number(data.inTransit) : 21;
 
-  const totalPallets = 238;
+  const totalPallets = inYard + docked + qcHold + inTransit;
+  const safeTotal = totalPallets > 0 ? totalPallets : 1;
+
+  const chartData = [
+    { name: 'In Yard', value: inYard, percentage: `${Math.round((inYard / safeTotal) * 100)}%`, color: '#15803D' },
+    { name: 'Docked', value: docked, percentage: `${Math.round((docked / safeTotal) * 100)}%`, color: '#2563EB' },
+    { name: 'QC Hold', value: qcHold, percentage: `${Math.round((qcHold / safeTotal) * 100)}%`, color: '#7C3AED' },
+    { name: 'In Transit', value: inTransit, percentage: `${Math.round((inTransit / safeTotal) * 100)}%`, color: '#F97316' }
+  ];
 
   return (
     <div className="rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] p-4 shadow-[0_1px_3px_rgba(35,30,25,0.04)] space-y-2 select-none">

@@ -9,13 +9,27 @@ const paymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   matchStatus: {
     type: String,
-    enum: ['PENDING', 'MATCHED', 'PARTIALLY_MATCHED', 'MISMATCHED', 'MISMATCH'],
+    enum: ['PENDING', 'MATCHED', 'PARTIALLY_MATCHED', 'MISMATCHED', 'MISMATCH', 'MANUALLY_APPROVED'],
     default: 'PENDING'
   },
   paymentStatus: {
     type: String,
-    enum: ['PENDING', 'APPROVED', 'ON_HOLD', 'PROCESSING', 'PAID'],
+    enum: ['PENDING', 'APPROVED', 'ON_HOLD', 'PROCESSING', 'PAID', 'AUTHORIZED', 'DISBURSED'],
     default: 'PENDING'
+  },
+  status: {
+    type: String,
+    enum: ['PENDING', 'AUTHORIZED', 'ON_HOLD', 'PROCESSING', 'COMPLETED', 'PAID'],
+    default: 'AUTHORIZED'
+  },
+  paymentReference: { type: String },
+  vendorName: { type: String },
+  paymentMethod: { type: String, default: 'RTGS / Automated ACH' },
+  disbursementDate: { type: String },
+  manualApproval: {
+    approvedBy: { type: String },
+    approvedAt: { type: Date },
+    notes: { type: String }
   },
   paymentDate: { type: Date },
   transactionId: { type: String }

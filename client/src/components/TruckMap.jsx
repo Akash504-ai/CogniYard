@@ -105,7 +105,15 @@ const YARD_ZONE_POLYGON = [
   [12.9700, 77.5990]
 ];
 
-export default function TruckMap({ trucks = [], onSimulateStep, isRunning = false, speed = 1, onSelectTruck }) {
+export default function TruckMap({
+  trucks = [],
+  docks = [],
+  onSimulateStep,
+  isRunning = false,
+  speed = 1,
+  selectedTruckId = null,
+  onSelectTruck
+}) {
   const { isDark } = useTheme();
 
   // Fallback demo fleet if trucks array is empty
@@ -273,18 +281,18 @@ export default function TruckMap({ trucks = [], onSimulateStep, isRunning = fals
                 </div>
 
                 <div className="grid grid-cols-2 gap-1 text-[10px]">
-                  <div className="p-1 rounded-xs bg-[#F4EFE6]">
+                  <div className="p-1 rounded-xs bg-[#F4EFE6] dark:bg-[#1E2825]">
                     <span className="text-[#68716D] block">PO REF</span>
                     <strong>{truck.poNumber || 'PO-78432'}</strong>
                   </div>
-                  <div className="p-1 rounded-xs bg-[#F4EFE6]">
+                  <div className="p-1 rounded-xs bg-[#F4EFE6] dark:bg-[#1E2825]">
                     <span className="text-[#68716D] block">LOCATION</span>
                     <strong>{truck.yardLocation || 'In Transit'}</strong>
                   </div>
                 </div>
 
                 <div className="text-[10px] space-y-0.5 text-[#68716D]">
-                  <div>Driver: <strong className="text-[#1C201E]">{truck.driverName || 'Operator'}</strong></div>
+                  <div>Driver: <strong className="text-[#1C201E] dark:text-white">{truck.driverName || 'Operator'}</strong></div>
                   <div>ETA: <strong className="text-[#15803D]">{truck.eta || 'On Schedule'}</strong></div>
                 </div>
 
