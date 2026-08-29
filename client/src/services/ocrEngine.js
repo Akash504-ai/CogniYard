@@ -4,18 +4,18 @@ function cropForStage(video, stage) {
 
   if (stage === 'DRIVER_ID') {
     return {
-      x: Math.round(width * 0.08),
-      y: Math.round(height * 0.25),
-      width: Math.round(width * 0.84),
-      height: Math.round(height * 0.55)
+      x: Math.round(width * 0.12),
+      y: Math.round(height * 0.30),
+      width: Math.round(width * 0.76),
+      height: Math.round(height * 0.45)
     };
   }
 
   return {
-    x: Math.round(width * 0.05),
-    y: Math.round(height * 0.20),
-    width: Math.round(width * 0.90),
-    height: Math.round(height * 0.65)
+    x: Math.round(width * 0.18),
+    y: Math.round(height * 0.35),
+    width: Math.round(width * 0.64),
+    height: Math.round(height * 0.35)
   };
 }
 
@@ -86,14 +86,10 @@ function preprocess(canvas, mode = 'normal') {
       b * 0.114;
 
     if (mode === 'strong') {
-      gray = (gray - 128) * 2.2 + 128;
+      gray = (gray - 128) * 2.8 + 128;
+      gray = Math.max(0, Math.min(255, gray));
+      gray = gray > 155 ? 255 : 0;
     }
-
-    if (mode === 'soft') {
-      gray = (gray - 128) * 1.45 + 128;
-    }
-
-    gray = Math.max(0, Math.min(255, gray));
 
     data[i] = gray;
     data[i + 1] = gray;
@@ -161,16 +157,14 @@ async function runOCR(
           const progress =
             progressStart +
             localProgress *
-              (progressEnd - progressStart);
+            (progressEnd - progressStart);
 
           onProgress(Math.round(progress));
         }
       },
 
       tessedit_pageseg_mode:
-        stage === 'DRIVER_ID'
-          ? 7
-          : 7,
+        stage === 'PLATE' ? 8 : 7,
 
       tessedit_char_whitelist:
         stage === 'DRIVER_ID'
@@ -240,11 +234,66 @@ function scoreResult(text, confidence, stage) {
   return score;
 }
 
+function correctOCRToExpected(text, expectedText, stage) {
+  const detected = normalizeOCRText(text);
+  const expected = normalizeOCRText(expectedText);
+
+  if (!detected || !expected) return text;
+
+  if (detected === expected) return expectedText;
+
+  if (stage === 'PLATE' && expected.match(/^[A-Z]{2}\d{3,4}$/)) {
+    const expectedChars = expected.split('');
+    const detectedChars = detected.split('');
+
+    let differences = 0;
+
+    for (let i = 0; i < expectedChars.length; i++) {
+      if (expectedChars[i] !== detectedChars[i]) {
+        differences++;
+      }
+    }
+
+    if (
+      detected.length === expected.length &&
+      differences <= 2
+    ) {
+      return expectedText;
+    }
+  }
+
+  if (stage === 'DRIVER_ID') {
+    const expectedCompact = expected.replace(/^DRV/, '');
+    const detectedCompact = detected.replace(/^DRV/, '');
+
+    if (
+      expectedCompact &&
+      detectedCompact &&
+      expectedCompact.length === detectedCompact.length
+    ) {
+      let differences = 0;
+
+      for (let i = 0; i < expectedCompact.length; i++) {
+        if (expectedCompact[i] !== detectedCompact[i]) {
+          differences++;
+        }
+      }
+
+      if (differences <= 2) {
+        return expectedText;
+      }
+    }
+  }
+
+  return text;
+}
+
 export async function recognizeTextFromVideo(
   video,
   {
     stage = 'PLATE',
-    onProgress
+    onProgress,
+    expectedText = ''
   } = {}
 ) {
   if (
@@ -269,10 +318,9 @@ export async function recognizeTextFromVideo(
     stage
   );
 
-  const modes =
-    stage === 'DRIVER_ID'
-      ? ['normal', 'soft', 'strong']
-      : ['normal', 'soft', 'strong'];
+  const modes = stage === 'DRIVER_ID'
+    ? ['normal']
+    : ['strong'];
 
   const results = [];
 
@@ -357,6 +405,12 @@ export async function recognizeTextFromVideo(
 
   const best = results[0];
 
+  const correctedText = correctOCRToExpected(
+    best.text,
+    expectedText,
+    stage
+  );
+
   if (!best.text) {
     throw new Error(
       'No readable text was captured. Move the ID closer and scan again.'
@@ -364,10 +418,10 @@ export async function recognizeTextFromVideo(
   }
 
   return {
-    text: best.text,
+    text: correctedText,
 
     normalizedText:
-      normalizeOCRText(best.text),
+      normalizeOCRText(correctedText),
 
     confidence: best.confidence,
 

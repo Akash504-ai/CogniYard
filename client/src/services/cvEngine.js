@@ -13,9 +13,11 @@ export const loadCVModel = async () => {
   isModelLoading = true;
   try {
     if (window.cocoSsd) {
+      console.log('✅ COCO-SSD found. Loading model...');
       cocoModel = await window.cocoSsd.load();
+      console.log('✅ COCO-SSD model loaded successfully');
     } else {
-      console.warn('⚠️ window.cocoSsd CDN not found. Real CV model pending initialization.');
+      console.error('❌ COCO-SSD NOT FOUND on window.cocoSsd');
     }
   } catch (err) {
     console.error('❌ Error loading COCO-SSD model:', err.message);
@@ -47,7 +49,12 @@ export const detectObjectsInVideo = async (videoOrCanvasElement) => {
   let rawDetections = [];
 
   // Execute genuine TensorFlow.js COCO-SSD model inference on video frame pixels
-  if (cocoModel && videoOrCanvasElement.readyState >= 2) {
+  if (!cocoModel) {
+    console.error('❌ CV model is not loaded');
+    return [];
+  }
+
+  if (videoOrCanvasElement && videoOrCanvasElement.readyState >= 2) {
     try {
       const predictions = await cocoModel.detect(videoOrCanvasElement);
       const vehicleClasses = ['truck', 'car', 'bus', 'motorcycle', 'person'];

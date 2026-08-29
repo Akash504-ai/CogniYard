@@ -82,8 +82,20 @@ export default function WarehouseGateVision({ trucks = [], docks = [], onUpdated
 
   useEffect(() => {
     let mounted = true;
-    loadCVModel().finally(() => { if (mounted) setModelReady(true); });
-    return () => { mounted = false; };
+
+    loadCVModel()
+      .then(model => {
+        console.log('CV MODEL RESULT:', model);
+        if (mounted) setModelReady(Boolean(model));
+      })
+      .catch(error => {
+        console.error('CV MODEL LOAD FAILED:', error);
+        if (mounted) setModelReady(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const stopCamera = useCallback(() => {
@@ -149,7 +161,8 @@ export default function WarehouseGateVision({ trucks = [], docks = [], onUpdated
         videoRef.current,
         {
           stage,
-          onProgress: setOcrProgress
+          onProgress: setOcrProgress,
+          expectedText: stage === 'PLATE' ? expected.plate : expected.driverId
         }
       );
       setLastCapture({ ...capture, stage });
