@@ -40,7 +40,7 @@ export default function LogisticsPage({ mode = 'verification' }) {
   const [submitting, setSubmitting] = useState(false);
   const [delayAlert, setDelayAlert] = useState(null);
 
-  // Simulation Controls & Telemetry State
+  // Simulation controls & Telemetry State
   const isSimulation = mode === "simulation";
   const [activeView, setActiveView] = useState(mode === "simulation" ? "map" : "twin");
   const [simRunning, setSimRunning] = useState(false);
@@ -378,9 +378,14 @@ export default function LogisticsPage({ mode = 'verification' }) {
     }
 
     const item = foundPo.items[0];
+    const verifiedSupplier = foundPo.supplierName || truck.supplierName || 'Verified Supplier';
+    const verifiedVendorCode = foundPo.supplier?.code || truck.vendorCode || 'SUP-1001';
 
     setReceivingPo({
       poNumber: truck.poNumber,
+      supplierName: verifiedSupplier,
+      vendorCode: verifiedVendorCode,
+      truckId: truck.truckId,
       item: item.productName,
       ordered: item.quantity,
     });
@@ -802,9 +807,10 @@ export default function LogisticsPage({ mode = 'verification' }) {
                         (truck) => truck.status !== "COMPLETED"
                       )
                       .map((truck) => {
-
-                        const verified =
-                          truckHasPassedGate(truck);
+                        const verified = truckHasPassedGate(truck);
+                        const matchingPo = purchaseOrders.find((po) => po.poNumber === truck.poNumber);
+                        const verifiedSupplierName = matchingPo?.supplierName || truck.supplierName || 'Verified Supplier';
+                        const verifiedVendorCode = matchingPo?.supplier?.code || truck.vendorCode || 'SUP-1001';
 
                         return (
                           <tr
@@ -821,12 +827,16 @@ export default function LogisticsPage({ mode = 'verification' }) {
                                 </div>
 
                                 <div>
-                                  <p className="text-[10px] font-bold text-[#15803D]">
+                                  <p className="text-[10px] font-bold text-[#15803D] font-mono">
                                     {truck.truckId}
                                   </p>
 
+                                  <p className="text-[8px] font-mono text-[#68716D] dark:text-[#8E9C97]">
+                                    {truck.licensePlate || 'License Check'} · {truck.driverName || 'Driver'}
+                                  </p>
+
                                   <p className="text-[7px] uppercase tracking-wider text-[#9AA29E]">
-                                    Inbound vehicle
+                                    {truck.priority || 'MEDIUM'} Priority · {truck.loadType || 'DRY_VAN'}
                                   </p>
                                 </div>
 
@@ -837,9 +847,21 @@ export default function LogisticsPage({ mode = 'verification' }) {
 
                             <td className="px-5 py-4">
 
-                              <p className="text-[10px] font-mono font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                              <p className="text-[10px] font-mono font-bold text-[#1C201E] dark:text-[#F5F7F6]">
                                 {truck.poNumber}
                               </p>
+
+                              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs bg-[#DCFCE7] dark:bg-[#163824] border border-[#BBF7D0] dark:border-[#205035] text-[8px] font-bold text-[#15803D] dark:text-[#4ADE80]">
+                                  <span>🏭</span>
+                                  <span>{verifiedSupplierName}</span>
+                                </span>
+                                {verifiedVendorCode && (
+                                  <span className="px-1 py-0.2 rounded-xs font-mono text-[7px] font-bold bg-[#E3DDD1] dark:bg-[#2B3835] text-[#59625E] dark:text-[#AAB4AF]">
+                                    {verifiedVendorCode}
+                                  </span>
+                                )}
+                              </div>
 
                             </td>
 
@@ -1238,8 +1260,10 @@ export default function LogisticsPage({ mode = 'verification' }) {
 
                 <TruckMap
                   trucks={trucks}
+                  docks={docks}
                   isRunning={simRunning}
                   speed={simSpeed}
+                  selectedTruckId={selectedTruckDetail?.truckId}
                   onSimulateStep={handleStartSimulation}
                   onSelectTruck={(t) =>
                     setSelectedTruckDetail(t)
@@ -1603,12 +1627,17 @@ export default function LogisticsPage({ mode = 'verification' }) {
                           truck._id ||
                           truck.truckId
                         }
-                        onClick={() =>
+                        onClick={() => {
                           setSelectedTruckDetail(
                             truck
-                          )
-                        }
-                        className="group cursor-pointer hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                          );
+                          setActiveView("map");
+                        }}
+                        className={`group cursor-pointer transition-colors ${
+                          selectedTruckDetail?.truckId === truck.truckId
+                            ? "bg-[#DCFCE7]/40 dark:bg-[#163824]/40"
+                            : "hover:bg-[#FAF8F3] dark:hover:bg-[#1D2824]"
+                        }`}
                       >
 
                         <td className="px-5 py-4">
@@ -1638,8 +1667,12 @@ export default function LogisticsPage({ mode = 'verification' }) {
 
                         <td className="px-5 py-4">
 
-                          <span className="text-[9px] font-mono font-semibold text-[#1C201E] dark:text-[#F5F7F6]">
+                          <span className="text-[9px] font-mono font-semibold text-[#1C201E] dark:text-[#F5F7F6] block">
                             {truck.poNumber}
+                          </span>
+
+                          <span className="text-[8px] text-[#15803D] font-bold block truncate max-w-[140px]">
+                            {truck.supplierName || 'Verified Supplier'}
                           </span>
 
                         </td>
@@ -1736,7 +1769,18 @@ export default function LogisticsPage({ mode = 'verification' }) {
                           }
                         >
 
-                          <div className="flex justify-end gap-1.5">
+                          <div className="flex justify-end gap-1.5 items-center">
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTruckDetail(truck);
+                                setActiveView("map");
+                              }}
+                              className="rounded-lg border border-[#BBF7D0] bg-[#DCFCE7] px-2.5 py-2 text-[8px] font-bold text-[#15803D] hover:bg-[#BBF7D0]"
+                            >
+                              Track Map
+                            </button>
 
                             <button
                               type="button"
@@ -2306,14 +2350,27 @@ export default function LogisticsPage({ mode = 'verification' }) {
                   <PackageCheck className="w-4 h-4 text-[#15803D]" />
 
                   <h3 className="font-handwriting text-xl font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                    Receive Goods & Create GRN
+                    Receive Goods & GRN
                   </h3>
 
                 </div>
 
-                <p className="mt-1 text-[9px] font-mono text-[#8A938F]">
-                  Purchase Order {receivingPo.poNumber}
-                </p>
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                  <p className="text-[9px] font-mono text-[#8A938F]">
+                    PO: <strong className="text-[#1C201E] dark:text-[#F5F7F6]">{receivingPo.poNumber}</strong>
+                  </p>
+                  <span className="text-zinc-400 text-xs">·</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-mono font-bold text-[#15803D] dark:text-[#4ADE80]">
+                      🏭 {receivingPo.supplierName}
+                    </span>
+                    {receivingPo.vendorCode && (
+                      <span className="px-1 py-0.2 rounded-xs font-mono text-[7px] font-bold bg-[#E3DDD1] dark:bg-[#2B3835] text-[#59625E] dark:text-[#AAB4AF]">
+                        {receivingPo.vendorCode}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
               </div>
 

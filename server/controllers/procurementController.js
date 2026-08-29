@@ -304,7 +304,31 @@ exports.createPurchaseOrder = async (req, res, next) => {
       await requisition.save();
     }
 
+// Supplier Origin Mapping
+const SUPPLIER_ORIGINS = {
+  'SUP-1005': { origin: [13.0120, 77.6180], facility: 'Hrisi HD Works, Electronic City Phase II, Bengaluru' },
+  'SUP-1004': { origin: [12.9510, 77.6620], facility: 'Pradip Steel Mills & Freight Yard, Hosur' },
+  'SUP-1003': { origin: [12.9780, 77.6450], facility: 'Akash Logistics Hub, Whitefield, Bengaluru' },
+  'SUP-1002': { origin: [12.9350, 77.5890], facility: 'YO-YO Production Plant, Bommasandra' },
+  'SUP-1001': { origin: [12.9240, 77.5210], facility: 'Apex Industrial Safety Co., Peenya Industrial Complex, Bengaluru' },
+  'SUP-DEMO': { origin: [12.9495, 77.5620], facility: 'CogniYard Demo Supplier Terminal, Outer Ring Road' }
+};
+
+function getSupplierOrigin(supplierName, vendorCode) {
+  const normSup = String(supplierName || '').toLowerCase().trim();
+  const code = String(vendorCode || '').toUpperCase().trim();
+
+  if (code === 'SUP-1005' || normSup.includes('hrisi')) return SUPPLIER_ORIGINS['SUP-1005'];
+  if (code === 'SUP-1004' || normSup.includes('pradip') || normSup.includes('steel')) return SUPPLIER_ORIGINS['SUP-1004'];
+  if (code === 'SUP-1003' || normSup.includes('akash')) return SUPPLIER_ORIGINS['SUP-1003'];
+  if (code === 'SUP-1002' || normSup.includes('yo-yo')) return SUPPLIER_ORIGINS['SUP-1002'];
+  if (code === 'SUP-DEMO' || normSup.includes('demo')) return SUPPLIER_ORIGINS['SUP-DEMO'];
+  return SUPPLIER_ORIGINS['SUP-1001'];
+}
+
     // Automatically create linked Shipment & Truck for Yard Logistics
+    const supplierLoc = getSupplierOrigin(supplier.name, supplier.code);
+
     let shipment = await Shipment.findOne({ poNumber: po.poNumber });
     if (!shipment) {
       const shpCount = await Shipment.countDocuments();
@@ -314,8 +338,8 @@ exports.createPurchaseOrder = async (req, res, next) => {
         shipmentNumber,
         poNumber: po.poNumber,
         supplierName: supplier.name,
-        origin: `${supplier.name} Logistics Center`,
-        destination: 'CogniYard Main Yard - Gate 1',
+        origin: supplierLoc.facility,
+        destination: 'CogniYard Central Docks - Gate 1',
         carrier: 'CogniExpress Logistics',
         status: 'IN_TRANSIT',
         estimatedArrival: '10:30 AM'
@@ -335,18 +359,20 @@ exports.createPurchaseOrder = async (req, res, next) => {
         trailerId,
         shipmentId: shipment.shipmentNumber,
         poNumber: po.poNumber,
+        supplierName: supplier.name,
+        vendorCode: supplier.code,
         driverName: 'CogniYard Express Driver',
         driverPhone: '+1-555-0199',
         licensePlate: `CY-${truckSerial}`,
         driverIdSerial: `DRV-${truckSerial}`,
-        latitude: 12.9716 + (Math.random() - 0.5) * 0.01,
-        longitude: 77.5946 + (Math.random() - 0.5) * 0.01,
+        latitude: supplierLoc.origin[0],
+        longitude: supplierLoc.origin[1],
         status: 'IN_TRANSIT',
-        eta: '10:30 AM',
+        eta: '15 min',
         priority: requisition?.priority || 'HIGH',
         appointmentTime: '11:00 AM',
         loadType: 'DRY_VAN',
-        yardLocation: 'In Transit to Yard Gate',
+        yardLocation: `In Transit from ${supplier.name}`,
         assignedDock: null
       });
       await truck.save();
@@ -354,7 +380,7 @@ exports.createPurchaseOrder = async (req, res, next) => {
 
     // Register newly created truck with live yard simulation engine
     if (truck) {
-      yardSimulationService.registerTruck(truck);
+      yardSimulationService.registerTruck(truck, supplier);
     }
 
     await AuditLog.create({

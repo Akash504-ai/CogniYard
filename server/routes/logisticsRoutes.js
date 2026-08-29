@@ -23,6 +23,8 @@ router.get('/docks', protect, authorize('warehouse_manager', 'admin'), logistics
 router.get('/docks/recommend/:truckId', protect, authorize('warehouse_manager', 'admin'), logistics.recommendDock);
 router.post('/docks/assign', protect, authorize('warehouse_manager', 'admin'), logistics.assignDock);
 router.post('/docks/release', protect, authorize('warehouse_manager', 'admin'), logistics.releaseDock);
+router.post('/trucks/:truckId/preempt-dock', protect, authorize('warehouse_manager', 'admin'), logistics.preemptAndAssignDock);
+router.post('/docks/preempt', protect, authorize('warehouse_manager', 'admin'), logistics.preemptAndAssignDock);
 
 // ASN
 router.get('/asn', protect, authorize('warehouse_manager', 'procurement_manager', 'admin'), logistics.getASNs);

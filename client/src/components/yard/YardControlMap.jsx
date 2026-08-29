@@ -7,7 +7,6 @@ import {
   Crosshair,
   ArrowRight,
   ArrowDown,
-  ArrowUp,
   Boxes,
   MapPin,
   Clock,
@@ -16,21 +15,41 @@ import {
   X
 } from 'lucide-react';
 
-export default function YardControlMap({ onSelectTruck, selectedTruck }) {
+export default function YardControlMap({ onSelectTruck, selectedTruck, docksData = [], trucksData = [], zonesData = [] }) {
   const [activeTruck, setActiveTruck] = useState(null);
 
-  // 6 Docks matching the reference
-  const docks = [
-    { id: 'D1', label: 'D1', status: 'IN USE', truck: 'WB 11 CD 5678', badge: 'At D1' },
-    { id: 'D2', label: 'D2', status: 'IN USE', truck: null, badge: null },
-    { id: 'D3', label: 'D3', status: 'AVAILABLE', truck: null, badge: null },
-    { id: 'D4', label: 'D4', status: 'IN USE', truck: 'WB 11 CD 5678', badge: 'At D4' },
-    { id: 'D5', label: 'D5', status: 'IN USE', truck: null, badge: null },
-    { id: 'D6', label: 'D6', status: 'AVAILABLE', truck: null, badge: null }
-  ];
+  // 6 Docks matching live docksData or fallback
+  const docks = docksData.length > 0
+    ? docksData.slice(0, 6).map(d => {
+        const assignedTruck = trucksData.find(t => t.assignedDock === d.dockNumber);
+        const truckId = d.currentTruckId || assignedTruck?.licensePlate || assignedTruck?.truckId || null;
+        const isOccupied = d.status === 'OCCUPIED' || Boolean(truckId);
+        return {
+          id: d.dockNumber,
+          label: d.dockNumber,
+          status: isOccupied ? 'IN USE' : 'AVAILABLE',
+          truck: truckId,
+          badge: truckId ? `At ${d.dockNumber}` : null
+        };
+      })
+    : [
+        { id: 'D1', label: 'D1', status: 'IN USE', truck: 'WB 11 CD 5678', badge: 'At D1' },
+        { id: 'D2', label: 'D2', status: 'IN USE', truck: null, badge: null },
+        { id: 'D3', label: 'D3', status: 'AVAILABLE', truck: null, badge: null },
+        { id: 'D4', label: 'D4', status: 'IN USE', truck: 'WB 19 EF 9012', badge: 'At D4' },
+        { id: 'D5', label: 'D5', status: 'AVAILABLE', truck: null, badge: null },
+        { id: 'D6', label: 'D6', status: 'AVAILABLE', truck: null, badge: null }
+      ];
 
-  // 4 Bottom Storage Zones matching the reference
-  const zones = [
+  // Inbound truck at gate
+  const gateTruck = trucksData.find(t => t.status === 'AT_GATE' || t.status === 'IN_YARD') || {
+    truckId: 'TRK-9001',
+    licensePlate: 'WB 25 AB 1234',
+    status: 'AT_GATE'
+  };
+
+  // 4 Bottom Storage Zones
+  const zones = zonesData.length > 0 ? zonesData : [
     {
       id: 'YARD A',
       title: 'YARD A',
@@ -118,14 +137,24 @@ export default function YardControlMap({ onSelectTruck, selectedTruck }) {
                 {dock.truck && (
                   <div 
                     onClick={() => {
-                      setActiveTruck({ id: dock.truck, status: dock.badge, location: dock.id });
-                      onSelectTruck?.({ id: dock.truck, status: dock.badge, location: dock.id });
+                      const matchedTruck = trucksData.find(t => t.truckId === dock.truck || t.licensePlate === dock.truck || t.assignedDock === dock.id);
+                      const targetInfo = {
+                        id: dock.truck,
+                        status: dock.badge || 'Docked',
+                        location: `Dock ${dock.id}`,
+                        supplierName: matchedTruck?.supplierName || 'Verified Supplier',
+                        poNumber: matchedTruck?.poNumber || 'PO-1030',
+                        priority: matchedTruck?.priority || 'MEDIUM',
+                        loadType: matchedTruck?.loadType || 'DRY_VAN'
+                      };
+                      setActiveTruck(targetInfo);
+                      onSelectTruck?.(targetInfo);
                     }}
                     className="w-11 sm:w-14 h-20 sm:h-24 rounded-sm bg-[#D4CABE] dark:bg-[#374642] border border-[#A89F91] p-1 flex flex-col justify-between items-center cursor-pointer hover:border-[#15803D] transition-colors shadow-xs"
                   >
                     <div className="w-full h-4 rounded-xs bg-[#B8ADA0] border-b border-[#A89F91]" />
                     <div className="text-center">
-                      <div className="text-[7px] sm:text-[8px] font-mono font-bold text-[#1C201E] dark:text-[#F5F7F6] leading-tight">
+                      <div className="text-[7px] sm:text-[8px] font-mono font-bold text-[#1C201E] dark:text-[#F5F7F6] leading-tight truncate max-w-[50px]">
                         {dock.truck}
                       </div>
                       <span className="px-1 py-0.2 rounded-xs bg-[#DBEAFE] text-[#2563EB] text-[7px] font-mono font-bold">
@@ -140,20 +169,30 @@ export default function YardControlMap({ onSelectTruck, selectedTruck }) {
           })}
         </div>
 
-        {/* YARD DRIVING APRON & LANES (Lanes, Direction Arrows, Inbound Truck, Forklift) */}
+        {/* YARD DRIVING APRON & LANES */}
         <div className="relative min-h-[140px] sm:min-h-[160px] border-y border-dashed border-[#D4CABE] dark:border-[#374642] flex items-center justify-between px-6 sm:px-12">
           
           {/* Inbound Truck at Left Gate */}
           <div className="flex flex-col items-center space-y-1">
             <div className="text-[9px] font-mono text-[#68716D] flex items-center gap-1">
-              <ArrowDown className="w-3 h-3 text-[#D97706]" />
+              <ArrowDown className="w-3.5 h-3.5 text-[#D97706]" />
               <span>ENTRY LANE</span>
             </div>
 
             <div 
               onClick={() => {
-                setActiveTruck({ id: 'WB 25 AB 1234', status: 'At Gate', location: 'Gate 01' });
-                onSelectTruck?.({ id: 'WB 25 AB 1234', status: 'At Gate', location: 'Gate 01' });
+                const targetId = gateTruck.licensePlate || gateTruck.truckId || 'WB 25 AB 1234';
+                const targetInfo = {
+                  id: targetId,
+                  status: gateTruck.status || 'At Gate',
+                  location: 'Gate 01 ANPR Station',
+                  supplierName: gateTruck.supplierName || 'Verified Supplier',
+                  poNumber: gateTruck.poNumber || 'PO-1002',
+                  priority: gateTruck.priority || 'HIGH',
+                  loadType: gateTruck.loadType || 'DRY_VAN'
+                };
+                setActiveTruck(targetInfo);
+                onSelectTruck?.(targetInfo);
               }}
               className="w-12 sm:w-14 h-22 sm:h-26 rounded-sm bg-[#FAF7F0] dark:bg-[#1E2825] border-2 border-[#D97706] p-1 flex flex-col justify-between items-center cursor-pointer shadow-md hover:scale-105 transition-transform"
             >
@@ -161,9 +200,11 @@ export default function YardControlMap({ onSelectTruck, selectedTruck }) {
                 <Truck className="w-3.5 h-3.5 text-[#D97706]" />
               </div>
               <div className="text-center font-mono">
-                <div className="text-[8px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">WB 25 AB 1234</div>
+                <div className="text-[8px] font-bold text-[#1C201E] dark:text-[#F5F7F6] truncate max-w-[50px]">
+                  {gateTruck.licensePlate || gateTruck.truckId || 'WB 25 AB 1234'}
+                </div>
                 <span className="px-1 py-0.2 rounded-xs bg-[#FEF3C7] text-[#D97706] text-[7px] font-bold">
-                  At Gate
+                  {gateTruck.status === 'AT_GATE' ? 'At Gate' : (gateTruck.status === 'IN_YARD' ? 'In Yard' : 'Scheduled')}
                 </span>
               </div>
               <div className="w-3 h-1.5 rounded-full bg-[#D97706]/40" />
@@ -181,39 +222,32 @@ export default function YardControlMap({ onSelectTruck, selectedTruck }) {
 
             {/* Central Forklift Schematic Graphic */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] shadow-2xs font-mono text-[10px] text-[#1C201E] dark:text-[#F5F7F6]">
-              {/* Forklift SVG icon */}
               <svg className="w-5 h-5 text-[#D97706]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 17h14v-5H9l-4-4v9Z" />
                 <circle cx="7" cy="18" r="2" />
                 <circle cx="17" cy="18" r="2" />
                 <path d="M19 12h3v5" />
               </svg>
-              <span>FORKLIFT 02 • MOVING PALLETS</span>
+              <span>FORKLIFT 02 • TRANSIT</span>
             </div>
           </div>
         </div>
 
-        {/* BOTTOM YARD STORAGE ZONES (YARD A, B, C, QC HOLD) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+        {/* 4 BOTTOM STORAGE ZONES (YARD A, YARD B, YARD C, QC HOLD) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
           {zones.map((zone) => (
             <div
               key={zone.id}
-              className="p-3 rounded-[3px] bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] space-y-2 shadow-2xs"
+              className="p-3 rounded-sm border border-[#E3DDD1] dark:border-[#2B3835] bg-[#FCFAF4] dark:bg-[#1E2825] space-y-2 shadow-xs"
             >
-              <div className="text-center font-mono">
-                <div className="font-bold text-xs text-[#1C201E] dark:text-[#F5F7F6] tracking-wide">
-                  {zone.title}
-                </div>
-                <div className="text-[10px] text-[#68716D] dark:text-[#8E9C97]">
-                  {zone.lpns}
-                </div>
-                <div className="text-[10px] font-bold text-[#1C201E] dark:text-[#F5F7F6]">
-                  {zone.pallets}
-                </div>
+              <div className="flex items-center justify-between font-mono pb-1 border-b border-[#E3DDD1] dark:border-[#2B3835]">
+                <strong className="text-xs font-bold text-[#1C201E] dark:text-[#F5F7F6]">{zone.title}</strong>
+                <span className="text-[9px] text-[#68716D]">{zone.lpns}</span>
               </div>
-
-              {/* ▦ ▦ ▦ Pallet Dots Grid Layout */}
-              <div className="p-2 rounded-xs bg-[#F4EFE6] dark:bg-[#222D2B] border border-[#E3DDD1] dark:border-[#2B3835] grid grid-cols-6 gap-1 justify-items-center">
+              <div className="text-[10px] font-mono text-[#15803D] font-bold">
+                {zone.pallets} Staged
+              </div>
+              <div className="grid grid-cols-6 gap-1 pt-1">
                 {Array.from({ length: zone.dotCount }).map((_, i) => (
                   <div
                     key={i}
@@ -230,40 +264,41 @@ export default function YardControlMap({ onSelectTruck, selectedTruck }) {
         <div className="pt-2 border-t border-[#E3DDD1] dark:border-[#2B3835] flex flex-wrap items-center justify-center gap-4 sm:gap-6 font-mono text-[10px] text-[#68716D] dark:text-[#8E9C97]">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#D97706]" />
-            <span>At Gate</span>
+            <span>At Gate Checkpoint</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#2563EB]" />
-            <span>Docked</span>
+            <span>Dock Intake</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#15803D]" />
-            <span>Stored</span>
+            <span>Yard Inventory Staged</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#7C3AED]" />
-            <span>QC Hold</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#F97316]" />
-            <span>In Transit</span>
+            <span>QC Inspection Hold</span>
           </div>
         </div>
       </div>
 
       {/* TRUCK TELEMETRY INSPECTOR MODAL */}
       {activeTruck && (
-        <div className="absolute right-4 bottom-4 z-20 w-64 p-3 rounded-sm bg-[#FCFAF4] dark:bg-[#1B2422] border-2 border-[#15803D] shadow-xl font-mono text-xs space-y-2 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between pb-1 border-b border-[#E3DDD1]">
-            <strong className="text-[#15803D]">{activeTruck.id}</strong>
+        <div className="absolute right-4 bottom-4 z-20 w-72 p-3.5 rounded-sm bg-[#FCFAF4] dark:bg-[#1B2422] border-2 border-[#15803D] shadow-xl font-mono text-xs space-y-2 animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between pb-1.5 border-b border-[#E3DDD1]">
+            <div className="flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5 text-[#15803D]" />
+              <strong className="text-[#15803D]">{activeTruck.id}</strong>
+            </div>
             <button type="button" onClick={() => setActiveTruck(null)} className="text-[#68716D] hover:text-[#1C201E]">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="space-y-1 text-[11px] text-[#1C201E] dark:text-[#F5F7F6]">
+            <div>Supplier: <strong className="text-[#15803D]">{activeTruck.supplierName || 'Verified Supplier'}</strong></div>
+            <div>PO Reference: <strong className="text-zinc-700 dark:text-zinc-300">{activeTruck.poNumber || 'PO-1030'}</strong></div>
             <div>Location: <strong>{activeTruck.location}</strong></div>
             <div>Status: <strong>{activeTruck.status}</strong></div>
-            <div>Cargo: 24 Pallets (Bearing Assys)</div>
+            <div>Priority: <strong className="text-amber-600">{activeTruck.priority || 'MEDIUM'}</strong></div>
           </div>
         </div>
       )}

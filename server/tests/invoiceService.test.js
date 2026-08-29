@@ -76,3 +76,52 @@ test('Cloudinary and built-in local documents are both valid supplier documents'
   assert.equal(isStoredSupplierDocument({ fileUrl: 'https://untrusted.example/invoice.pdf', document: { storageProvider: 'external' } }), false);
   assert.equal(isStoredSupplierDocument({ fileUrl: '', document: { storageProvider: 'local' } }), false);
 });
+
+test('calculateThreeWayMatch synthesizes intelligent OCR data and auto-approves compliant matches', () => {
+  const result = calculateThreeWayMatch(purchaseOrder, [receipt], invoice);
+  assert.equal(result.autoApproved, true);
+  assert.equal(result.ocrData.matched, true);
+  assert.ok(result.ocrData.confidenceScore >= 99);
+  assert.ok(result.aiVerdict.includes('Reconciliation Verified'));
+  assert.ok(Array.isArray(result.aiReasoning) && result.aiReasoning.length > 0);
+});
+
+test('Invoice and Payment model schemas accept MANUALLY_APPROVED and override details', () => {
+  const InvoiceModel = require('../models/Invoice');
+  const PaymentModel = require('../models/Payment');
+
+  const invDoc = new InvoiceModel({
+    invoiceNumber: 'INV-MANUAL-TEST-1',
+    supplierName: 'Acme Steel Pvt Ltd',
+    poNumber: 'PO-78415',
+    totalAmount: 85000,
+    matchStatus: 'MANUALLY_APPROVED',
+    paymentStatus: 'APPROVED',
+    manualApproval: {
+      approvedBy: 'AP Finance Manager',
+      approvedAt: new Date(),
+      notes: 'Variance verified and manually overridden.'
+    }
+  });
+  const invValidationError = invDoc.validateSync();
+  assert.equal(invValidationError, undefined);
+
+  const payDoc = new PaymentModel({
+    paymentNumber: 'PAY-MANUAL-TEST-1',
+    invoiceNumber: 'INV-MANUAL-TEST-1',
+    poNumber: 'PO-78415',
+    supplierName: 'Acme Steel Pvt Ltd',
+    amount: 85000,
+    matchStatus: 'MANUALLY_APPROVED',
+    paymentStatus: 'APPROVED',
+    status: 'AUTHORIZED',
+    manualApproval: {
+      approvedBy: 'AP Finance Manager',
+      approvedAt: new Date(),
+      notes: 'Variance verified and manually overridden.'
+    }
+  });
+  const payValidationError = payDoc.validateSync();
+  assert.equal(payValidationError, undefined);
+});
+
