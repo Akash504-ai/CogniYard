@@ -135,9 +135,10 @@ export default function AIAssistantModal() {
         ];
       case 'finance':
         return [
-          { label: 'Payment Holds', text: 'Why are payments on hold?', icon: TrendingUp },
-          { label: 'Mismatched Invoices', text: 'Show mismatched invoices', icon: AlertTriangle },
+          // { label: 'Payment Holds', text: 'Why are payments on hold?', icon: TrendingUp },
+          // { label: 'Mismatched Invoices', text: 'Show mismatched invoices', icon: AlertTriangle },
           { label: 'Trace Invoice', text: 'Trace INV-8802', icon: Activity },
+          // { label: 'Total invoice in the queue', text: 'How many invoices are in the queue?', icon: FileText }
         ];
       default:
         return [
