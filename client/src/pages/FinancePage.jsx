@@ -666,7 +666,7 @@ export default function FinancePage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xs bg-[#FCFAF4] dark:bg-[#1B2422] border border-[#E3DDD1] dark:border-[#2B3835] text-xs font-sans text-[#1C201E] dark:text-[#F5F7F6] hover:border-[#15803D] transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#15803D]" />
-              <span>AP Copilot</span>
+              <span>AI Copilot</span>
             </button>
             <button
               type="button"
