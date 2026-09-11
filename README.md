@@ -1057,7 +1057,10 @@ docs/IMPLEMENTATION_REPORT.md
 
 ## License
 
-This project was developed as a hackathon solution and demonstration platform.
+CogniYard is licensed under the **Apache License 2.0**.
 
-**CogniYard**
-AI-enabled Procure-to-Pay + Yard & Dock Execution
+See the [`LICENSE`](LICENSE) file for the complete license terms.
+
+Copyright 2026 Akash Santra and Hrisikesh Das.
+
+This project was developed as a hackathon solution and demonstration platform.
