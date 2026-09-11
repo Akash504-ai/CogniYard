@@ -1,250 +1,541 @@
-# CogniYard
+<p align="center">
+  <img alt="CogniYard — AI-enabled Procure-to-Pay and Yard Execution Platform" src="./docs/assets/cogniyard-banner.png" width="900" />
+</p>
 
-**AI-Enabled Procure-to-Pay and Yard/Dock Execution Platform**
+<p align="center">
+  <a href="#"><img alt="Version" src="https://img.shields.io/badge/version-2.3.1-blue?style=flat-square" /></a>
+  <a href="#"><img alt="Status" src="https://img.shields.io/badge/status-hackathon%20ready-success?style=flat-square" /></a>
+  <a href="#"><img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white" /></a>
+  <a href="#"><img alt="Node.js" src="https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white" /></a>
+  <a href="#"><img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" /></a>
+  <a href="#"><img alt="Tests" src="https://img.shields.io/badge/tests-31%20passed-success?style=flat-square" /></a>
+</p>
 
-CogniYard is a full-stack supply-chain platform that connects procurement, supplier collaboration, warehouse operations, yard execution, finance, and analytics in a single application.
+<p align="center">
+  <b>AI-enabled supply-chain execution from procurement request to payment eligibility.</b>
+</p>
 
-The platform covers the complete workflow from **Purchase Requisition and Purchase Order to Truck Arrival, Goods Receipt, Supplier Invoice, 3-Way Matching, and Payment**.
-
-**Current Version:** v2.3.1 — Verified Corrections
-
----
-
-## Overview
-
-CogniYard is designed to demonstrate how AI, computer vision, document processing, workflow automation, and persistent enterprise data can be combined to improve supply-chain execution.
-
-The platform provides dedicated workflows for:
-
-* Procurement
-* Warehouse and Yard Operations
-* Supplier Management
-* Finance
-* Administration
-* Analytics and Operational Monitoring
+<p align="center">
+  CogniYard connects procurement, supplier collaboration, yard & dock execution,<br/>
+  warehouse receiving, invoicing, 3-way matching, payment controls, and operational intelligence<br/>
+  into one persistent end-to-end platform.
+</p>
 
 ---
 
-## Architecture Overview
+## What is CogniYard?
 
-```mermaid
-flowchart TB
+CogniYard is a full-stack supply-chain platform built around a simple idea:
 
-    U[Users<br/>Admin • Procurement • Warehouse • Finance • Supplier]
+> **Procurement decisions and physical warehouse execution should not live in disconnected systems.**
 
-    subgraph VERCEL["Frontend — Vercel"]
-        FE[React 18 + Vite<br/>Role-Based Workspaces]
-        CV[Computer Vision<br/>Camera • Tesseract OCR • COCO-SSD]
-    end
+A natural-language requirement can move through AI-assisted procurement intelligence, supplier evaluation, EOQ validation, human approval, purchase-order creation, shipment and truck lifecycle management, gate verification, yard/dock execution, goods receipt, supplier invoicing, 3-way matching, and payment eligibility.
 
-    subgraph RENDER["Backend — Render"]
-        API[Node.js + Express REST API<br/>JWT • RBAC • Business Logic]
+The result is a single workflow connecting the **digital procurement lifecycle** with the **physical execution lifecycle**.
 
-        AI[AI Services<br/>Groq API • Deterministic Local Fallback]
-
-        DOC[Document Services<br/>PDFKit • Multer]
-
-        P2P[Autonomous Procure-to-Pay<br/>PR → Supplier Intelligence → PO → GRN → Invoice → 3-Way Match → Payment]
-
-        YARD[Warehouse & Yard Execution<br/>Gate Verification → Yard → Dock → Receiving]
-
-        DASH[Analytics & Control Tower<br/>KPIs • Exceptions • Operational Monitoring]
-    end
-
-    subgraph DATA["Persistent Data & Storage"]
-        DB[(MongoDB Atlas<br/>Users • Suppliers • PRs • POs • Trucks • GRNs • Inventory • Invoices • Payments)]
-
-        CLOUD[(Cloudinary<br/>Supplier Invoice Documents)]
-    end
-
-    subgraph CICD["CI/CD — GitHub Actions"]
-        CI1[Server CI<br/>Automated Backend Tests]
-        CI2[Client CI<br/>Production Build Validation]
-    end
-
-    GH[GitHub Repository]
-
-    U --> FE
-
-    FE --> API
-    FE --> CV
-
-    API --> AI
-    API --> DOC
-    API --> P2P
-    API --> YARD
-    API --> DASH
-    API --> DB
-
-    CV --> API
-    DOC --> CLOUD
-
-    P2P --> DB
-    YARD --> DB
-    DASH --> DB
-
-    P2P --> YARD
-
-    GH --> CI1
-    GH --> CI2
-
-    CI1 -. CI Validation .-> RENDER
-    CI2 -. CI Validation .-> VERCEL
+```text
+Natural-Language Requirement
+            │
+            ▼
+     AI Supply-Chain Copilot
+            │
+     ┌──────┼───────────┐
+     │      │           │
+    SKU  Supplier      EOQ
+     │  Intelligence  Validation
+     └──────┼───────────┘
+            ▼
+      Human Approval
+            │
+            ▼
+    Purchase Requisition
+            │
+            ▼
+     Purchase Order
+            │
+      ┌─────┴─────┐
+      ▼           ▼
+ Shipment       Truck
+      │           │
+      └─────┬─────┘
+            ▼
+     Gate Verification
+            │
+            ▼
+       Yard / Dock
+            │
+            ▼
+      Goods Receiving
+            │
+            ▼
+           GRN
+            │
+            ▼
+     Supplier Invoice
+            │
+            ▼
+      3-Way Matching
+        ┌───┴───┐
+        ▼       ▼
+     MATCHED  MISMATCH
+        │       │
+        ▼       ▼
+     PAYMENT   ON HOLD
+     ELIGIBLE
 ```
 
+## Why CogniYard?
+
+Traditional supply-chain workflows often split procurement, supplier communication, warehouse execution, and finance across separate systems.
+
+CogniYard brings them together:
+
+* **Procurement** — PR creation, approval, supplier selection, PO generation
+* **Supplier Intelligence** — supplier scoring, recommendations, pricing and availability analysis
+* **AI Procurement** — natural-language requirement extraction and procurement orchestration
+* **Yard Execution** — truck verification, yard movement, dock recommendation and assignment
+* **Warehouse** — receiving, GRNs, inventory updates and dock availability
+* **Supplier Portal** — PO visibility, invoice generation and document submission
+* **Finance** — invoice review, 3-way matching and payment controls
+* **Control Tower** — operational KPIs, exceptions and cross-module monitoring
+* **Computer Vision** — browser camera, OCR and object detection
+* **Persistent Enterprise Data** — MongoDB-backed business workflows instead of frontend-only simulation
+
 ---
 
-## Key Features
+## Core Workflow
 
-### Role-Based Access
+### Procure-to-Pay
 
-CogniYard supports dedicated workspaces for:
+```text
+Purchase Requisition
+        ↓
+Approval
+        ↓
+Supplier Intelligence
+        ↓
+Purchase Order
+        ↓
+Shipment + Truck
+        ↓
+Goods Receipt
+        ↓
+Supplier Invoice
+        ↓
+3-Way Match
+        ↓
+Payment Eligibility
+```
 
-* Admin
-* Procurement Manager
-* Warehouse/Dock Manager
-* Finance
-* Supplier
+### Yard & Dock Execution
 
-Access is protected through authentication, role-based authorization, route protection, and supplier ownership controls.
+```text
+Truck Arrival
+     ↓
+Gate Verification
+     ↓
+License Plate / Driver Verification
+     ↓
+Yard Entry
+     ↓
+Dock Recommendation
+     ↓
+Dock Assignment
+     ↓
+Goods Receiving
+     ↓
+GRN
+     ↓
+Inventory Update
+```
 
-### Procurement
+These are not isolated demos. The workflows are connected through persistent backend records.
 
-* Purchase requisition creation and approval
-* Supplier selection
-* Purchase order generation
-* Supplier Chain Matrix
-* Quantity and unit-price tracking
-* AI-assisted procurement actions
-* Persistent procurement records
+---
 
-The procurement workflow connects:
+## AI Procurement
 
-**PR → PO → GRN → Invoice → 3-Way Match → Payment**
+CogniYard includes an AI-powered Supply-Chain Copilot that turns natural-language procurement requirements into structured procurement actions.
 
-### Warehouse and Yard Operations
+```text
+"I need 500 units of product X
+for next month's production."
+                │
+                ▼
+       Natural-Language Parsing
+                │
+       ┌────────┼─────────┐
+       ▼        ▼         ▼
+      SKU    Quantity   Business
+   Resolution              Reason
+       │        │         │
+       └────────┼─────────┘
+                ▼
+       Supplier Intelligence
+                │
+                ▼
+         Supplier Scoring
+                │
+                ▼
+          EOQ Validation
+                │
+                ▼
+          Human Approval
+                │
+                ▼
+       Purchase Requisition
+```
 
-* Truck gate verification
-* Browser-based camera and OCR workflow
-* License plate verification
+AI capabilities include:
+
+* Natural-language requirement extraction
+* SKU/product resolution
+* Quantity and unit-price extraction
+* Business reason and priority extraction
+* Supplier recommendation
+* Supplier scoring
+* EOQ-based procurement validation
+* AI-assisted PR creation
+* AI-assisted PR → PO conversion
+* Autonomous orchestration with human approval safeguards
+* Deterministic local fallback when the external AI service is unavailable
+
+### AI Architecture
+
+```text
+                    User
+                     │
+                     ▼
+             Supply-Chain Copilot
+                     │
+            ┌────────┴────────┐
+            ▼                 ▼
+       Groq API         Local Fallback
+            │                 │
+            └────────┬────────┘
+                     ▼
+            Procurement Engine
+                     │
+        ┌────────────┼────────────┐
+        ▼            ▼            ▼
+   SKU Resolver   Supplier      EOQ Engine
+                  Intelligence
+        │            │            │
+        └────────────┼────────────┘
+                     ▼
+               Human Approval
+                     │
+                     ▼
+                  PR / PO
+```
+
+The external AI layer is therefore not a single point of failure for the core demonstration workflow.
+
+---
+
+## Computer Vision & Gate Verification
+
+CogniYard extends the digital workflow into truck arrival and gate execution.
+
+The browser-based gate workflow combines:
+
+* Camera access
+* Tesseract OCR
+* License-plate extraction
 * Driver ID verification
-* Dock recommendation and assignment
-* Yard truck simulation
-* Goods receiving
-* Goods Receipt Notes
-* Inventory updates
-* Dock availability tracking
+* TensorFlow.js
+* COCO-SSD object detection
+* Backend verification
+* Persisted truck/gate state
 
-Gate verification is enforced before the truck can proceed to the yard and receiving workflow.
+```text
+Camera
+  │
+  ├── License Plate
+  │       ↓
+  │     OCR
+  │
+  └── Driver / Vehicle
+          ↓
+    Verification Engine
+          │
+          ▼
+     Backend API
+          │
+    ┌─────┴─────┐
+    ▼           ▼
+ VERIFIED     REJECTED
+    │
+    ▼
+ Yard Entry
+```
 
-### Supplier Portal
+Gate verification is enforced before the truck can proceed into the downstream yard and receiving workflow.
 
-Suppliers can:
+---
+
+## 3-Way Matching
+
+Finance closes the loop by validating the supplier invoice against the purchasing and receiving records.
+
+```text
+             Purchase Order
+                   │
+                   │
+                   ▼
+             ┌───────────┐
+             │           │
+             │  3-Way    │
+             │  Match    │
+             │           │
+             └───────────┘
+              ▲         ▲
+              │         │
+        Goods Receipt  Invoice
+              │         │
+              └────┬────┘
+                   ▼
+             Validation
+                   │
+          ┌────────┴────────┐
+          ▼                 ▼
+       MATCHED           MISMATCH
+          │                 │
+          ▼                 ▼
+ Payment Eligible       Payment Hold
+```
+
+Matching validates key procurement and financial fields including:
+
+* Supplier
+* Purchase order
+* Items
+* Quantities
+* Unit prices
+* Subtotal
+
+A fully matched invoice becomes payment-eligible.
+
+Partial or failed matches are placed on **payment hold** for review.
+
+---
+
+## Role-Based Workspaces
+
+CogniYard provides separate workspaces for the different actors involved in the supply chain.
+
+| Role                         | Primary Responsibilities                                                           |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| **Admin**                    | Platform administration, Control Tower, exceptions, inventory planning, Smart CCTV |
+| **Procurement Manager**      | PRs, supplier intelligence, approvals, POs                                         |
+| **Warehouse / Dock Manager** | Trucks, gate verification, yard, docks, receiving, GRNs                            |
+| **Finance**                  | Supplier invoices, 3-way matching, payment controls                                |
+| **Supplier**                 | Assigned POs, invoice generation, invoice upload and updates                       |
+
+Access is protected using:
+
+* JWT authentication
+* bcrypt password hashing
+* Role-based authorization
+* Protected frontend routes
+* Backend authorization middleware
+* Supplier ownership controls
+* Resource-level access restrictions
+
+---
+
+## Supplier Portal
+
+Suppliers receive a dedicated workflow rather than direct access to the entire application.
+
+They can:
 
 * View assigned purchase orders
 * Generate PDF invoices
 * Upload invoice documents
-* Edit submitted invoices
-* Replace invoice documents
-* Update invoice number, date, quantities, prices, tax, and shipping
+* Replace submitted invoice documents
+* Edit invoice metadata
+* Update invoice number and date
+* Update quantities and prices
+* Add tax and shipping information
 
-Supplier access is restricted to their assigned purchase orders and invoices.
-
-### Finance and 3-Way Matching
-
-Finance users can review supplier invoices and perform 3-way matching between:
-
-* Purchase Order
-* Goods Receipt Note
-* Supplier Invoice
-
-Matching validates supplier, PO number, items, quantities, unit prices, and subtotal.
-
-Fully matched invoices become eligible for payment. Partial or failed matches are placed on payment hold for review.
-
-### Dashboards and Monitoring
-
-Role-specific dashboards provide operational KPIs for:
-
-* Procurement
-* Warehouse
-* Finance
-* Administration
-
-Admin users also have access to:
-
-* Control Tower
-* Exception Center
-* Inventory Planning
-* Smart CCTV
-
-### AI and Computer Vision
-
-The platform includes:
-
-* Groq-powered AI assistance
-* Deterministic local AI fallback
-* Browser camera integration
-* Tesseract OCR
-* TensorFlow.js COCO-SSD object detection
-
-### Invoice Documents
-
-Invoice processing supports:
-
-* PDF generation
-* Invoice uploads
-* Invoice replacement
-* Cloudinary storage
-* Local demo storage
-* File size validation
-* MIME-type validation
-* File signature/content validation
+Supplier resources are restricted to the supplier's permitted purchase orders and invoices.
 
 ---
 
-## End-to-End Workflow
+## Invoice Documents
 
-1. Admin creates or manages suppliers.
-2. Procurement creates and approves a purchase requisition.
-3. The approved requisition is converted into a purchase order.
-4. Warehouse verifies the arriving truck using the gate workflow.
-5. The truck proceeds through yard and dock assignment.
-6. Warehouse receives the goods and creates the GRN.
-7. Supplier generates or uploads an invoice against the PO.
-8. Finance reviews the invoice and performs 3-way matching.
-9. A matched invoice becomes payment-eligible; exceptions are placed on hold.
-10. Dashboards and operational views reflect the resulting activity.
+Invoice processing supports:
+
+```text
+PDF
+JPG / JPEG
+PNG
+WEBP
+HTML / HTM
+DOC / DOCX
+XLS / XLSX
+CSV
+```
+
+Maximum upload size:
+
+```text
+10 MB
+```
+
+Documents pass through multiple validation layers:
+
+```text
+Extension
+   ↓
+MIME Type
+   ↓
+File Size
+   ↓
+File Signature / Content
+   ↓
+Storage
+   ↓
+Invoice Record
+```
+
+Cloudinary is used as the preferred production document-storage provider, while local storage can be used for development/demo configurations.
+
+Executable and disguised executable files are rejected.
+
+---
+
+## Operational Intelligence
+
+CogniYard includes role-specific dashboards and an operational control layer.
+
+### Control Tower
+
+Admin users can monitor:
+
+* Procurement activity
+* Yard activity
+* Dock utilization
+* Inventory
+* Finance exceptions
+* Supplier activity
+* Operational KPIs
+
+### Exception Center
+
+Exceptions surface workflow problems such as:
+
+```text
+Invoice mismatch
+      │
+      ├── Quantity mismatch
+      ├── Price mismatch
+      ├── Supplier mismatch
+      └── PO / receiving mismatch
+```
+
+This gives the platform an operational monitoring layer rather than treating each workflow as an isolated CRUD module.
+
+---
+
+## Architecture
+
+```text
+                              USERS
+                                │
+                                ▼
+                    ┌─────────────────────┐
+                    │ React 18 + Vite     │
+                    │ Role-Based UI       │
+                    └──────────┬──────────┘
+                               │
+                         HTTPS / REST
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Node.js + Express   │
+                    │ JWT • RBAC          │
+                    │ Business Logic      │
+                    └───────┬─┬─┬────────┘
+                            │ │ │
+              ┌─────────────┘ │ └─────────────┐
+              ▼               ▼               ▼
+        AI Services      Procurement      Yard / Dock
+        Groq + Fallback   Engine           Execution
+              │               │               │
+              └───────────────┼───────────────┘
+                              │
+                              ▼
+                       ┌──────────────┐
+                       │ MongoDB Atlas│
+                       │              │
+                       │ Users        │
+                       │ Suppliers    │
+                       │ PRs / POs    │
+                       │ Trucks       │
+                       │ GRNs         │
+                       │ Inventory    │
+                       │ Invoices     │
+                       │ Payments     │
+                       └──────────────┘
+                              │
+                              │
+                       ┌──────▼──────┐
+                       │ Cloudinary  │
+                       │ Documents   │
+                       └─────────────┘
+```
+
+### Deployment
+
+```text
+                    Internet
+                       │
+                       ▼
+              ┌────────────────┐
+              │     Vercel     │
+              │ React + Vite   │
+              └───────┬────────┘
+                      │
+                  HTTPS / REST
+                      │
+                      ▼
+              ┌────────────────┐
+              │     Render     │
+              │ Node + Express │
+              └───┬────┬───┬───┘
+                  │    │   │
+          ┌───────┘    │   └─────────┐
+          ▼            ▼             ▼
+     MongoDB Atlas  Cloudinary    Groq API
+```
 
 ---
 
 ## Technology Stack
 
-| Layer                           | Technology                                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Frontend**                    | React 18, Vite, Tailwind CSS                                                                    |
-| **Frontend Hosting**            | **Vercel**                                                                                      |
-| **Routing**                     | React Router                                                                                    |
-| **Charts**                      | Recharts                                                                                        |
-| **Maps**                        | React Leaflet                                                                                   |
-| **Backend**                     | Node.js 20+, Express                                                                            |
-| **Backend Hosting**             | **Render**                                                                                      |
-| **Database**                    | **MongoDB Atlas, Mongoose**                                                                     |
-| **Authentication**              | JWT, bcrypt, RBAC                                                                               |
-| **AI / Copilot**                | **Groq API + deterministic local fallback**                                                     |
-| **AI Procurement Intelligence** | Natural-language extraction, supplier scoring, EOQ validation, autonomous PR → PO orchestration |
-| **Computer Vision**             | TensorFlow.js, COCO-SSD                                                                         |
-| **OCR**                         | Tesseract                                                                                       |
-| **Documents**                   | PDFKit, Multer                                                                                  |
-| **File Storage**                | **Cloudinary**                                                                                  |
-| **Testing**                     | Node.js Test Runner                                                                             |
-| **CI/CD**                       | **GitHub Actions**                                                                              |
-| **Client CI**                   | Automated Vite production build validation                                                      |
-| **Server CI**                   | Automated backend test validation                                                               |
-| **API**                         | REST API                                                                                        |
-| **Build Tool**                  | Vite                                                                                            |
-| **Version Control**             | Git, GitHub                                                                                     |
-
+| Layer                    | Technology                                       |
+| ------------------------ | ------------------------------------------------ |
+| Frontend                 | React 18, Vite, Tailwind CSS                     |
+| Routing                  | React Router                                     |
+| Charts                   | Recharts                                         |
+| Maps                     | React Leaflet                                    |
+| Backend                  | Node.js 20+, Express                             |
+| Database                 | MongoDB Atlas, Mongoose                          |
+| Authentication           | JWT, bcrypt, RBAC                                |
+| AI                       | Groq API + deterministic local fallback          |
+| Procurement Intelligence | NLP extraction, supplier scoring, EOQ validation |
+| Computer Vision          | TensorFlow.js, COCO-SSD                          |
+| OCR                      | Tesseract                                        |
+| Documents                | PDFKit, Multer                                   |
+| File Storage             | Cloudinary                                       |
+| API                      | REST                                             |
+| Testing                  | Node.js Test Runner                              |
+| CI/CD                    | GitHub Actions                                   |
+| Frontend Hosting         | Vercel                                           |
+| Backend Hosting          | Render                                           |
+| Version Control          | Git, GitHub                                      |
 
 ---
 
@@ -252,55 +543,62 @@ Invoice processing supports:
 
 ```text
 CogniYard/
-├── client/                              # React + Vite frontend
+│
+├── client/
 │   ├── public/
 │   └── src/
-│       ├── components/                  # Reusable UI & Copilot components
-│       ├── context/                     # Auth, theme & application state
-│       ├── pages/                       # Procurement, Logistics, Finance, etc.
-│       └── services/                    # API service integrations
+│       ├── components/
+│       ├── context/
+│       ├── pages/
+│       └── services/
 │
-├── server/                              # Node.js + Express backend
-│   ├── controllers/                     # Business logic & API controllers
-│   ├── middleware/                      # Auth, RBAC & file-upload middleware
-│   ├── models/                          # MongoDB/Mongoose models
-│   ├── routes/                           # REST API routes
-│   ├── seed/                             # Demo/bootstrap data
-│   ├── services/                         # AI, procurement & document services
-│   └── tests/                            # Backend & integration tests
+├── server/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── seed/
+│   ├── services/
+│   └── tests/
 │
 ├── docs/
-│   └── IMPLEMENTATION_REPORT.md          # Detailed implementation & verification report
+│   ├── assets/
+│   └── IMPLEMENTATION_REPORT.md
 │
 ├── .github/
 │   └── workflows/
-│       ├── client-ci.yml                 # Frontend build CI
-│       └── server-ci.yml                 # Backend test CI
+│       ├── client-ci.yml
+│       └── server-ci.yml
 │
-├── .env.example                          # Environment variable template
+├── .env.example
 ├── .gitignore
-├── package.json                          # Root workspace configuration
+├── package.json
 ├── package-lock.json
 ├── README.md
-└── START_COGNIYARD_WINDOWS.bat           # Windows development launcher
+└── START_COGNIYARD_WINDOWS.bat
 ```
 
-`node_modules` and environment files containing secrets are excluded from version control.
+Secrets, environment files, and `node_modules` are excluded from version control.
 
 ---
 
-## Quick Start
+## Installation
 
 ### Requirements
 
-* Node.js 20 or newer
+* Node.js 20+
 * npm
 * MongoDB Community Server or MongoDB Atlas
 * Chrome or Edge for camera/OCR functionality
 
-### 1. Configure Environment
+### 1. Clone
 
-For local development, create `.env` from the example file.
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd CogniYard
+```
+
+### 2. Configure Environment
 
 Windows PowerShell:
 
@@ -308,134 +606,68 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-macOS/Linux:
+macOS / Linux:
 
 ```bash
 cp .env.example .env
 ```
 
-At minimum:
+Minimum configuration:
 
 ```env
 DATABASE_URL=mongodb://127.0.0.1:27017/cogniyard
 JWT_SECRET=replace_with_a_long_random_secret
 ```
 
-Optional integrations include:
+Optional integrations:
 
-* Groq AI
-* Cloudinary
-* Google Sign-In
+```env
+GROQ_API_KEY=...
+CLOUDINARY_URL=...
+GOOGLE_CLIENT_ID=...
+```
 
-Never commit real secrets or `.env` files to GitHub.
+Never commit real credentials or `.env` files.
 
-### 2. Install Dependencies
-
-From the project root:
+### 3. Install
 
 ```bash
 npm install
 ```
 
-Prepare demo data:
+### 4. Prepare Demo Data
 
 ```bash
 npm run bootstrap
 ```
 
-`bootstrap` safely prepares demo data without intentionally clearing existing business records.
+The bootstrap command prepares demo data without intentionally clearing existing business records.
 
-### 3. Start the Application
+### 5. Start
 
 ```bash
 npm run dev
 ```
 
-Development frontend:
-
-```text
-http://localhost:3000
-```
-
----
-
-## Deployment
-
-CogniYard is deployed using a cloud-based application architecture:
-
-| Component | Platform |
-| --- | --- |
-| Frontend | **Vercel** |
-| Backend API | **Render** |
-| Database | **MongoDB Atlas** |
-| Invoice Document Storage | **Cloudinary** |
-| Source Control | **GitHub** |
-| Continuous Integration | **GitHub Actions** |
-
-The React frontend communicates with the deployed Express REST API through the configured `VITE_API_URL`.
-
-The Render backend connects to MongoDB Atlas for persistent business data and Cloudinary for supplier invoice documents.
-
-### Deployment Architecture
-
-```text
-User
-  │
-  ▼
-Vercel
-React + Vite Frontend
-  │
-  │ HTTPS / REST API
-  ▼
-Render
-Node.js + Express Backend
-  │
-  ├──────────────► MongoDB Atlas
-  │
-  ├──────────────► Cloudinary
-  │
-  └──────────────► Groq API
-```
-
-### Production Environment
-
-The deployed backend requires environment variables such as:
-
-```env
-NODE_ENV=production
-DATABASE_URL=...
-JWT_SECRET=...
-CLIENT_URL=...
-CLOUDINARY_REQUIRED=true
-```
-
-The deployed frontend requires:
-
-```env
-VITE_API_URL=...
-```
-
-Actual secret values are configured through the respective deployment platforms and are never committed to the repository.
-
----
-
-## Windows One-Click Start
-
-Windows users can run:
-
-```text
-START_COGNIYARD_WINDOWS.bat
-```
-
-The startup script prepares the environment, installs dependencies, bootstraps demo accounts, starts the backend and frontend, and opens the verified local application.
-
-Verified local URL:
+For the verified local configuration:
 
 ```text
 http://127.0.0.1:3101
 ```
 
-MongoDB must be running locally when using the local development configuration.
+---
+
+## Windows One-Click Start
+
+Windows users can launch the application through:
+
+```text
+START_COGNIYARD_WINDOWS.bat
+```
+
+The launcher prepares the environment, installs dependencies, bootstraps demo accounts, starts the required services, and opens the local application.
+
+MongoDB must be available when using the local MongoDB configuration.
 
 ---
 
@@ -447,152 +679,42 @@ All seeded demo accounts use:
 password123
 ```
 
-| Role | Email |
-| --- | --- |
-| Admin | `admin@cogniyard.com` |
-| Procurement Manager | `procurement@cogniyard.com` |
-| Warehouse/Dock Manager | `warehouse@cogniyard.com` |
-| Finance | `finance@cogniyard.com` |
-| Supplier | `supplier@cogniyard.com` |
+| Role        | Email                       |
+| ----------- | --------------------------- |
+| Admin       | `admin@cogniyard.com`       |
+| Procurement | `procurement@cogniyard.com` |
+| Warehouse   | `warehouse@cogniyard.com`   |
+| Finance     | `finance@cogniyard.com`     |
+| Supplier    | `supplier@cogniyard.com`    |
 
-The login page also provides quick-access options for the seeded demo roles.
-
-> **Demo note:** These credentials are intended only for the hackathon demonstration environment. They must not be used as production credentials.
+These credentials are intended only for the hackathon/demo environment.
 
 ---
 
-## Useful Commands
+## Testing
 
-| Command | Purpose |
-| --- | --- |
-| `npm install` | Install project dependencies |
-| `npm run bootstrap` | Prepare demo data safely |
-| `npm run dev` | Start frontend and backend locally |
-| `npm run build` | Build the frontend |
-| `npm test` | Run backend tests and frontend production build |
-| `npm start` | Start the production backend |
-| `npm run seed` | Reset and reseed development data |
+CogniYard includes automated backend regression tests and frontend production-build validation.
 
-Use `npm run seed` only when intentionally rebuilding the development dataset.
-
----
-
-## Environment Variables
-
-| Variable | Required | Description |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | MongoDB connection string |
-| `JWT_SECRET` | Yes | JWT signing secret |
-| `JWT_EXPIRES_IN` | No | JWT lifetime; defaults to `7d` |
-| `PORT` | No | Backend port; defaults to `5000` |
-| `CLIENT_URL` | Production | Deployed Vercel frontend origin allowed by backend CORS |
-| `ALLOW_PUBLIC_REGISTRATION` | No | Enables/disables public registration |
-| `DEMO_ACCOUNTS_ENABLED` | No | Enables demo account bootstrap |
-| `GROQ_API_KEY` | No | Groq AI integration |
-| `GROQ_MODEL` | No | Groq model configuration |
-| `CLOUDINARY_URL` | No | Cloudinary connection string |
-| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
-| `CLOUDINARY_INVOICE_FOLDER` | No | Cloudinary invoice storage folder |
-| `CLOUDINARY_REQUIRED` | No | Forces invoice documents to use Cloudinary |
-| `GOOGLE_CLIENT_ID` | No | Google authentication configuration |
-| `VITE_GOOGLE_CLIENT_ID` | No | Browser Google Sign-In configuration |
-| `VITE_API_URL` | Production | Deployed Render backend API URL |
-| `VITE_PORT` | No | Local Vite frontend port |
-| `VITE_API_TARGET` | No | Local Vite API proxy target |
-| `VITE_APP_VERSION` | No | Application version label |
-| `BUYER_COMPANY_NAME` | No | Buyer name for generated invoices |
-| `BUYER_ADDRESS` | No | Buyer address for generated invoices |
-
-Never commit real `.env` files, API keys, database credentials, JWT secrets, or other production secrets.
-
----
-
-## Invoice Uploads
-
-Supplier invoice processing supports:
-
-```text
-PDF, JPG, JPEG, PNG, WEBP, HTML, HTM,
-DOC, DOCX, XLS, XLSX, CSV
+```bash
+npm test
 ```
 
-Maximum file size:
+The complete validation pipeline is:
 
 ```text
-10 MB
+Backend Tests
+     │
+     ▼
+31 Tests
+     │
+     ▼
+Frontend Production Build
+     │
+     ▼
+Vite Build Validation
 ```
 
-Uploaded files are validated using:
-
-* File extension
-* MIME type
-* File size
-* File signature/content validation
-
-Executable files and disguised executable files are rejected.
-
-### Invoice Document Lifecycle
-
-```text
-Supplier
-   │
-   ▼
-Upload / Generate Invoice
-   │
-   ▼
-File Validation
-   │
-   ▼
-Cloudinary
-   │
-   ▼
-Invoice Record
-   │
-   ▼
-Finance Review
-   │
-   ▼
-3-Way Match
-```
-
-Cloudinary is the preferred document-storage provider for the deployed environment. Local storage remains available as a development/demo fallback when configured.
-
----
-
-## Continuous Integration
-
-CogniYard uses **GitHub Actions** for automated CI validation.
-
-Two independent workflows are maintained:
-
-```text
-.github/
-└── workflows/
-    ├── client-ci.yml
-    └── server-ci.yml
-```
-
-### Server CI
-
-The server workflow:
-
-1. Installs backend dependencies.
-2. Runs the Node.js backend test suite.
-3. Validates backend functionality and regression coverage.
-
-### Client CI
-
-The client workflow:
-
-1. Installs frontend dependencies.
-2. Runs the Vite production build.
-3. Verifies that the frontend compiles successfully.
-
-### Current Verification
-
-The current backend test suite contains:
+Current verification:
 
 ```text
 31 tests
@@ -600,127 +722,7 @@ The current backend test suite contains:
 0 failed
 ```
 
-Coverage includes areas such as:
-
-* AI procurement parsing
-* Procurement intelligence
-* Supplier recommendation
-* PR → PO conversion
-* Logistics Copilot routing
-* RBAC enforcement
-* Invoice processing
-* Document validation
-* OCR and gate verification
-* 3-way matching
-* Payment controls
-* Cloudinary/local document handling
-* Regression scenarios
-
-The production frontend build also completes successfully.
-
----
-
-## Production-Like Run
-
-To validate the frontend locally:
-
-```bash
-npm run build
-```
-
-To start the backend in production mode:
-
-```bash
-npm start
-```
-
-Required production environment variables include:
-
-```env
-NODE_ENV=production
-DATABASE_URL=...
-JWT_SECRET=...
-CLIENT_URL=...
-```
-
-For deployed invoice processing:
-
-```env
-CLOUDINARY_REQUIRED=true
-```
-
-This ensures invoice documents use Cloudinary rather than relying on local server storage.
-
-The production deployment is hosted using:
-
-```text
-Frontend  → Vercel
-Backend   → Render
-Database  → MongoDB Atlas
-Documents → Cloudinary
-```
-
----
-
-## Troubleshooting
-
-| Problem | Solution |
-| --- | --- |
-| Application loads but data is unavailable | Verify MongoDB/Atlas connectivity and `DATABASE_URL` |
-| Invalid demo credentials | Run `npm run bootstrap` |
-| `ECONNREFUSED 127.0.0.1:27017` | Start MongoDB or use the MongoDB Atlas connection string |
-| Port 5000 is already in use | Stop the existing Node process or change `PORT` |
-| CORS error in deployed frontend | Verify `CLIENT_URL` matches the deployed Vercel origin |
-| Frontend cannot reach backend | Verify `VITE_API_URL` points to the deployed Render API |
-| Cloudinary configuration error | Verify Cloudinary environment variables |
-| Invoice upload fails | Check file type, file size, MIME type, and Cloudinary configuration |
-| Camera does not open | Use Chrome/Edge and allow camera permissions |
-| OCR model does not load | Refresh after establishing an internet connection |
-| Groq AI is unavailable | Configure `GROQ_API_KEY`; deterministic local fallback remains available |
-| GitHub Actions server CI fails | Open the Server CI workflow and inspect the failed backend test |
-| GitHub Actions client CI fails | Open the Client CI workflow and inspect the Vite build output |
-| Old frontend keeps opening locally | Close old tabs and use `http://127.0.0.1:3101` for the verified local build |
-
----
-
-## Testing
-
-### Run the Complete Test and Build Validation
-
-From the project root:
-
-```bash
-npm test
-```
-
-The root test command executes:
-
-```text
-Server Tests
-     │
-     ▼
-31+ Backend Tests
-     │
-     ▼
-Client Production Build
-     │
-     ▼
-Vite Build Validation
-```
-
-### Backend Tests Only
-
-```bash
-npm run test --workspace server
-```
-
-### Frontend Build Only
-
-```bash
-npm run build --workspace client
-```
-
-The test suite validates areas including:
+Coverage includes:
 
 * AI procurement parsing
 * Procurement intelligence
@@ -728,11 +730,13 @@ The test suite validates areas including:
 * EOQ validation
 * PR creation
 * PR → PO conversion
-* Shipment and Truck lifecycle creation
+* Shipment lifecycle
+* Truck lifecycle
 * Logistics Copilot
 * Finance Copilot
 * RBAC
 * Invoice processing
+* Document validation
 * Document storage
 * File uploads
 * Gate verification
@@ -741,24 +745,100 @@ The test suite validates areas including:
 * Payment controls
 * Regression scenarios
 
+### Backend only
+
+```bash
+npm run test --workspace server
+```
+
+### Frontend build only
+
+```bash
+npm run build --workspace client
+```
+
 ---
 
-## Demo and Simulation Notes
+## Continuous Integration
 
-CogniYard is a hackathon demonstration platform. Some physical-world capabilities are simulated because the development environment does not provide live warehouse hardware, GPS devices, production CCTV infrastructure, or real logistics partners.
+GitHub Actions runs independent validation workflows:
 
-### Simulated Components
+```text
+.github/workflows/
+├── client-ci.yml
+└── server-ci.yml
+```
 
-The following capabilities use controlled simulation or seeded telemetry:
+### Server CI
+
+```text
+Install dependencies
+        ↓
+Run backend tests
+        ↓
+Validate regression suite
+```
+
+### Client CI
+
+```text
+Install dependencies
+        ↓
+Run production build
+        ↓
+Validate Vite compilation
+```
+
+This prevents backend regressions and frontend build failures from silently reaching deployment.
+
+---
+
+## Production Configuration
+
+### Backend
+
+```env
+NODE_ENV=production
+DATABASE_URL=...
+JWT_SECRET=...
+CLIENT_URL=...
+CLOUDINARY_REQUIRED=true
+```
+
+### Frontend
+
+```env
+VITE_API_URL=...
+```
+
+Production infrastructure:
+
+```text
+Frontend   → Vercel
+Backend    → Render
+Database   → MongoDB Atlas
+Documents  → Cloudinary
+AI         → Groq API
+CI/CD      → GitHub Actions
+```
+
+---
+
+## Simulation vs Persistent Systems
+
+CogniYard is a hackathon demonstration platform, so some physical-world capabilities are intentionally simulated.
+
+### Simulated
 
 * GPS truck movement
 * Physical yard telemetry
 * Fixed-yard camera associations
 * Certain logistics events
+* Hardware-dependent logistics signals
 
-### Persisted Application Workflows
+### Persisted
 
-Core business workflows use persistent backend data:
+The core enterprise workflow is backed by persistent application data:
 
 * Authentication
 * Users
@@ -781,81 +861,118 @@ Core business workflows use persistent backend data:
 * AI procurement recommendations
 * Role enforcement
 
-This allows CogniYard to demonstrate a realistic end-to-end supply-chain workflow while clearly separating simulated physical infrastructure from persisted enterprise business data.
+This distinction is intentional: the platform demonstrates realistic enterprise workflow orchestration without pretending that a browser-based hackathon environment contains physical warehouse infrastructure.
 
 ---
 
-## End-to-End Demo Flow
+## End-to-End Demo
 
-The recommended demonstration flow is:
+For the strongest demonstration, start with a natural-language procurement requirement and follow the data through the entire system:
 
 ```text
 Natural-Language Requirement
-          │
-          ▼
+             ↓
 Supply-Chain Copilot
-          │
-          ├── SKU Resolution
-          ├── Quantity / Price Extraction
-          ├── Priority & Business Reason
-          ├── Supplier Intelligence
-          └── EOQ Validation
-          │
-          ▼
+             ↓
+SKU Resolution
+             ↓
+Supplier Intelligence
+             ↓
+EOQ Validation
+             ↓
 Human Approval
-          │
-          ▼
+             ↓
 Purchase Requisition
-          │
-          ▼
+             ↓
 Purchase Order
-          │
-          ├── Shipment Created
-          └── Truck Created
-                    │
-                    ▼
-              Gate Verification
-                    │
-                    ▼
-              Yard / Dock Assignment
-                    │
-                    ▼
-                Goods Receipt
-                    │
-                    ▼
-                  GRN
-                    │
-                    ▼
-             Supplier Invoice
-                    │
-                    ▼
-              3-Way Matching
-          ┌─────────┴─────────┐
-          ▼                   ▼
-       MATCHED             MISMATCH
-          │                   │
-          ▼                   ▼
- Payment Eligible        Payment ON HOLD
+             ↓
+Shipment + Truck
+             ↓
+Gate Verification
+             ↓
+Yard / Dock Assignment
+             ↓
+Goods Receipt
+             ↓
+GRN
+             ↓
+Supplier Invoice
+             ↓
+3-Way Match
+        ↙          ↘
+   MATCHED       MISMATCH
+      ↓              ↓
+Payment Eligible  Payment Hold
 ```
 
-This demonstrates the connection between the **AI procurement layer, operational yard execution, and autonomous Procure-to-Pay workflow**.
+This single journey demonstrates the core idea behind CogniYard:
+
+**AI-assisted procurement → physical execution → financial validation.**
 
 ---
 
-## Documentation
+## Useful Commands
 
-Additional implementation and verification details are available in:
+| Command             | Purpose                           |
+| ------------------- | --------------------------------- |
+| `npm install`       | Install dependencies              |
+| `npm run bootstrap` | Prepare demo data                 |
+| `npm run dev`       | Start development environment     |
+| `npm run build`     | Build frontend                    |
+| `npm test`          | Backend tests + frontend build    |
+| `npm start`         | Start production backend          |
+| `npm run seed`      | Reset and reseed development data |
 
-```text
-docs/IMPLEMENTATION_REPORT.md
-```
+Use `npm run seed` only when intentionally rebuilding the development dataset.
 
-The repository also contains the GitHub Actions CI workflows:
+---
 
-```text
-.github/workflows/client-ci.yml
-.github/workflows/server-ci.yml
-```
+## Environment Variables
+
+| Variable                    | Required   | Purpose                       |
+| --------------------------- | ---------- | ----------------------------- |
+| `DATABASE_URL`              | Yes        | MongoDB connection            |
+| `JWT_SECRET`                | Yes        | JWT signing secret            |
+| `JWT_EXPIRES_IN`            | No         | JWT lifetime                  |
+| `PORT`                      | No         | Backend port                  |
+| `CLIENT_URL`                | Production | Allowed frontend origin       |
+| `ALLOW_PUBLIC_REGISTRATION` | No         | Public registration control   |
+| `DEMO_ACCOUNTS_ENABLED`     | No         | Demo account bootstrap        |
+| `GROQ_API_KEY`              | No         | Groq AI integration           |
+| `GROQ_MODEL`                | No         | AI model configuration        |
+| `CLOUDINARY_URL`            | No         | Cloudinary connection         |
+| `CLOUDINARY_CLOUD_NAME`     | No         | Cloudinary cloud              |
+| `CLOUDINARY_API_KEY`        | No         | Cloudinary API key            |
+| `CLOUDINARY_API_SECRET`     | No         | Cloudinary API secret         |
+| `CLOUDINARY_INVOICE_FOLDER` | No         | Invoice storage folder        |
+| `CLOUDINARY_REQUIRED`       | No         | Require Cloudinary storage    |
+| `GOOGLE_CLIENT_ID`          | No         | Google authentication         |
+| `VITE_GOOGLE_CLIENT_ID`     | No         | Browser Google authentication |
+| `VITE_API_URL`              | Production | Render API URL                |
+| `VITE_PORT`                 | No         | Local Vite port               |
+| `VITE_API_TARGET`           | No         | Local API proxy               |
+| `VITE_APP_VERSION`          | No         | Application version           |
+| `BUYER_COMPANY_NAME`        | No         | Invoice buyer name            |
+| `BUYER_ADDRESS`             | No         | Invoice buyer address         |
+
+---
+
+## Troubleshooting
+
+| Problem                    | Solution                                                       |
+| -------------------------- | -------------------------------------------------------------- |
+| Data unavailable           | Verify MongoDB / Atlas connectivity                            |
+| Demo login fails           | Run `npm run bootstrap`                                        |
+| MongoDB connection refused | Start MongoDB or configure Atlas                               |
+| Port already in use        | Stop the existing process or change `PORT`                     |
+| CORS error                 | Verify `CLIENT_URL`                                            |
+| Frontend cannot reach API  | Verify `VITE_API_URL`                                          |
+| Invoice upload fails       | Check file type, size, validation and Cloudinary configuration |
+| Camera does not open       | Use Chrome/Edge and allow camera permissions                   |
+| OCR model does not load    | Refresh with an active internet connection                     |
+| Groq unavailable           | Configure `GROQ_API_KEY`; local fallback remains available     |
+| CI server workflow fails   | Inspect backend test output                                    |
+| CI client workflow fails   | Inspect Vite build output                                      |
 
 ---
 
@@ -863,47 +980,77 @@ The repository also contains the GitHub Actions CI workflows:
 
 **CogniYard v2.3.1 — Verified Corrections**
 
-The current deployed build includes:
+The current implementation includes:
 
-* Role-based workspaces
-* Supplier ownership controls
-* AI Supply-Chain Copilot
-* Natural-language procurement intelligence
-* SKU/product resolution
-* Supplier intelligence and scoring
-* EOQ-based procurement validation
-* Human approval safeguards
-* AI-assisted PR creation
-* AI-assisted PR → PO conversion
-* Automatic Shipment and Truck lifecycle creation
-* Procurement workflow
-* Purchase orders
-* Gate verification
-* Browser-camera OCR
-* Yard and dock simulation
-* Dock recommendation
-* Goods receiving and GRNs
-* Inventory updates
-* Supplier invoice generation and uploads
-* Cloudinary invoice document storage
-* Finance invoice review
-* 3-way matching
-* Payment workflow
-* Payment hold controls
-* Logistics Copilot
-* Finance Copilot
-* Operational dashboards
-* Control Tower
-* Exception Center
-* Inventory Planning
-* Smart CCTV
-* MongoDB Atlas persistence
-* Vercel frontend deployment
-* Render backend deployment
-* GitHub Actions CI
-* Automated Windows startup
-* Backend test suite
-* Production frontend build
+```text
+✓ Role-based workspaces
+✓ Supplier ownership controls
+✓ AI Supply-Chain Copilot
+✓ Natural-language procurement intelligence
+✓ SKU resolution
+✓ Supplier intelligence
+✓ Supplier scoring
+✓ EOQ validation
+✓ Human approval safeguards
+✓ AI-assisted PR creation
+✓ AI-assisted PR → PO conversion
+✓ Shipment + Truck lifecycle
+✓ Gate verification
+✓ Browser camera + OCR
+✓ Yard / dock simulation
+✓ Dock recommendation
+✓ Goods receiving
+✓ GRNs
+✓ Inventory updates
+✓ Supplier invoice generation
+✓ Invoice uploads
+✓ Cloudinary document storage
+✓ Finance invoice review
+✓ 3-way matching
+✓ Payment eligibility
+✓ Payment holds
+✓ Logistics Copilot
+✓ Finance Copilot
+✓ Operational dashboards
+✓ Control Tower
+✓ Exception Center
+✓ Inventory Planning
+✓ Smart CCTV
+✓ MongoDB Atlas persistence
+✓ Vercel deployment
+✓ Render deployment
+✓ GitHub Actions CI
+✓ Automated Windows startup
+✓ Backend regression tests
+✓ Production frontend build
+```
+
+---
+
+## Roadmap
+
+Potential future extensions include:
+
+* Real GPS / telematics integration
+* Production-grade CCTV streams
+* Real-time yard IoT telemetry
+* Advanced demand forecasting
+* Supplier performance prediction
+* Automated exception resolution
+* Multi-warehouse orchestration
+* Event-driven workflow processing
+* Advanced invoice OCR and field extraction
+* Production observability and distributed tracing
+
+---
+
+## Documentation
+
+Detailed implementation and verification information is available in:
+
+```text
+docs/IMPLEMENTATION_REPORT.md
+```
 
 ---
 
@@ -911,8 +1058,5 @@ The current deployed build includes:
 
 This project was developed as a hackathon solution and demonstration platform.
 
-For implementation details, architecture information, and verification notes, refer to:
-
-```text
-docs/IMPLEMENTATION_REPORT.md
-```
+**CogniYard**
+AI-enabled Procure-to-Pay + Yard & Dock Execution
