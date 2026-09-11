@@ -1,5 +1,6 @@
 <p align="center">
-  <img alt="CogniYard — AI-enabled Procure-to-Pay and Yard Execution Platform" src="./docs/assets/cogniyard-banner.png" width="900" />
+  <img width="1806" height="871" alt="CogniYard — AI-enabled Procure-to-Pay and Yard Execution Platform" src="https://github.com/user-attachments/assets/dad943e2-a29b-458c-947e-9a45d39e095c" width="900" />
+  <!-- <img alt= src="./docs/assets/cogniyard-banner.png"  /> -->
 </p>
 
 <p align="center">
